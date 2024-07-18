@@ -1,30 +1,27 @@
 ﻿#include "pch.h"
 #include "CppUnitTest.h"
 
-#include <string>
-
-#include "../Engine/defs.h"
-#include "../Engine/consts.h"
-#include "../Engine/main.cpp"
-#include "../Engine/attacks.cpp"
-
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace Tests
 {
-	TEST_CLASS(Tests)
+	TEST_CLASS(PieceAttacksTests)
 	{
+	private:
+		Attacks attacks;
+		std::string expected;
+		std::string result;
+
 	public:
-		// TODO: Fix tests and errors
-		TEST_METHOD(AssertBitboardKnighAttack_e4)
+		// Piece attacks
+		TEST_METHOD(AssertKnightAttacks)
 		{
-			std::string expectedBitboardValue = "567348067172352";
+			U64 asd = 1ULL;
 
-			attacks att;
+			expected = "567348067172352";
+			result = std::to_string(attacks.maskKnightAttacks(e4));
 
-			Assert::AreEqual(
-				expectedBitboardValue,
-				std::to_string(att.maskKnightAttacks(e4)));
+			Assert::AreEqual(expected, result);
 		}
 	};
 }

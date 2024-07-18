@@ -2,10 +2,12 @@
 #ifndef CONSTS_H
 #define CONSTS_H
 
-#define notAFile 18374403900871474942ULL // bitboard value where the A file is set to zero
-#define notHFile 9187201950435737471ULL // bitboard value where the H file is set to zero
-#define notHGFile 4557430888798830399ULL // bitboard value where the HG files are set to zero
-#define notABFile 18229723555195321596ULL // bitboard value where the HG files are set to zero
+#define NAME "iuli 1.0"
+
+#define AFile_0 18374403900871474942ULL // bitboard value where the A file is set to zero
+#define HFile_0 9187201950435737471ULL // bitboard value where the H file is set to zero
+#define HGFile_0 4557430888798830399ULL // bitboard value where the HG files are set to zero
+#define ABFile_0 18229723555195321596ULL // bitboard value where the HG files are set to zero
 
 
 #endif // !CONSTS_H

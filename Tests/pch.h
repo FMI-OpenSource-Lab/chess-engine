@@ -8,5 +8,13 @@
 #define PCH_H
 
 // add headers that you want to pre-compile here
+// Add headers that you want to pre-compile here
+#include <iostream>
+#include <cstdint>
+
+// Add other common headers here
+#include "..//Engine/defs.h"
+#include "..//Engine/consts.h"
+#include "..//Engine/attacks.h"
 
 #endif //PCH_H
