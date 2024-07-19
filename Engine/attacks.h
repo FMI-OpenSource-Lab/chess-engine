@@ -6,7 +6,10 @@
 
 class Attacks
 {
-public: // precalculated attack tables
+public:
+    // Constructor to initialize attack tables
+    Attacks();
+
     // define pawn attacks table [side][square]
     U64 pawnAttacks[2][64]; // 2 - sides to play, 64 - squares on a table
 
@@ -15,9 +18,6 @@ public: // precalculated attack tables
 
     // define king attack table [square]
     U64 kingAttacks[64];
-
-    // Constructor to initialize attack tables
-    Attacks();
 
     // mask attacks
     U64 maskPawnAttacks(int side, int square);

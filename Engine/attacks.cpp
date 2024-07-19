@@ -1,11 +1,12 @@
+#include "Attacks.h"
 #include "defs.h"
 #include "consts.h"
-#include "attacks.h"
 
-Attacks::Attacks()
-{
+Attacks::Attacks(){
 	initAttacks();
 }
+
+/* --------------- Mask attacks-------------------- */
 
 U64 Attacks::maskPawnAttacks(int side, int square)
 {
@@ -42,7 +43,7 @@ U64 Attacks::maskKnightAttacks(int square)
 
 	// piece bitboard
 	U64 bitboard = 0ULL;
-
+	
 	// set piece on board
 	set_bit(bitboard, square);
 
@@ -124,7 +125,7 @@ U64 Attacks::maskKingAttacks(int square)
 	return attacks;
 }
 
-// Generating attacks
+/* --------------- Generating attacks-------------------- */
 
 // generate bishop attacks
 U64 Attacks::generateBishopAttacks(int square, U64 blockPiece)
@@ -204,7 +205,7 @@ U64 Attacks::generateRookAttacks(int square, U64 blockPiece)
 	}
 
 	return attacks;
-}
+};
 
 void Attacks::initAttacks()
 {
