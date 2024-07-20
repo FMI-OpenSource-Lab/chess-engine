@@ -35,7 +35,7 @@
     <ClInclude Include="attacks.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="bboard.h">
+    <ClInclude Include="bitboard.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="random.h">

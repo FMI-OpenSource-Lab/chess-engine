@@ -211,8 +211,8 @@ void Attacks::initAttacks()
 {
 	for (int sq = 0; sq < 64; sq++)
 	{
-		pawnAttacks[white][sq] = maskPawnAttacks(white, sq);
-		pawnAttacks[black][sq] = maskPawnAttacks(black, sq);
+		pawnAttacks[WHITE][sq] = maskPawnAttacks(WHITE, sq);
+		pawnAttacks[BLACK][sq] = maskPawnAttacks(BLACK, sq);
 
 		knightAttacks[sq] = maskKnightAttacks(sq);
 
