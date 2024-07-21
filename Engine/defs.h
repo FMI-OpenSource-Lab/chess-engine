@@ -3,6 +3,8 @@
 #ifndef DEFS_H
 #define DEFS_H
 
+#define NAME "iuli 1.0"
+
 #include <cassert>
 //#include <cstdint>
 
@@ -42,7 +44,33 @@ constexpr const char* squareToCoordinates[] = {
 	"a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1"
 };
 
-enum {BISHOP, ROOK};
+enum PieceType : int {
+	NO_PIECE_TYPE,
+	PAWN,
+	KNIGHT,
+	BISHOP,
+	ROOK,
+	QUEEN,
+	KING,
+	ALL_PIECES = 0,
+	PIECE_TYPE_NB = 8
+};
+
+enum Piece : int {
+	WHITE_PAWN,
+	WHITE_KNIGHT,
+	WHITE_BISHOP,
+	WHITE_ROOK,
+	WHITE_QUEEN,
+	WHITE_KING,
+	BLACK_PAWN,
+	BLACK_KNIGHT,
+	BLACK_BISHOP,
+	BLACK_ROOK,
+	BLACK_QUEEN,
+	BLACK_KING,
+	EMPTY,
+};
 
 enum Color
 {
@@ -87,11 +115,18 @@ enum Rank : int {
 	RANK_NB
 };
 
+enum MoveType {
+	NORMAL,
+	PROMOTION	= 1 << 14,
+	EN_PASSANT	= 2 << 14,
+	CASTLING	= 3 << 14
+};
+
 constexpr Direction operator+(Direction d1, Direction d2) { return Direction(int(d1) + int(d2)); }
 constexpr Direction operator*(int i, Direction d) { return Direction(i * int(d)); }
 
 constexpr bool is_ok(Square s) { return s >= A1 && s <= H8; }
-//constexpr File file_of(Square s) { return File(s & 7); }
+constexpr File file_of(Square s) { return File(s % 8); }
 constexpr Rank rank_of(Square s) { return Rank(s >> 3); }
 
 // Additional operators to add a Direction to a Square
@@ -101,7 +136,7 @@ inline Square& operator+=(Square& s, Direction d) { return s = s + d; }
 inline Square& operator-=(Square& s, Direction d) { return s = s - d; }
 
 // Toggle the colour
-constexpr Color operator~(Color c) { return Color(c ^ BLACK); }
+constexpr Color operator~(Color c) { return Color(c ^ 1); }
 
 constexpr Square make_square(File f, Rank r) { return Square((r << 3) + f); }
 
@@ -115,6 +150,7 @@ constexpr Square make_square(File f, Rank r) { return Square((r << 3) + f); }
 		inline T& operator++(T& d) { return d = T(int(d) + 1); } \
 		inline T& operator--(T& d) { return d = T(int(d) - 1); }
 
+ENABLE_INCR_OPERATORS_ON(PieceType)
 ENABLE_INCR_OPERATORS_ON(Square)
 ENABLE_INCR_OPERATORS_ON(File)
 ENABLE_INCR_OPERATORS_ON(Rank)

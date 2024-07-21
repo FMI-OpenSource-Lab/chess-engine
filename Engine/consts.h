@@ -5,13 +5,6 @@
 #include "defs.h"
 #include <array>
 
-#define NAME "iuli 1.0"
-
-extern constexpr U64 AFile_0 = 18374403900871474942ULL; // bitboard value where the A file is set to zero
-extern constexpr U64 HFile_0 = 9187201950435737471ULL; // bitboard value where the H file is set to zero
-extern constexpr U64 HGFile_0 = 4557430888798830399ULL; // bitboard value where the HG files are set to zero
-extern constexpr U64 ABFile_0 = 18229723555195321596ULL; // bitboard value where the HG files are set to zero
-
 constexpr std::array<int, 64> RELEVANT_BISHOP_BITS = {
 	6, 5, 5, 5, 5, 5, 5, 6,
 	5, 5, 5, 5, 5, 5, 5, 5,

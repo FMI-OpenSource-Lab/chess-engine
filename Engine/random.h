@@ -8,13 +8,13 @@
 class PRNG
 {
 public:
-	uint32_t state = 1804289383;
+	uint32_t random_state = 1804289383;
 
 	// generate 32-bit pseudo legal nums
 	uint32_t rand32()
 	{
 		// get curr state
-		unsigned int currentState = state;
+		unsigned int currentState = random_state;
 
 		// XOR shift algorithm (XORSHIFT32)
 		currentState ^= currentState << 13;
@@ -22,7 +22,7 @@ public:
 		currentState ^= currentState << 5;
 
 		// update random number state
-		state = currentState;
+		random_state = currentState;
 
 		// ret random number
 		return currentState;
@@ -52,7 +52,7 @@ public:
 	}
 
 	// find magic number
-	U64 find_magic(Square square, int relevant_bits, U64 attack_mask, int bishop)
+	U64 find_magic(Square square, int relevant_bits, int bishop)
 	{
 		// init occupancies
 		U64 occupancies[4096];
@@ -63,12 +63,8 @@ public:
 		// init used attacks
 		U64 used_attacks[4096];
 
-		// TODO: DO NOT DO THIS, NOT EFFICIENT 
-		// i did it only for testing purposes
-		Attacks att;
-
 		// init attack mask for current piece
-		U64 attack_mask = bishop ? att.maskBishopAttacks(square) : att.maskRookAttacks(square);
+		U64 attack_mask = bishop ? maskBishopAttacks(square) : maskRookAttacks(square);
 
 		// init occupancie indecies
 		int occupancy_indicies = 1 << relevant_bits;
@@ -80,11 +76,41 @@ public:
 			occupancies[index] = set_occupancy(index, relevant_bits, attack_mask);
 
 			// init attacks
-			attacks[index] = bishop ? att.generateBishopAttacks(square, occupancies[index]) :
-				att.generateRookAttacks(square, occupancies[index]);
+			attacks[index] = bishop ? generateBishopAttacks(square, occupancies[index]) :
+				generateRookAttacks(square, occupancies[index]);
 		}
 
-		// To be continued..
+		for (int random_count = 0; random_count < 100000000; random_count++)
+		{
+			// generate magic number candidate
+			U64 magic_number = rand64();
+
+			if (countBits((attack_mask * magic_number) & 0xFF) < 6) continue;
+
+			memset(used_attacks, 0ULL, sizeof(used_attacks));
+
+			// flags
+			int index, fail;
+
+			// test magic index
+			for (index = 0, fail = 0; !fail && index < occupancy_indicies; index++)
+			{
+				// init magic index
+				int magic_index = (int)((occupancies[index] * magic_number) >> (64 - relevant_bits));
+
+				// if magic index works
+				if (used_attacks[index] == 0ULL)
+					used_attacks[index] = attacks[index]; // init attacks
+				else if (used_attacks[index] != attacks[index])
+					fail = 1;
+			}
+
+			if (!fail)
+				return magic_number;
+		}
+
+		printf("Magic number fails!");
+		return 0ULL;
 	}
 
 	//PRNG(uint32_t seed) : state(seed) {}
