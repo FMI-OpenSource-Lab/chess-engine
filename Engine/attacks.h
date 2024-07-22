@@ -2,48 +2,48 @@
 #ifndef ATTACKS_H
 #define ATTACKS_H
 
-#include "defs.h"
+#include <array>
 #include "bitboard.h"
+
+using Bitboard = U64;
+
+// define pawn attacks table [side][square]
+static Bitboard pawnAttacks[2][64]; // 2 - sides to play, 64 - squares on a table
+
+// define knight attacks table [square]
+static Bitboard knightAttacks[64];
+
+// define king attack table [square]
+static Bitboard kingAttacks[64];
 
 // Prototypes
 
 // mask attacks
-U64 maskPawnAttacks(int side, int square);
-U64 maskKnightAttacks(int square);
-U64 maskKingAttacks(int square);
-U64 maskBishopAttacks(int square);
-U64 maskRookAttacks(int square);
+inline Bitboard maskPawnAttacks(Color color, Square square);
+inline Bitboard maskKnightAttacks(Square square);
+inline Bitboard maskKingAttacks(Square square);
+inline Bitboard maskBishopAttacks(Square square);
+inline Bitboard maskRookAttacks(Square square);
 
 // generate attacks
-U64 generateBishopAttacks(int square, U64 blockPiece);
-U64 generateRookAttacks(int square, U64 blockPiece);
-
-void initAttacks();
-
-// define pawn attacks table [side][square]
-U64 pawnAttacks[2][64]; // 2 - sides to play, 64 - squares on a table
-
-// define knight attacks table [square]
-U64 knightAttacks[64];
-
-// define king attack table [square]
-U64 kingAttacks[64];
+inline Bitboard generateBishopAttacks(Square square, Bitboard blockPiece);
+inline Bitboard generateRookAttacks(Square square, Bitboard blockPiece);
 
 /* --------------- Mask attacks-------------------- */
 
-U64 maskPawnAttacks(int side, int square)
+inline Bitboard maskPawnAttacks(Color color , Square square)
 {
 	// result attacks
-	U64 attacks = 0ULL;
+	Bitboard attacks = 0ULL;
 
 	// piece bitboard
-	U64 bitboard = 0ULL;
+	Bitboard bitboard = 0ULL;
 
 	// set piece on board
 	set_bit(bitboard, square);
 
 	// white
-	if (!side)
+	if (!color)
 	{
 		// generate attacks
 		if ((bitboard >> 7) & not_A) attacks |= (bitboard >> 7);
@@ -59,13 +59,13 @@ U64 maskPawnAttacks(int side, int square)
 	return attacks;
 }
 
-U64 maskKnightAttacks(int square)
+inline Bitboard maskKnightAttacks(Square square)
 {
 	// result attacks
-	U64 attacks = 0ULL;
+	Bitboard attacks = 0ULL;
 
 	// piece bitboard
-	U64 bitboard = 0ULL;
+	Bitboard bitboard = 0ULL;
 
 	// set piece on board
 	set_bit(bitboard, square);
@@ -86,9 +86,9 @@ U64 maskKnightAttacks(int square)
 }
 
 // mask bishop attacks
-U64 maskBishopAttacks(int square)
+inline Bitboard maskBishopAttacks(Square square)
 {
-	U64 attacks = 0ULL;
+	Bitboard attacks = 0ULL;
 
 	int rank, file;
 
@@ -105,9 +105,9 @@ U64 maskBishopAttacks(int square)
 }
 
 // mask bishop attacks
-U64 maskRookAttacks(int square)
+inline Bitboard maskRookAttacks(Square square)
 {
-	U64 attacks = 0ULL;
+	Bitboard attacks = 0ULL;
 
 	int rank, file;
 
@@ -123,13 +123,13 @@ U64 maskRookAttacks(int square)
 	return attacks;
 }
 
-U64 maskKingAttacks(int square)
+inline Bitboard maskKingAttacks(Square square)
 {
 	// result attacks
-	U64 attacks = 0ULL;
+	Bitboard attacks = 0ULL;
 
 	// piece bitboard
-	U64 bitboard = 0ULL;
+	Bitboard bitboard = 0ULL;
 
 	// set piece on board
 	set_bit(bitboard, square);
@@ -151,9 +151,9 @@ U64 maskKingAttacks(int square)
 /* --------------- Generating attacks-------------------- */
 
 // generate bishop attacks
-U64 generateBishopAttacks(int square, U64 blockPiece)
+inline Bitboard generateBishopAttacks(Square square, Bitboard blockPiece)
 {
-	U64 attacks = 0ULL;
+	Bitboard attacks = 0ULL;
 
 	int rank, file;
 
@@ -194,9 +194,9 @@ U64 generateBishopAttacks(int square, U64 blockPiece)
 }
 
 // generate rook attacks
-U64 generateRookAttacks(int square, U64 blockPiece)
+inline Bitboard generateRookAttacks(Square square, Bitboard blockPiece)
 {
-	U64 attacks = 0ULL;
+	Bitboard attacks = 0ULL;
 
 	int rank, file;
 
@@ -230,9 +230,10 @@ U64 generateRookAttacks(int square, U64 blockPiece)
 	return attacks;
 };
 
-void initAttacks()
+
+constexpr inline void initAttacks()
 {
-	for (int sq = 0; sq < 64; sq++)
+	for (Square sq = A8; sq <= H1; ++sq)
 	{
 		pawnAttacks[WHITE][sq] = maskPawnAttacks(WHITE, sq);
 		pawnAttacks[BLACK][sq] = maskPawnAttacks(BLACK, sq);
@@ -242,6 +243,5 @@ void initAttacks()
 		kingAttacks[sq] = maskKingAttacks(sq);
 	}
 }
-
 
 #endif // !ATTACKS_H
