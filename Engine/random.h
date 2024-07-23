@@ -2,6 +2,8 @@
 #ifndef RANDOM_H
 #define RANDOM_H
 
+#include <cstdint>
+#include "attacks.h"
 //#include "attacks.h"
 
 // pseudo random number generator

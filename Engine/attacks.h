@@ -7,23 +7,14 @@
 
 using Bitboard = U64;
 
-// define pawn attacks table [side][square]
-static Bitboard pawnAttacks[2][64]; // 2 - sides to play, 64 - squares on a table
-
-// define knight attacks table [square]
-static Bitboard knightAttacks[64];
-
-// define king attack table [square]
-static Bitboard kingAttacks[64];
-
 // Prototypes
 
 // mask attacks
 inline Bitboard maskPawnAttacks(Color color, Square square);
 inline Bitboard maskKnightAttacks(Square square);
-inline Bitboard maskKingAttacks(Square square);
 inline Bitboard maskBishopAttacks(Square square);
 inline Bitboard maskRookAttacks(Square square);
+inline Bitboard maskKingAttacks(Square square);
 
 // generate attacks
 inline Bitboard generateBishopAttacks(Square square, Bitboard blockPiece);
@@ -31,7 +22,7 @@ inline Bitboard generateRookAttacks(Square square, Bitboard blockPiece);
 
 /* --------------- Mask attacks-------------------- */
 
-inline Bitboard maskPawnAttacks(Color color , Square square)
+inline Bitboard maskPawnAttacks(Color color, Square square)
 {
 	// result attacks
 	Bitboard attacks = 0ULL;

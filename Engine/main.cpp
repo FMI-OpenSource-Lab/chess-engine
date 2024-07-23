@@ -1,25 +1,28 @@
+#include "bitboard.h"
 #include "attacks.h"
-#include "defs.h"
-#include "random.h"
 
 #include <iostream>
 
-int main()
+void init_all()
 {
 	initAttacks();
 
-	//Attacks attacks;
-	////Bitboard bb;
-	PRNG prng;
+    init_sliders_attacks(BISHOP);
+    init_sliders_attacks(ROOK);
+}
 
-	//print_bitboard((U64)prng.rand32());
-	//print_bitboard((U64)(prng.rand32() & 0xFFFF));
-	//print_bitboard(prng.rand64());
-	//print_bitboard(prng.rand64() & prng.rand64() & prng.rand64());
+int main()
+{
+	init_all();
 
-	//print_bitboard(Rank8_Bits);
+	U64 occ = 0ULL;
 
-	prng.init_magic_numbers();
+	set_bit(occ, D6);
+
+	print_bitboard(occ);
+
+	print_bitboard(bishopAttacks(occ, F4));
+	print_bitboard(rookAttacks(occ, D4));
 
 	system("pause");
 	return 0;

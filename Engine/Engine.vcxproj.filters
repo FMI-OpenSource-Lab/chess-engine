@@ -21,7 +21,7 @@
     <ClCompile Include="attacks.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="bboard.cpp">
+    <ClCompile Include="bitboard.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

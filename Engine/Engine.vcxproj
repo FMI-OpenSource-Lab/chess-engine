@@ -128,7 +128,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="attacks.cpp" />
-    <ClCompile Include="bboard.cpp" />
+    <ClCompile Include="bitboard.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>

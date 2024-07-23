@@ -28,7 +28,7 @@ constexpr std::array<int, SQUARE_NB> RELEVANT_ROOK_BITS{
 };
 
 // rook magic numbers
-constexpr std::array<U64, SQUARE_NB> rook_magic_numbers = {
+constexpr std::array<U64, SQUARE_NB> ROOK_MAGIC_NUMBERS = {
     0x8a80104000800020ULL,
     0x140002000100040ULL,
     0x2801880a0017001ULL,
@@ -96,7 +96,7 @@ constexpr std::array<U64, SQUARE_NB> rook_magic_numbers = {
 };
 
 // bishop magic numbers
-constexpr std::array<U64, SQUARE_NB> bishop_magic_numbers = {
+constexpr std::array<U64, SQUARE_NB> BISHOP_MAGIC_NUMBERS = {
     0x40040844404084ULL,
     0x2004208a004208ULL,
     0x10190041080202ULL,

@@ -6,15 +6,18 @@
 #include <cstdint>
 #include <iostream>
 #include <array>
-#include <string>
 
-#include "defs.h"
 #include "consts.h"
 
 // Declare prototypes
 constexpr inline U64 set_occupancy(int index, int bitsInMask, U64 attackMask);
+
 extern constexpr int getLS1B(U64 bitboard);
 extern constexpr int countBits(U64 bitboard);
+
+extern void init_sliders_attacks(PieceType py);
+extern U64 bishopAttacks(U64 occ, Square sq);
+extern U64 rookAttacks(U64 occ, Square sq);
 
 constexpr U64 squareBB(Square square)
 {
@@ -44,7 +47,7 @@ constexpr U64 FileE_Bits = FileA_Bits << 4;
 constexpr U64 FileF_Bits = FileA_Bits << 5;
 constexpr U64 FileG_Bits = FileA_Bits << 6;
 constexpr U64 FileH_Bits = 0x8080808080808080ULL;
-		
+
 // Ranks, displayed look flipped
 constexpr U64 Rank1_Bits = 0xFF;
 constexpr U64 Rank2_Bits = Rank1_Bits << (8 * 1);
@@ -56,7 +59,7 @@ constexpr U64 Rank7_Bits = Rank1_Bits << (8 * 6);
 constexpr U64 Rank8_Bits = 0x8080808080808080;
 
 // displayed looks flipped
-constexpr U64 Diagonal_A1_H8 = 0x8040201008040201ULL; 
+constexpr U64 Diagonal_A1_H8 = 0x8040201008040201ULL;
 constexpr U64 Diagonal_H1_A8 = 0x0102040810204080ULL;
 
 constexpr U64 LightSquares = 0x55AA55AA55AA55AAULL;
@@ -68,13 +71,25 @@ constexpr U64 not_H = 9187201950435737471ULL;	// ~FileH_Bits bitboard value wher
 constexpr U64 not_HG = 4557430888798830399ULL;	// ~FileH_Bits & ~FileG_Bits bitboard value where the HG files are set to zero
 constexpr U64 not_AB = 18229723555195321596ULL;	// ~FileA_Bits & ~FileB_Bits bitboard value where the HG files are set to zero
 
-struct Magic {
-	using Bitboard = U64;
 
-	Bitboard mask;
-	Bitboard magic;
-	Bitboard* attacks;
-	unsigned shift;
+// define pawn attacks table [side][square]
+static U64 pawnAttacks[2][64]; // 2 - sides to play, 64 - squares on a table
+
+// define knight attacks table [square]
+static U64 knightAttacks[64];
+
+// define king attack table [square]
+static U64 kingAttacks[64];
+
+// define magic bishop attack table [squares][occupancy]
+static U64 mBishopAttacks[64][512]; // 256 K
+
+// define magic rook attack table [squares][occupancy]
+static U64 mRookAttacks[64][4096]; // 2048K
+
+struct SMagic {
+	U64 mask;  // to mask relevant squares of both lines (no outer squares)
+	U64 magic; // magic 64-bit factor
 };
 
 inline void print_bitboard(U64 bitboard)
