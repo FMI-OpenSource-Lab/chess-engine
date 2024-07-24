@@ -143,13 +143,14 @@ constexpr Square make_square(File f, Rank r) { return Square((r << 3) + f); }
 // bit macros
 #define get_bit(bitboard, square) (bitboard & (1ULL << square)) // checks for available bit
 #define set_bit(bitboard, square) (bitboard |= (1ULL << square)) // set piece to square
-#define rm_bit(bitboard, square) (get_bit(bitboard, square) ? bitboard ^= (1ULL << square) : 0) // if theres a 1 remove it, if 0 don't
+#define rm_bit(bitboard, square) ((bitboard) &= ~(1ULL << (square))) // if theres a 1 remove it, if 0 don't
 
 // Allow to use File--, File++, Rank-- and Rank++ 
 #define ENABLE_INCR_OPERATORS_ON(T) \
 		inline T& operator++(T& d) { return d = T(int(d) + 1); } \
 		inline T& operator--(T& d) { return d = T(int(d) - 1); }
 
+ENABLE_INCR_OPERATORS_ON(Piece)
 ENABLE_INCR_OPERATORS_ON(PieceType)
 ENABLE_INCR_OPERATORS_ON(Square)
 ENABLE_INCR_OPERATORS_ON(File)

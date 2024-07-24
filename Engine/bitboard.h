@@ -25,6 +25,11 @@ constexpr U64 squareBB(Square square)
 	return (1ULL << square);
 }
 
+namespace Bitboards
+{
+	void init();
+};
+
 // overloads of bitwise operators between bitboard and square for testing purposes
 inline U64 operator&(U64 b, Square s) { return b & squareBB(s); }
 inline U64 operator|(U64 b, Square s) { return b | squareBB(s); }
