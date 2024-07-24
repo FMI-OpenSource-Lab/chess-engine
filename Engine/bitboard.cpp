@@ -85,3 +85,9 @@ extern U64 rookAttacks(U64 occ, Square sq)
 
     return mRookAttacks[sq][occ];
 }
+
+void Bitboards::init()
+{
+    init_sliders_attacks(BISHOP);
+    init_sliders_attacks(ROOK);
+}
