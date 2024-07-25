@@ -11,11 +11,7 @@ U64 bitboards[12];
 U64 occupancies[3];
 
 // side to move
-<<<<<<< HEAD
 int side;
-=======
-int side = -1;
->>>>>>> a05689ae40a33a453c55e0df60cd5e7c832587e5
 
 // en passant square
 int enpassant = NONE;
@@ -38,8 +34,6 @@ int castle;
 	1001	white king => king side
 			black king => queen side
 */
-
-enum { WK = 1, WQ = 2, BK = 4, BQ = 8 };
 
 char ascii_pieces[13] = "PNBRQKpnbrqk";
 
@@ -76,7 +70,6 @@ void print_board()
 
 	// print files
 	std::cout << "\n     a b c d e f g h \n\n";
-<<<<<<< HEAD
 
 	printf("	Side:		%s\n", (!side) ? "white" : "black");
 	printf("	Enpassant:	%s\n", (enpassant != NONE) ? squareToCoordinates[enpassant] : "no");
@@ -87,10 +80,34 @@ void print_board()
 		(castle & BQ) ? 'q' : '-');
 }
 
-char start_fen[] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+void parse_fen(char* fen)
+{
+
+
+	// loop over board squares
+	for (Rank rank = RANK_1; rank <= RANK_8; ++rank)
+	{
+		for (File file = FILE_A; file <= FILE_H; ++file)
+		{
+			if ((*fen >= 'a' && *fen <= 'z'))
+			{
+
+			}
+		}
+	}
+
+}
 
 void load_fen(char* fenPtr)
 {
+	// reset boards and state variables
+	memset(bitboards, 0ULL, sizeof(bitboards));
+	memset(occupancies, 0ULL, sizeof(occupancies));
+
+	side = 0;
+	enpassant = NONE;
+	castle = 0;
+
 	std::map<char, Piece> pieceTypeFromSymbolMp;
 
 	pieceTypeFromSymbolMp['p'] = BLACK_PAWN;
@@ -111,7 +128,7 @@ void load_fen(char* fenPtr)
 	int rank = 0;
 
 	// loop over char elements
-	for (char c = *fenPtr; c; c = *++fenPtr)
+	for (char c = *fenPtr; c != ' '; c = *++fenPtr)
 	{
 		if (c == '/') // new line
 		{
@@ -122,12 +139,11 @@ void load_fen(char* fenPtr)
 		}
 		else
 		{
-			if (isdigit(c))
+			if (c >= '0' && c <= '9')
 			{
 				// leve this many empty spaces
-				// probably mod 8 empty spaces
-
-				file += ('0' + c);
+				// c derefrences the pointer and subtracs '0' to convert it into int
+				file += c - '0';
 			}
 			else // its a piece
 			{
@@ -137,8 +153,53 @@ void load_fen(char* fenPtr)
 			}
 		}
 	}
-=======
->>>>>>> a05689ae40a33a453c55e0df60cd5e7c832587e5
+
+	// for paring side to move
+	// increment to reach the side to move
+	*fenPtr++;
+
+	// side to move
+	(*fenPtr == 'w') ? (side = WHITE) : (side = BLACK);
+
+	// go to castling rights
+	fenPtr += 2;
+
+	// parse castling rights
+	while (*fenPtr != ' ')
+	{
+		switch (*fenPtr)
+		{
+		case 'K': castle |= WK; break;
+		case 'Q': castle |= WQ; break;
+		case 'k': castle |= BK; break;
+		case 'q': castle |= BQ; break;
+		case '-': break;
+		}
+
+		*fenPtr++;
+	}
+
+	*fenPtr++;
+
+	// enpassant square
+	if (*fenPtr != '-')
+	{
+		// parse file and rank
+		int file = fenPtr[0] - 'a';
+		int rank = 8 - (fenPtr[1] - '0');
+
+		// init enpassant suqare
+		enpassant = rank * 8 + file;
+	}
+	else
+		enpassant = NONE;
+
+	// populate occupancy bitboard
+	for (Piece piece = WHITE_PAWN; piece <= WHITE_KING; ++piece)
+	{
+		occupancies[WHITE] |= bitboards[piece];
+		occupancies[BLACK] |= bitboards[piece + 6]; // + 6 pieces
+	}
 }
 
 void init_all()
@@ -146,7 +207,6 @@ void init_all()
 	initAttacks();
 
 	Bitboards::init();
-<<<<<<< HEAD
 
 	// init side to move
 	side = WHITE;
@@ -154,90 +214,19 @@ void init_all()
 	enpassant = E3;
 	// init castling rights
 	castle |= WK | WQ | BK | BQ;
-
+	char tricky_position[] = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ";
 	// load the starting fen
-	load_fen(start_fen);
-=======
-}
-
-void load_fen(std::string fen)
-{
-	std::map<char, int> pieceTypeFromSymbolMp;
-
-	pieceTypeFromSymbolMp['p'] = BLACK_PAWN;
-	pieceTypeFromSymbolMp['n'] = BLACK_KNIGHT;
-	pieceTypeFromSymbolMp['b'] = BLACK_BISHOP;
-	pieceTypeFromSymbolMp['r'] = BLACK_ROOK;
-	pieceTypeFromSymbolMp['q'] = BLACK_QUEEN;
-	pieceTypeFromSymbolMp['k'] = BLACK_KING;
-
-	pieceTypeFromSymbolMp['P'] = WHITE_PAWN;
-	pieceTypeFromSymbolMp['N'] = WHITE_KNIGHT;
-	pieceTypeFromSymbolMp['B'] = WHITE_BISHOP;
-	pieceTypeFromSymbolMp['R'] = WHITE_ROOK;
-	pieceTypeFromSymbolMp['Q'] = WHITE_QUEEN;
-	pieceTypeFromSymbolMp['K'] = WHITE_KING;
-
-	int file = 0;
-	int rank = 7;
-
-	// Not tested
-	for (int i = 0; i < fen.length(); i++)
-	{
-		if (fen[i] == '/')
-		{
-			file = 0;
-			rank--;
-		}
-		else
-		{
-			if (isdigit(fen[i]))
-				file += ('0' + fen[i]);
-			else
-			{
-				Color color = isupper(fen[i]) ? WHITE : BLACK;
-				PieceType py = static_cast<PieceType>(pieceTypeFromSymbolMp[(char)tolower(fen[i])]);
-				bitboards[rank * 8 + file] = py | color;
-				file++;
-			}
-		}
-	}
-}
-
-void set_up_pieces()
-{
-	// init pawns
-	for (Square s = A2; s <= H2; ++s)
-	{
-		set_bit(bitboards[WHITE_PAWN], s);
-		set_bit(bitboards[BLACK_PAWN], s - (8 * 5));
-	}
-
-	// init heavy pieces
-	for (Square s = A1; s <= H1; ++s)
-	{
-		if (s % 8)
-
-			set_bit(bitboards[WHITE_ROOK], A1);
-		set_bit(bitboards[WHITE_ROOK], H1);
-
-		set_bit(bitboards[BLACK_ROOK], A8);
-		set_bit(bitboards[BLACK_ROOK], H8);
-	}
-
->>>>>>> a05689ae40a33a453c55e0df60cd5e7c832587e5
+	load_fen(tricky_position);
 }
 
 int main()
 {
 	init_all();
 
-<<<<<<< HEAD
-=======
-	set_up_pieces();
-
->>>>>>> a05689ae40a33a453c55e0df60cd5e7c832587e5
 	print_board();
+	
+	print_bitboard(occupancies[WHITE]);
+	print_bitboard(occupancies[BLACK]);
 
 	system("pause");
 	return 0;
