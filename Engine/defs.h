@@ -17,8 +17,6 @@
 
 // define bitboard data type
 #define U64 unsigned long long 
-#define start_fen "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ";
-// #define tricky_position "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 "
 
 enum Square : int {
 	A8, B8, C8, D8, E8, F8, G8, H8,
@@ -115,13 +113,6 @@ enum Rank : int {
 	RANK_7,
 	RANK_8,
 	RANK_NB
-};
-
-enum MoveType {
-	NORMAL,
-	PROMOTION	= 1 << 14,
-	EN_PASSANT	= 2 << 14,
-	CASTLING	= 3 << 14
 };
 
 enum { WK = 1, WQ = 2, BK = 4, BQ = 8 };

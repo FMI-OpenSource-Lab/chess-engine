@@ -3,6 +3,7 @@
 #define ATTACKS_H
 
 #include <array>
+
 #include "bitboard.h"
 
 using Bitboard = U64;

@@ -130,12 +130,14 @@
     <ClCompile Include="attacks.cpp" />
     <ClCompile Include="bitboard.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="position.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bitboard.h" />
     <ClInclude Include="consts.h" />
     <ClInclude Include="defs.h" />
     <ClInclude Include="attacks.h" />
+    <ClInclude Include="position.h" />
     <ClInclude Include="random.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

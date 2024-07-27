@@ -18,6 +18,7 @@ extern constexpr int countBits(U64 bitboard);
 extern void init_sliders_attacks(PieceType py);
 extern U64 bishopAttacks(U64 occ, Square sq);
 extern U64 rookAttacks(U64 occ, Square sq);
+extern U64 queenAttacks(U64 occ, Square sq);
 
 constexpr U64 squareBB(Square square)
 {
