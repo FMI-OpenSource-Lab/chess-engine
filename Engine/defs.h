@@ -123,6 +123,7 @@ constexpr Direction operator*(int i, Direction d) { return Direction(i * int(d))
 constexpr bool is_ok(Square s) { return s >= A1 && s <= H8; }
 constexpr File file_of(Square s) { return File(s % 8); }
 constexpr Rank rank_of(Square s) { return Rank(s >> 3); }
+constexpr Square get_square(Rank rank, File file) { return static_cast<Square>(static_cast<int>(rank) * 8 + static_cast<int>(file)); }
 
 // Additional operators to add a Direction to a Square
 constexpr Square operator+(Square s, Direction d) { return Square(int(s) + int(d)); }

@@ -5,13 +5,11 @@
 
 void Position::init(const char* fen)
 {
-	Position pos;
-
-	pos.set(fen);
-	pos.print_board();
+	set(fen);
+	print_board();
 }
 
-Position& Position::set(const char* fenPtr)
+extern inline void set(const char* fenPtr)
 {
 	/*
 	FEN describes a Chess position, It is one line ASCII string.
@@ -80,7 +78,7 @@ Position& Position::set(const char* fenPtr)
 			else // its a piece
 			{
 				Square sq = static_cast<Square>(8 * rank + file);
-				Piece piece = get_piece_from_symbol(c);
+				Piece piece = get_piece(c);
 
 				set_bit(bitboards[piece], sq);
 				file++;
@@ -137,11 +135,9 @@ Position& Position::set(const char* fenPtr)
 		// All the black pieces start from 7 to 12
 		occupancies[BLACK] |= bitboards[piece + 6]; // + 6 pieces
 	}
-
-	return *this;
 }
 
-void Position::print_board()
+extern inline void print_board()
 {
 	std::cout << "\n";
 
@@ -182,7 +178,7 @@ void Position::print_board()
 		(castle & BQ) ? 'q' : '-');
 }
 
-Piece Position::get_piece_from_symbol(const char& symbol)
+extern inline Piece get_piece(const char& symbol)
 {
 	std::map<char, Piece> pieceTypeFromSymbolMp;
 

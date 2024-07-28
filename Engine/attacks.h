@@ -5,6 +5,7 @@
 #include <array>
 
 #include "bitboard.h"
+#include "position.h";
 
 using Bitboard = U64;
 
@@ -20,6 +21,23 @@ inline Bitboard maskKingAttacks(Square square);
 // generate attacks
 inline Bitboard generateBishopAttacks(Square square, Bitboard blockPiece);
 inline Bitboard generateRookAttacks(Square square, Bitboard blockPiece);
+
+inline bool is_attacked(Square s, Color c)
+{
+	// TODO: Needs fixing
+
+
+	// variables that check if a square is attacked by a piece
+	// checking the pawn attack table at square s and apply attack mask on the board that corresponds with the either side of pawns
+	// c ? get_piece('N') : get_piece('n') means that if white are attacking White pawn attack mask will be used, and similiar for black
+	bool pawn_attacked = pawnAttacks[BLACK][s] & bitboards[c ? get_piece('P') : get_piece('p')];
+	bool knight_attacked = knightAttacks[s] & bitboards[c ? get_piece('N') : get_piece('n')];
+
+	if (pawn_attacked || knight_attacked)
+		return true;
+
+	return false;
+}
 
 /* --------------- Mask attacks-------------------- */
 
