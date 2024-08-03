@@ -1,8 +1,9 @@
 ﻿#ifndef POSITION_H
 #define POSITION_H
 
-#include "defs.h"
 #include <map>
+
+#include "defs.h"
 
 
 // Starting fen string
@@ -13,13 +14,13 @@ static const char* TEST_FEN = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP
 static const char* TEST_ATTACKS_FEN = "8/8/8/3N4/8/8/8/8 w - - ";
 
 // side to move
-int side;
+static unsigned short side;
 
 // en passant square
-int enpassant = NONE;
+static unsigned short enpassant = NONE;
 
 // castling bit
-int castle;
+static int castle;
 
 /*
 	binary representation of castling rights
@@ -37,7 +38,7 @@ int castle;
 			black king => queen side
 */
 
-char ascii_pieces[13] = "PNBRQKpnbrqk";
+static char ascii_pieces[13] = "PNBRQKpnbrqk";
 
 //static char tricky_position[] = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ";
 
@@ -52,7 +53,6 @@ namespace Position
 	void init(const char* fen);
 }
 
-
 // fen string input output
 extern inline void set(const char* fenStr);
 
@@ -61,6 +61,5 @@ extern inline void print_board();
 
 // Helper methods
 extern inline Piece get_piece(const char& symbol);
-
 
 #endif // !POSITION_H

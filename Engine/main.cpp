@@ -37,7 +37,6 @@ void init_all()
 	// load the starting fen
 	Position::init(TEST_ATTACKS_FEN);
 
-	print_board();
 	print_attacked_squares(BLACK);
 }
 
