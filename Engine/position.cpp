@@ -5,11 +5,17 @@
 
 void Position::init(const char* fen)
 {
+	init_pieces();
 	set(fen);
 	print_board();
+
+	// Color c = WHITE;
+	//print_attacked_squares(c);
 }
 
-extern inline void set(const char* fenPtr)
+
+
+extern inline void set(const char* fen)
 {
 	/*
 	FEN describes a Chess position, It is one line ASCII string.
@@ -42,34 +48,38 @@ extern inline void set(const char* fenPtr)
 
 	// convert the string into char *
 	// const char* fenPtr = fenStr.c_str();
-	
-	std::istringstream ss(fenPtr);
-	unsigned short rank = 0, file = 0;
+
+	// init a pointer to the fen string
+	char* fen_ptr = (char*)fen;
+
+	std::istringstream ss(fen_ptr);
+	Rank rank = RANK_1;
+	File file = FILE_A;
 
 	// reset boards and state variables
 	memset(bitboards, 0ULL, sizeof(bitboards));
 	memset(occupancies, 0ULL, sizeof(occupancies));
 
-	side = 0;
+	side = COLOR_NB;
 	enpassant = NONE;
-	castle = 0;
+	castle = CASTLE_NB;
 
 	ss >> std::noskipws;
 
 	// 1. Piece placement
 	// loop over char elements
-	for (char c = *fenPtr; c != ' '; c = *++fenPtr)
+	for (char c = *fen_ptr; c != ' '; c = *++fen_ptr)
 	{
 		if (c == '/') // new line
 		{
 			// resent file
 			// go to the next rank
-			file = 0;
-			rank++;
+			file = FILE_A;
+			++rank;
 		}
 		else
 		{
-			if (c >= '0' && c <= '9')
+			if (isdigit(c))
 			{
 				// leve this many empty spaces
 				// c derefrences the pointer and subtracs '0' to convert it into int
@@ -77,29 +87,26 @@ extern inline void set(const char* fenPtr)
 			}
 			else // its a piece
 			{
-				Square sq = static_cast<Square>(8 * rank + file);
+				Square sq = get_square(rank, file);
 				Piece piece = get_piece(c);
 
 				set_bit(bitboards[piece], sq);
-				file++;
+				++file;
 			}
 		}
 	}
 
-	// for paring side to move
-	// increment to reach the side to move
-	*fenPtr++;
-
 	// 2. Side to move
-	(*fenPtr == 'w') ? (side = WHITE) : (side = BLACK);
+	// inc pointer to castling rights and check the side to move
+	(*++fen_ptr == 'w') ? (side = WHITE) : (side = BLACK);
 
 	// go to castling rights
-	fenPtr += 2;
+	fen_ptr += 2;
 
 	// 3. Castling rights
-	while (*fenPtr != ' ')
+	while (*fen_ptr != ' ')
 	{
-		switch (*fenPtr)
+		switch (*fen_ptr++)
 		{
 		case 'K': castle |= WK; break;
 		case 'Q': castle |= WQ; break;
@@ -107,18 +114,14 @@ extern inline void set(const char* fenPtr)
 		case 'q': castle |= BQ; break;
 		case '-': break;
 		}
-
-		*fenPtr++;
 	}
 
-	*fenPtr++;
-
 	// 3. Enpassant square
-	if (*fenPtr != '-')
+	if (*++fen_ptr != '-')
 	{
 		// parse file and rank
-		int file = fenPtr[0] - 'a';
-		int rank = 8 - (fenPtr[1] - '0');
+		int file = fen_ptr[0] - 'a';
+		int rank = 8 - (fen_ptr[1] - '0');
 
 		// init enpassant suqare
 		enpassant = rank * 8 + file;
@@ -178,10 +181,8 @@ extern inline void print_board()
 		(castle & BQ) ? 'q' : '-');
 }
 
-extern inline Piece get_piece(const char& symbol)
+void init_pieces()
 {
-	std::map<char, Piece> pieceTypeFromSymbolMp;
-
 	// initialize piece types from symbols
 	pieceTypeFromSymbolMp['p'] = BLACK_PAWN;
 	pieceTypeFromSymbolMp['n'] = BLACK_KNIGHT;
@@ -196,6 +197,6 @@ extern inline Piece get_piece(const char& symbol)
 	pieceTypeFromSymbolMp['R'] = WHITE_ROOK;
 	pieceTypeFromSymbolMp['Q'] = WHITE_QUEEN;
 	pieceTypeFromSymbolMp['K'] = WHITE_KING;
-
-	return pieceTypeFromSymbolMp[symbol];
 }
+
+inline Piece get_piece(const char& symbol) { return pieceTypeFromSymbolMp[symbol]; }

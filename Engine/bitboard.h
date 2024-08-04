@@ -15,7 +15,7 @@ constexpr inline U64 set_occupancy(int index, int bitsInMask, U64 attackMask);
 extern constexpr int getLS1B(U64 bitboard);
 extern constexpr int countBits(U64 bitboard);
 
-extern void init_sliders_attacks(PieceType py);
+void init_sliders_attacks(PieceType py);
 extern U64 bishopAttacks(U64 occ, Square sq);
 extern U64 rookAttacks(U64 occ, Square sq);
 extern U64 queenAttacks(U64 occ, Square sq);
@@ -76,16 +76,6 @@ constexpr U64 not_A = 18374403900871474942ULL;	// ~FileA_Bits bitboard value whe
 constexpr U64 not_H = 9187201950435737471ULL;	// ~FileH_Bits bitboard value where the H file is set to zero
 constexpr U64 not_HG = 4557430888798830399ULL;	// ~FileH_Bits & ~FileG_Bits bitboard value where the HG files are set to zero
 constexpr U64 not_AB = 18229723555195321596ULL;	// ~FileA_Bits & ~FileB_Bits bitboard value where the HG files are set to zero
-
-
-// define pawn attacks table [side][square]
-static U64 pawnAttacks[2][64]; // 2 - sides to play, 64 - squares on a table
-
-// define knight attacks table [square]
-static U64 knightAttacks[64];
-
-// define king attack table [square]
-static U64 kingAttacks[64];
 
 // define magic bishop attack table [squares][occupancy]
 static U64 mBishopAttacks[64][512]; // 256 K

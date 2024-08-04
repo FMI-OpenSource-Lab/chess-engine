@@ -115,7 +115,13 @@ enum Rank : int {
 	RANK_NB
 };
 
-enum { WK = 1, WQ = 2, BK = 4, BQ = 8 };
+enum CastlingRigths : int {
+	CASTLE_NB = 0,
+	WK = 1,
+	WQ = 2,
+	BK = 4,
+	BQ = 8
+};
 
 constexpr Direction operator+(Direction d1, Direction d2) { return Direction(int(d1) + int(d2)); }
 constexpr Direction operator*(int i, Direction d) { return Direction(i * int(d)); }
@@ -131,6 +137,12 @@ constexpr Square operator-(Square s, Direction d) { return Square(int(s) - int(d
 inline Square& operator+=(Square& s, Direction d) { return s = s + d; }
 inline Square& operator-=(Square& s, Direction d) { return s = s - d; }
 
+// Additional operators to increment the ranks by some value
+constexpr File operator+(File s, int d) { return File(int(s) + d); }
+constexpr File operator-(File s, int d) { return File(int(s) - d); }
+
+inline File& operator+=(File& f, int i) { return f = f + i; }
+
 // Toggle the colour
 constexpr Color operator~(Color c) { return Color(c ^ 1); }
 
@@ -141,10 +153,10 @@ constexpr Square make_square(File f, Rank r) { return Square((r << 3) + f); }
 #define set_bit(bitboard, square) (bitboard |= (1ULL << square)) // set piece to square
 #define rm_bit(bitboard, square) ((bitboard) &= ~(1ULL << (square))) // if theres a 1 remove it, if 0 don't
 
-// Allow to use File--, File++, Rank-- and Rank++ 
+// Allow to use ++File, ++File, --Rank, --Rank and etc.
 #define ENABLE_INCR_OPERATORS_ON(T) \
 		inline T& operator++(T& d) { return d = T(int(d) + 1); } \
-		inline T& operator--(T& d) { return d = T(int(d) - 1); }
+		inline T& operator--(T& d) { return d = T(int(d) - 1); } 
 
 ENABLE_INCR_OPERATORS_ON(Piece)
 ENABLE_INCR_OPERATORS_ON(PieceType)

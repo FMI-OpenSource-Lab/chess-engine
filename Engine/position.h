@@ -4,23 +4,23 @@
 #include <map>
 
 #include "defs.h"
+#include "attacks.h"
 
+// Map that stores pieces as symbols
+static std::map<char, Piece> pieceTypeFromSymbolMp;
 
 // Starting fen string
 static const char* START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ";
 
 // Some example fen string
 static const char* TEST_FEN = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ";
-static const char* TEST_ATTACKS_FEN = "8/8/8/3N4/8/8/8/8 w - - ";
+static const char* TEST_ATTACKS_FEN = "8/8/8/3P4/8/8/8/8 w - - ";
 
 // side to move
-static unsigned short side;
+static Color side;
 
 // en passant square
 static unsigned short enpassant = NONE;
-
-// castling bit
-static int castle;
 
 /*
 	binary representation of castling rights
@@ -38,6 +38,9 @@ static int castle;
 			black king => queen side
 */
 
+// castling bit
+static short castle;
+
 static char ascii_pieces[13] = "PNBRQKpnbrqk";
 
 //static char tricky_position[] = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ";
@@ -53,6 +56,9 @@ namespace Position
 	void init(const char* fen);
 }
 
+// print attacked squares
+extern void print_attacked_squares(Color& colour);
+
 // fen string input output
 extern inline void set(const char* fenStr);
 
@@ -60,6 +66,8 @@ extern inline void set(const char* fenStr);
 extern inline void print_board();
 
 // Helper methods
-extern inline Piece get_piece(const char& symbol);
+void init_pieces();
+// inline bool is_attacked(const Square& square, const Color& side_to_move);
+inline Piece get_piece(const char& symbol);
 
 #endif // !POSITION_H
