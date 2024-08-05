@@ -7,34 +7,38 @@
 
 #include <array>
 
-using Bitboard = U64;
-// Prototypes
 
-namespace Attacks
+namespace ChessEngine
 {
-	void init();
-};
+	using Bitboard = U64;
+	// Prototypes
 
-// pawn attacks table [side][square]
-static U64 pawnAttacks[2][64]; // 2 - sides to play, 64 - squares on a table
+	namespace Attacks
+	{
+		void init();
+	};
 
-// knight attacks table [square]
-static U64 knightAttacks[64];
+	// pawn attacks table [side][square]
+	static U64 pawnAttacks[2][64]; // 2 - sides to play, 64 - squares on a table
 
-// king attack table [square]
-static U64 kingAttacks[64];
+	// knight attacks table [square]
+	static U64 knightAttacks[64];
 
-// mask attacks
-extern constexpr Bitboard pawn_attacks_mask(const Color& color, const Square& square);
-extern constexpr Bitboard knight_attacks_mask(const Square& square);
-extern constexpr Bitboard bishop_attacks_mask(const Square& square);
-extern constexpr Bitboard rook_attacks_mask(const Square& square);
-extern constexpr Bitboard king_attacks_mask(const Square& square);
+	// king attack table [square]
+	static U64 kingAttacks[64];
 
-// generate attacks
-extern constexpr Bitboard bishop_attacks_generate(const Square& square, const Bitboard& blockPiece);
-extern constexpr Bitboard rook_attacks_generate(const Square& square, const Bitboard& blockPiece);
+	// mask attacks
+	extern constexpr Bitboard pawn_attacks_mask(const Color& color, const Square& square);
+	extern constexpr Bitboard knight_attacks_mask(const Square& square);
+	extern constexpr Bitboard bishop_attacks_mask(const Square& square);
+	extern constexpr Bitboard rook_attacks_mask(const Square& square);
+	extern constexpr Bitboard king_attacks_mask(const Square& square);
+	extern constexpr bool is_square_attacked(const Square& square, const Color& side_to_move);
 
-void initAttacks(U64** pawnAttacks, U64* knightAttacks, U64* kingAttacks);
+	// generate attacks
+	extern constexpr Bitboard bishop_attacks_generate(const Square& square, const Bitboard& blockPiece);
+	extern constexpr Bitboard rook_attacks_generate(const Square& square, const Bitboard& blockPiece);
 
+	void initAttacks();
+}
 #endif // !ATTACKS_H
