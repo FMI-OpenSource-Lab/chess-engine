@@ -7,8 +7,6 @@
 
 namespace ChessEngine
 {
-
-
 	// Map that stores pieces as symbols
 	static std::map<char, Piece> pieceTypeFromSymbolMp;
 

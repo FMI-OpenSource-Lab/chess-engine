@@ -75,7 +75,8 @@ enum Piece : int {
 enum Color
 {
 	WHITE,
-	BLACK
+	BLACK,
+	BOTH
 };
 
 enum Direction : int {

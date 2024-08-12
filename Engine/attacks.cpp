@@ -3,22 +3,36 @@
 namespace ChessEngine
 {
 	// check if square is attacked
-	extern constexpr bool is_square_attacked(const Square& square, const Color& side_to_move)
+	extern constexpr bool is_square_attacked(const Square& square, const Color& color)
 	{
 		// variables that check if a square is attacked by a piece
 		// checking the pawn attack table at square s and apply attack mask on the board that corresponds with the either side of pawns
 
 		// side_to_move ? get_piece(UPPERCASE SYMBOL) : get_piece(lowercase symbol) means that if white are attacking White pawn attack mask will be used, and similiar for black
 
-		bool isWhite = side_to_move == WHITE;
+		int sd = WHITE;
 
-		Piece get_pawn_piece = isWhite
-			? get_piece('P') // if is White playing
-			: get_piece('p'); // if Black is playing
+		if (sd == WHITE)
+		{
+			Piece P = get_piece('P');
 
-		bool is_pawn_square_attacked =
-			pawnAttacks[!isWhite ? BLACK : WHITE][square] &
-			bitboards[get_pawn_piece];
+			return (pawnAttacks[BLACK][square] & bitboards[P]);
+		}
+
+		//bool isWhite =
+		//	color == WHITE;
+
+		//Piece get_pawn_piece = color
+		//	? get_piece('P') // if is White playing
+		//	: get_piece('p'); // if Black is playing
+
+		//bool is_pawn_square_attacked =
+		//	pawnAttacks[isWhite ? BLACK : WHITE][square] &
+		//	bitboards[get_pawn_piece];
+
+		//// attacked by white pawns
+		//if (color && (pawnAttacks[!color][square] & bitboards[get_pawn_piece]))
+		//	return true;
 
 		//bool is_knight_square_attacked =
 		//	knightAttacks[square] &
@@ -27,7 +41,7 @@ namespace ChessEngine
 		//			? get_piece('N') // for White
 		//			: get_piece('n')]; // for Black
 
-		return is_pawn_square_attacked;
+		return false;
 	}
 
 	/* --------------- Mask attacks-------------------- */
@@ -170,8 +184,11 @@ namespace ChessEngine
 				break;
 		}
 
-		for (rank = targetRank - 1, file = targetFile + 1; (1ULL >> (rank * 8 + file) & blockPiece), rank >= 0 && file <= 7; rank--, file++)
+		for (rank = targetRank - 1, file = targetFile + 1; rank >= 0 && file <= 7; rank--, file++)
 		{
+			if (1ULL >> (rank * 8 + file) & blockPiece)
+				break;
+
 			attacks |= (1ULL << (rank * 8 + file));
 
 			if (1ULL << (rank * 8 + file) & blockPiece)
@@ -232,9 +249,9 @@ namespace ChessEngine
 		return attacks;
 	};
 
-
-	void initAttacks()
+	void Attacks::init()
 	{
+		// initialize attack tables
 		for (Square sq = A8; sq <= H1; ++sq)
 		{
 			pawnAttacks[WHITE][sq] = pawn_attacks_mask(WHITE, sq);
@@ -245,11 +262,5 @@ namespace ChessEngine
 
 			kingAttacks[sq] = king_attacks_mask(sq);
 		}
-	}
-
-	void Attacks::init()
-	{
-		// Needs fixing
-		initAttacks();
 	}
 }
