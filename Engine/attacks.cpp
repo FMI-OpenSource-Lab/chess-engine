@@ -1,47 +1,41 @@
 #include "attacks.h"
+#include "position.h"
 
 namespace ChessEngine
 {
+	// pawn attacks table [side][square]
+	Bitboard pawnAttacks[2][64]; // 2 - sides to play, 64 - squares on a table
+
+	// knight attacks table [square]
+	Bitboard knightAttacks[64];
+
+	// king attack table [square]
+	Bitboard kingAttacks[64];
+
 	// check if square is attacked
-	extern constexpr bool is_square_attacked(const Square& square, const Color& color)
+	extern int is_square_attacked(const Square& square, const Color color)
 	{
-		// variables that check if a square is attacked by a piece
-		// checking the pawn attack table at square s and apply attack mask on the board that corresponds with the either side of pawns
+		Piece P = get_piece('P');
+		Piece p = get_piece('p');
 
-		// side_to_move ? get_piece(UPPERCASE SYMBOL) : get_piece(lowercase symbol) means that if white are attacking White pawn attack mask will be used, and similiar for black
+		Piece N = get_piece('N');
+		Piece n = get_piece('n');
 
-		int sd = WHITE;
+		U64 b_pawn_mask = pawn_attacks_mask(BLACK, square);
+		U64 w_pawn_mask = pawn_attacks_mask(WHITE, square);
 
-		if (sd == WHITE)
-		{
-			Piece P = get_piece('P');
+		// attacked by white
+		if ((color == WHITE) && (b_pawn_mask & bitboards[P]))
+			return 1;
+		
+		if ((color == BLACK) && (w_pawn_mask & bitboards[p]))
+			return 1;
 
-			return (pawnAttacks[BLACK][square] & bitboards[P]);
-		}
+		// attacked by black
+		if ((color == BLACK) && (w_pawn_mask & bitboards[p]))
+			return 1;
 
-		//bool isWhite =
-		//	color == WHITE;
-
-		//Piece get_pawn_piece = color
-		//	? get_piece('P') // if is White playing
-		//	: get_piece('p'); // if Black is playing
-
-		//bool is_pawn_square_attacked =
-		//	pawnAttacks[isWhite ? BLACK : WHITE][square] &
-		//	bitboards[get_pawn_piece];
-
-		//// attacked by white pawns
-		//if (color && (pawnAttacks[!color][square] & bitboards[get_pawn_piece]))
-		//	return true;
-
-		//bool is_knight_square_attacked =
-		//	knightAttacks[square] &
-		//	bitboards[
-		//		(int)side_to_move
-		//			? get_piece('N') // for White
-		//			: get_piece('n')]; // for Black
-
-		return false;
+		return 0;
 	}
 
 	/* --------------- Mask attacks-------------------- */
@@ -58,7 +52,7 @@ namespace ChessEngine
 		set_bit(bitboard, square);
 
 		// white
-		if (!color)
+		if (color == WHITE)
 		{
 			// generate attacks
 			if ((bitboard >> 7) & not_A) attacks |= (bitboard >> 7);
@@ -67,8 +61,8 @@ namespace ChessEngine
 		else // black
 		{
 			// generate attacks
-			if ((bitboard << 7) & not_HG) attacks |= (bitboard << 7);
-			if ((bitboard << 9) & not_AB) attacks |= (bitboard << 9);
+			if ((bitboard << 7) & not_H) attacks |= (bitboard << 7);
+			if ((bitboard << 9) & not_A) attacks |= (bitboard << 9);
 		}
 
 		return attacks;
@@ -249,18 +243,22 @@ namespace ChessEngine
 		return attacks;
 	};
 
-	void Attacks::init()
+	void init_attack_tables()
 	{
 		// initialize attack tables
 		for (Square sq = A8; sq <= H1; ++sq)
 		{
 			pawnAttacks[WHITE][sq] = pawn_attacks_mask(WHITE, sq);
-
 			pawnAttacks[BLACK][sq] = pawn_attacks_mask(BLACK, sq);
 
 			knightAttacks[sq] = knight_attacks_mask(sq);
 
 			kingAttacks[sq] = king_attacks_mask(sq);
 		}
+	}
+
+	void Attacks::init()
+	{
+		init_attack_tables();
 	}
 }

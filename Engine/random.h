@@ -3,6 +3,7 @@
 #define RANDOM_H
 
 #include <cstdint>
+#include <vector>
 #include "attacks.h"
 
 namespace ChessEngine
@@ -57,14 +58,18 @@ namespace ChessEngine
 		// find magic number
 		U64 find_magic(Square square, int relevant_bits, PieceType bishop)
 		{
+			using std::vector;
+
+			// Using vectors instead of arrays to not having to deal with the stack or heap memory allocation
+
 			// init occupancies
-			U64 occ[4096]{};
+			vector<U64> occ(4096);
 
 			// init attack tables
-			U64 attacks[4096]{};
+			vector<U64> attacks(4096);
 
 			// init used attacks
-			U64 used_attacks[4096];
+			vector<U64> used_attacks(4096);
 
 			// init attack mask for current piece
 			U64 attack_mask = bishop ? bishop_attacks_mask(square) : rook_attacks_mask(square);
@@ -90,7 +95,10 @@ namespace ChessEngine
 
 				if (countBits((attack_mask * magic_number) & 0xFF00000000000000) < 6) continue;
 
-				memset(used_attacks, 0ULL, sizeof(used_attacks));
+				// does the same job as memset
+				std::fill(used_attacks.begin(), used_attacks.end(), 0ULL);
+
+				// memset(used_attacks, 0ULL, sizeof(used_attacks));
 
 				// flags
 				int index, fail;

@@ -1,21 +1,18 @@
 ﻿#ifndef POSITION_H
 #define POSITION_H
 
-#include <map>
-
 #include "defs.h"
+
+#include <vector>
 
 namespace ChessEngine
 {
-	// Map that stores pieces as symbols
-	static std::map<char, Piece> pieceTypeFromSymbolMp;
-
 	// Starting fen string
 	static const char* START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ";
 
 	// Some example fen string
 	static const char* TEST_FEN = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ";
-	static const char* TEST_ATTACKS_FEN = "8/8/8/3P4/8/8/8/8 w - - ";
+	static const char* TEST_ATTACKS_FEN = "8/8/8/3PN3/8/8/3p4/8 w - - ";
 
 	// side to move
 	static Color side;
@@ -54,11 +51,11 @@ namespace ChessEngine
 
 	namespace Position
 	{
-		void init(const char* fen, Color& c);
+		void init(const char* fen, Color c);
 	}
 
 	// print attacked squares
-	extern void print_attacked_squares(Color& colour);
+	extern void print_attacked_squares(Color colour);
 
 	// fen string input output
 	void set(const char* fen);
@@ -67,9 +64,6 @@ namespace ChessEngine
 	extern inline void print_board();
 
 	// Helper methods
-	void init_pieces();
-	// inline bool is_attacked(const Square& square, const Color& side_to_move);
 	inline Piece get_piece(const char& symbol);
-
 }
 #endif // !POSITION_H

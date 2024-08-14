@@ -6,16 +6,19 @@
 
 namespace ChessEngine
 {
-	void Position::init(const char* fen, Color& c)
+	void Position::init(const char* fen, Color c = WHITE)
 	{
-		init_pieces();
 		set(fen);
 		print_board();
 
-		print_attacked_squares(c);
+		std::cout << "Print attack squares for white: \n\n";
+		print_attacked_squares(WHITE);
+
+		std::cout << "Print attack squares for black: \n\n";
+		print_attacked_squares(BLACK);
 	}
 
-	extern void print_attacked_squares(Color& colour)
+	extern void print_attacked_squares(Color color)
 	{
 		std::cout << std::endl;
 
@@ -28,7 +31,8 @@ namespace ChessEngine
 				if (!file)
 					printf(" %d ", 8 - rank);
 
-				printf(" %d", is_square_attacked(square, colour) ? 1 : 0);
+				printf(" %d", is_square_attacked(square, color));
+				// std::cout << " PA: " << pawnAttacks[BLACK][square] << " ";
 			}
 
 			std::cout << std::endl;
@@ -87,8 +91,6 @@ namespace ChessEngine
 		enpassant = NONE;
 		castle = CASTLE_NB;
 
-		ss >> std::noskipws;
-
 		// 1. Piece placement
 		// loop over char elements
 		for (char c = *fen_ptr; c != ' '; c = *++fen_ptr)
@@ -105,7 +107,7 @@ namespace ChessEngine
 				if (isdigit(c))
 				{
 					// leve this many empty spaces
-					// c derefrences the pointer and subtracs '0' to convert it into int
+					// c derefrences the pointer and subtracts '0' to convert it into int
 					file += c - '0';
 				}
 				else // its a piece
@@ -114,6 +116,7 @@ namespace ChessEngine
 					Piece piece = get_piece(c);
 
 					set_bit(bitboards[piece], sq);
+
 					++file;
 				}
 			}
@@ -189,7 +192,7 @@ namespace ChessEngine
 				printf(" %c", (pieceIndex == -1) ? '.' : ascii_pieces[pieceIndex]);
 			}
 
-			std::cout << std::endl;
+			std::cout << "\n";
 		}
 
 		// print files
@@ -204,23 +207,23 @@ namespace ChessEngine
 			(castle & BQ) ? 'q' : '-');
 	}
 
-	void init_pieces()
+	inline Piece get_piece(const char& symbol)
 	{
-		// initialize piece types from symbols
-		pieceTypeFromSymbolMp['p'] = BLACK_PAWN;
-		pieceTypeFromSymbolMp['n'] = BLACK_KNIGHT;
-		pieceTypeFromSymbolMp['b'] = BLACK_BISHOP;
-		pieceTypeFromSymbolMp['r'] = BLACK_ROOK;
-		pieceTypeFromSymbolMp['q'] = BLACK_QUEEN;
-		pieceTypeFromSymbolMp['k'] = BLACK_KING;
+		switch (symbol)
+		{
+		case 'p': return BLACK_PAWN;
+		case 'n': return BLACK_KNIGHT;
+		case 'b': return BLACK_BISHOP;
+		case 'r': return BLACK_ROOK;
+		case 'q': return BLACK_QUEEN;
+		case 'k': return BLACK_KING;
 
-		pieceTypeFromSymbolMp['P'] = WHITE_PAWN;
-		pieceTypeFromSymbolMp['N'] = WHITE_KNIGHT;
-		pieceTypeFromSymbolMp['B'] = WHITE_BISHOP;
-		pieceTypeFromSymbolMp['R'] = WHITE_ROOK;
-		pieceTypeFromSymbolMp['Q'] = WHITE_QUEEN;
-		pieceTypeFromSymbolMp['K'] = WHITE_KING;
+		case 'P': return WHITE_PAWN;
+		case 'N': return WHITE_KNIGHT;
+		case 'B': return WHITE_BISHOP;
+		case 'R': return WHITE_ROOK;
+		case 'Q': return WHITE_QUEEN;
+		case 'K': return WHITE_KING;
+		}
 	}
-
-	inline Piece get_piece(const char& symbol) { return pieceTypeFromSymbolMp[symbol]; }
 }
