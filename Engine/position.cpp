@@ -3,18 +3,19 @@
 
 #include<iostream>
 #include <sstream>
+#include <memory>
 
 namespace ChessEngine
 {
+	U64 bitboards[12];
+	U64 occupancies[3];
+
 	void Position::init(const char* fen, Color c = WHITE)
 	{
-		set(fen);
+		set("8/8/8/3R4/8/3r4/8/8 w - - ");
 		print_board();
 
-		std::cout << "Print attack squares for white: \n\n";
 		print_attacked_squares(WHITE);
-
-		std::cout << "Print attack squares for black: \n\n";
 		print_attacked_squares(BLACK);
 	}
 
@@ -31,7 +32,7 @@ namespace ChessEngine
 				if (!file)
 					printf(" %d ", 8 - rank);
 
-				printf(" %d", is_square_attacked(square, color));
+				printf(" %d", is_square_attacked(square, color) ? 1 : 0);
 				// std::cout << " PA: " << pawnAttacks[BLACK][square] << " ";
 			}
 

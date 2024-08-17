@@ -4,6 +4,9 @@
 
 #include "bitboard.h"
 
+#include<vector>
+#include <memory>
+
 namespace ChessEngine
 {
 	using Bitboard = U64;
@@ -14,11 +17,20 @@ namespace ChessEngine
 		void init();
 	};
 
+	// pawn attacks table [side][square]
+	extern Bitboard pawnAttacks[2][64]; // 2 - sides to play, 64 - squares on a table
+
+	// knight attacks table [square]
+	extern Bitboard knightAttacks[64];
+
+	// king attack table [square]
+	extern Bitboard kingAttacks[64];
+
 	// Initialize the attack tables (pawns, king, knight)
 	void init_attack_tables();
 
 	// check if square is attacked
-	extern int is_square_attacked(const Square& square, const Color color);
+	extern bool is_square_attacked(const Square& square, const Color color);
 
 	// mask attacks
 	extern constexpr Bitboard pawn_attacks_mask(const Color& color, const Square& square);

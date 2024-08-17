@@ -46,8 +46,8 @@ namespace ChessEngine
 	// char unicode_pieces[12] = { '♙','♘','♗','♖','♕','♔','♟','♞','♝','♜','♛','♚' };
 
 	// piece bitboards
-	static U64 bitboards[12];
-	static U64 occupancies[3];
+	extern U64 bitboards[12];
+	extern U64 occupancies[3];
 
 	namespace Position
 	{
