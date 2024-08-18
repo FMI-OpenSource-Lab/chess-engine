@@ -10,21 +10,25 @@ namespace ChessEngine
 	// check if square is attacked
 	extern bool is_square_attacked(const Square& square, const Color color)
 	{
-		// !color means white
+		// !color -> white
 
 		// This gets the pawn attacks at the white side and square
 		// then applies bitwise AND to the opposide piece
-		bool is_pawn_attacks = pawnAttacks[!color][square]
-			& bitboards[
-				!color
-					? get_piece('P')
-					: get_piece('p')];
+		bool is_pawn_attacks = !color
+			? pawnAttacks[BLACK][square] & bitboards[get_piece('P')]
+			: pawnAttacks[WHITE][square] & bitboards[get_piece('p')];
 
 		bool is_knight_attacks = knightAttacks[square]
 			& bitboards[
 				!color
 					? get_piece('N')
 					: get_piece('n')];
+
+		bool is_king_attacks = kingAttacks[square]
+			& bitboards[
+				!color
+					? get_piece('K')
+					: get_piece('k')];
 
 		bool is_bishop_attacks = bishopAttacks(occupancies[BOTH], square)
 			& bitboards[
@@ -44,16 +48,39 @@ namespace ChessEngine
 					? get_piece('Q')
 					: get_piece('q')];
 
-		//// attacked by black
-		//if ((color == BLACK) && (w_pawn_mask & bitboards[p]))
-		//	return true;
+		return is_pawn_attacks	||
+			is_knight_attacks	||
+			is_king_attacks		||
+			is_bishop_attacks	||
+			is_rook_attacks		||
+			is_queen_attacks;
+	}
 
-		return is_pawn_attacks || is_knight_attacks || is_bishop_attacks || is_rook_attacks || is_queen_attacks;
+	void print_attacked_squares(Color color)
+	{
+		std::cout << std::endl;
+
+		for (Rank rank = RANK_1; rank <= RANK_8; ++rank)
+		{
+			for (File file = FILE_A; file <= FILE_H; ++file)
+			{
+				Square square = get_square(rank, file);
+
+				if (!file)
+					printf(" %d ", 8 - rank);
+
+				printf(" %d", is_square_attacked(square, color) ? 1 : 0);
+			}
+
+			std::cout << std::endl;
+		}
+
+		printf("\n    a b c d e f g h\n\n");
 	}
 
 	/* --------------- Mask attacks-------------------- */
 
-	extern constexpr U64 pawn_attacks_mask(const Color& color, const Square& square)
+	constexpr U64 pawn_attacks_mask(const Color& color, const Square& square)
 	{
 		// result attacks
 		Bitboard attacks = 0ULL;
@@ -81,7 +108,7 @@ namespace ChessEngine
 		return attacks;
 	}
 
-	extern constexpr Bitboard knight_attacks_mask(const Square& square)
+	constexpr Bitboard knight_attacks_mask(const Square& square)
 	{
 		// result attacks
 		Bitboard attacks = 0ULL;
@@ -108,7 +135,7 @@ namespace ChessEngine
 	}
 
 	// mask bishop attacks
-	extern constexpr Bitboard bishop_attacks_mask(const Square& square)
+	constexpr Bitboard bishop_attacks_mask(const Square& square)
 	{
 		Bitboard attacks = 0ULL;
 
@@ -127,7 +154,7 @@ namespace ChessEngine
 	}
 
 	// mask bishop attacks
-	extern constexpr Bitboard rook_attacks_mask(const Square& square)
+	constexpr Bitboard rook_attacks_mask(const Square& square)
 	{
 		Bitboard attacks = 0ULL;
 
@@ -145,7 +172,7 @@ namespace ChessEngine
 		return attacks;
 	}
 
-	extern constexpr Bitboard king_attacks_mask(const Square& square)
+	constexpr Bitboard king_attacks_mask(const Square& square)
 	{
 		// result attacks
 		Bitboard attacks = 0ULL;
@@ -173,7 +200,7 @@ namespace ChessEngine
 	/* --------------- Generating attacks-------------------- */
 
 	// generate bishop attacks
-	extern constexpr Bitboard bishop_attacks_generate(const Square& square, const Bitboard& blockPiece)
+	constexpr Bitboard bishop_attacks_generate(const Square& square, const Bitboard& blockPiece)
 	{
 		Bitboard attacks = 0ULL;
 
@@ -220,7 +247,7 @@ namespace ChessEngine
 	}
 
 	// generate rook attacks
-	extern constexpr Bitboard rook_attacks_generate(const Square& square, const Bitboard& blockPiece)
+	constexpr Bitboard rook_attacks_generate(const Square& square, const Bitboard& blockPiece)
 	{
 		Bitboard attacks = 0ULL;
 
@@ -256,7 +283,7 @@ namespace ChessEngine
 		return attacks;
 	};
 
-	void init_attack_tables()
+	void Attacks::init()
 	{
 		// initialize attack tables
 		for (Square sq = A8; sq <= H1; ++sq)
@@ -268,10 +295,5 @@ namespace ChessEngine
 
 			kingAttacks[sq] = king_attacks_mask(sq);
 		}
-	}
-
-	void Attacks::init()
-	{
-		init_attack_tables();
 	}
 }

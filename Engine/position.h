@@ -51,11 +51,8 @@ namespace ChessEngine
 
 	namespace Position
 	{
-		void init(const char* fen, Color c);
+		void init(const char* fen);
 	}
-
-	// print attacked squares
-	extern void print_attacked_squares(Color colour);
 
 	// fen string input output
 	void set(const char* fen);

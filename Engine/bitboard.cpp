@@ -5,6 +5,9 @@
 
 namespace ChessEngine {
 
+	U64 mBishopAttacks[64][512];
+	U64 mRookAttacks[64][4096];
+
 	SMagic mBishopTbl[64];
 	SMagic mRookTbl[64];
 

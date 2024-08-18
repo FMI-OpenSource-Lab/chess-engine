@@ -1,6 +1,7 @@
 ﻿#include "bitboard.h"
 #include "attacks.h"
 #include "position.h"
+#include "move.h"
 
 #include <iostream>
 
@@ -15,31 +16,14 @@ void init_all()
 	Bitboards::init();
 
 	// load the starting fen
-	Position::init(TEST_ATTACKS_FEN, WHITE);
+	Position::init("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPpP/R3K2R b KQkq - 0 1 ");
+
+	generate_moves();
 }
 
 int main()
 {
 	init_all();
-
-	// print_bitboard(knight_attacks_mask(E5));
-
-	/*if (2251799813685248)
-	{
-		U64 da = (11258999068426240ULL & 2251799947902976ULL);
-
-		std::cout << "AND Operation: ";
-		std::cout << da << "\n\n\n";
-
-		std::cout << "AND Operation bb: ";
-		print_bitboard(da);
-
-		std::cout << "Pawn attack bb: ";
-		print_bitboard(11258999068426240ULL);
-
-		std::cout << "BBS bb: ";
-		print_bitboard(2251799947902976ULL);
-	}*/
 
 	system("pause");
 	return 0;

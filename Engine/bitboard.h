@@ -80,10 +80,10 @@ namespace ChessEngine
 	constexpr U64 not_AB = 18229723555195321596ULL;	// ~FileA_Bits & ~FileB_Bits bitboard value where the HG files are set to zero
 
 	// define magic bishop attack table [squares][occupancy]
-	static U64 mBishopAttacks[64][512]; // 256 K
+	extern U64 mBishopAttacks[64][512]; // 256 K
 
 	// define magic rook attack table [squares][occupancy]
-	static U64 mRookAttacks[64][4096]; // 2048K
+	extern U64 mRookAttacks[64][4096]; // 2048K
 
 	struct SMagic {
 		U64 mask;  // to mask relevant squares of both lines (no outer squares)
@@ -142,7 +142,7 @@ namespace ChessEngine
 		return occupancy;
 	}
 
-	extern constexpr int getLS1B(U64 bitboard)
+	constexpr int getLS1B(U64 bitboard)
 	{
 		// check if bb is not 0
 		if (bitboard)
@@ -155,7 +155,7 @@ namespace ChessEngine
 			return -1;
 	}
 
-	extern constexpr int countBits(U64 bitboard)
+	constexpr int countBits(U64 bitboard)
 	{
 		// init variable for count
 		int count = 0;

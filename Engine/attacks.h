@@ -26,8 +26,8 @@ namespace ChessEngine
 	// king attack table [square]
 	extern Bitboard kingAttacks[64];
 
-	// Initialize the attack tables (pawns, king, knight)
-	void init_attack_tables();
+	// print attacked squares
+	extern void print_attacked_squares(Color color);
 
 	// check if square is attacked
 	extern bool is_square_attacked(const Square& square, const Color color);

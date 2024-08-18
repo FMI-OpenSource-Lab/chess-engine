@@ -10,36 +10,10 @@ namespace ChessEngine
 	U64 bitboards[12];
 	U64 occupancies[3];
 
-	void Position::init(const char* fen, Color c = WHITE)
+	void Position::init(const char* fen)
 	{
-		set("8/8/8/3R4/8/3r4/8/8 w - - ");
+		set(fen);
 		print_board();
-
-		print_attacked_squares(WHITE);
-		print_attacked_squares(BLACK);
-	}
-
-	extern void print_attacked_squares(Color color)
-	{
-		std::cout << std::endl;
-
-		for (Rank rank = RANK_1; rank <= RANK_8; ++rank)
-		{
-			for (File file = FILE_A; file <= FILE_H; ++file)
-			{
-				Square square = get_square(rank, file);
-
-				if (!file)
-					printf(" %d ", 8 - rank);
-
-				printf(" %d", is_square_attacked(square, color) ? 1 : 0);
-				// std::cout << " PA: " << pawnAttacks[BLACK][square] << " ";
-			}
-
-			std::cout << std::endl;
-		}
-
-		printf("\n    a b c d e f g h\n\n");
 	}
 
 	void set(const char* fen)
@@ -165,6 +139,10 @@ namespace ChessEngine
 			// All the black pieces start from 7 to 12
 			occupancies[BLACK] |= bitboards[piece + 6]; // + 6 pieces
 		}
+
+		// occupanices for both sides
+		occupancies[BOTH] |= occupancies[WHITE] | occupancies[BLACK];
+		// occupancies[BOTH] |= occupancies[BLACK];
 	}
 
 	extern inline void print_board()

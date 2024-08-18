@@ -130,6 +130,7 @@
     <ClCompile Include="attacks.cpp" />
     <ClCompile Include="bitboard.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="move.cpp" />
     <ClCompile Include="position.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -137,6 +138,7 @@
     <ClInclude Include="consts.h" />
     <ClInclude Include="defs.h" />
     <ClInclude Include="attacks.h" />
+    <ClInclude Include="move.h" />
     <ClInclude Include="position.h" />
     <ClInclude Include="random.h" />
   </ItemGroup>
