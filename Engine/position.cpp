@@ -10,6 +10,11 @@ namespace ChessEngine
 	U64 bitboards[12];
 	U64 occupancies[3];
 
+	// side to move
+	Color side;
+	Square enpassant;
+	CastlingRigths castle;
+
 	void Position::init(const char* fen)
 	{
 		set(fen);
@@ -109,10 +114,10 @@ namespace ChessEngine
 		{
 			switch (*fen_ptr++)
 			{
-			case 'K': castle |= WK; break;
-			case 'Q': castle |= WQ; break;
-			case 'k': castle |= BK; break;
-			case 'q': castle |= BQ; break;
+			case 'K': castle = castle | WK; break;
+			case 'Q': castle = castle | WQ; break;
+			case 'k': castle = castle | BK; break;
+			case 'q': castle = castle | BQ; break;
 			case '-': break;
 			}
 		}
@@ -125,7 +130,7 @@ namespace ChessEngine
 			int rank = 8 - (fen_ptr[1] - '0');
 
 			// init enpassant suqare
-			enpassant = rank * 8 + file;
+			enpassant = get_square(rank, file);
 		}
 		else
 			enpassant = NONE;
@@ -203,6 +208,7 @@ namespace ChessEngine
 		case 'R': return WHITE_ROOK;
 		case 'Q': return WHITE_QUEEN;
 		case 'K': return WHITE_KING;
+		default: return EMPTY;
 		}
 	}
 }

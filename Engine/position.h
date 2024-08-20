@@ -15,10 +15,10 @@ namespace ChessEngine
 	static const char* TEST_ATTACKS_FEN = "8/8/8/3PN3/8/8/3p4/8 w - - ";
 
 	// side to move
-	static Color side;
+	extern Color side;
 
 	// en passant square
-	static unsigned short enpassant = NONE;
+	extern Square enpassant;
 
 	/*
 		binary representation of castling rights
@@ -37,7 +37,7 @@ namespace ChessEngine
 	*/
 
 	// castling bit
-	static short castle;
+	extern CastlingRigths castle;
 
 	static char ascii_pieces[13] = "PNBRQKpnbrqk";
 

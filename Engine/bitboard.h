@@ -15,6 +15,7 @@ namespace ChessEngine
 	constexpr inline U64 set_occupancy(int index, int bitsInMask, U64 attackMask);
 
 	extern constexpr int getLS1B(U64 bitboard);
+	extern constexpr void resetLSB(U64& bitboard);
 	extern constexpr int countBits(U64 bitboard);
 
 	void init_sliders_attacks(PieceType py);
@@ -24,7 +25,6 @@ namespace ChessEngine
 
 	constexpr U64 squareBB(Square square)
 	{
-		assert(is_ok(square));
 		return (1ULL << square);
 	}
 
@@ -56,19 +56,19 @@ namespace ChessEngine
 	constexpr U64 FileG_Bits = FileA_Bits << 6;
 	constexpr U64 FileH_Bits = 0x8080808080808080ULL;
 
-	// Ranks, displayed look flipped
-	constexpr U64 Rank1_Bits = 0xFF;
-	constexpr U64 Rank2_Bits = Rank1_Bits << (8 * 1);
-	constexpr U64 Rank3_Bits = Rank1_Bits << (8 * 2);
-	constexpr U64 Rank4_Bits = Rank1_Bits << (8 * 3);
-	constexpr U64 Rank5_Bits = Rank1_Bits << (8 * 4);
-	constexpr U64 Rank6_Bits = Rank1_Bits << (8 * 5);
-	constexpr U64 Rank7_Bits = Rank1_Bits << (8 * 6);
-	constexpr U64 Rank8_Bits = 0x8080808080808080;
+	// Ranks
+	constexpr U64 Rank8_Bits = 0xFF;
+	constexpr U64 Rank7_Bits = Rank8_Bits << (8 * 1);
+	constexpr U64 Rank6_Bits = Rank8_Bits << (8 * 2);
+	constexpr U64 Rank5_Bits = Rank8_Bits << (8 * 3);
+	constexpr U64 Rank4_Bits = Rank8_Bits << (8 * 4);
+	constexpr U64 Rank3_Bits = Rank8_Bits << (8 * 5);
+	constexpr U64 Rank2_Bits = Rank8_Bits << (8 * 6);
+	constexpr U64 Rank1_Bits = Rank8_Bits << (8 * 7);
 
-	// displayed looks flipped
-	constexpr U64 Diagonal_A1_H8 = 0x8040201008040201ULL;
-	constexpr U64 Diagonal_H1_A8 = 0x0102040810204080ULL;
+	// Diagonals
+	constexpr U64 Diagonal_H1_A8 = 0x8040201008040201ULL;
+	constexpr U64 Diagonal_A1_H8 = 0x0102040810204080ULL;
 
 	constexpr U64 LightSquares = 0x55AA55AA55AA55AAULL;
 	constexpr U64 DarkSquares = 0xAA55AA55AA55AA55ULL;
@@ -153,6 +153,11 @@ namespace ChessEngine
 		}
 		else
 			return -1;
+	}
+
+	constexpr void resetLSB(U64& bitboard)
+	{
+		bitboard &= bitboard - 1;
 	}
 
 	constexpr int countBits(U64 bitboard)
