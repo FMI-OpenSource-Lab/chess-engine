@@ -31,6 +31,21 @@ namespace ChessEngine
 		PROMOTION_QUEEN,
 	};
 
+	// Get all pawn attacks on the respective bits on the board
+	inline U64 all_board_pawn_attacks(U64 wattacks[], U64 wpawns)
+	{
+		U64 pawn_attack_bb = 0ULL;
+
+		while (wpawns)
+		{
+			int source = getLS1B(wpawns);
+			pawn_attack_bb |= wattacks[source] | wpawns;
+			resetLSB(wpawns);
+		}
+
+		return pawn_attack_bb;
+	}
+
 	// go nort
 	inline U64 down_one(U64 b) { return b << 8; }
 	// go sout
@@ -69,44 +84,17 @@ namespace ChessEngine
 		return black_p_able_to_push(bpawns, emptyRank6);
 	}
 
-	extern inline void generate_moves();
+	// extern inline void generate_moves();
 
-	class Move
+	struct GenerateMoves
 	{
-	private:
-		// How bits are arranged
-		// promotion piece - 2 bits
-		// type - 2 bits 
-		// source - 6 bits
-		// target - 6 bits
-		uint16_t move;
-	public:
-		Move() = default;
-		constexpr explicit Move(std::uint16_t m) : move(m) {}
-
-		constexpr Move(Square source, Square target)
-			: move((source << 6) + target) {}
-
-		inline Move(Square source, Square target, MoveType mt)
-			: move((mt << 12) | (source << 6) | (target << 0)) { }
-
-		constexpr Square from_square() const
-		{
-			return Square((move >> 6) & 0x3F);
-		}
-
-		constexpr Square to_square() const
-		{
-			return Square(move & 0x3F);
-		}
-
-		constexpr Square target() const { return Square(move & 0x3F); }
-		constexpr Square source() const { return Square((move >> 6) & 0x3F); }
-		constexpr MoveType type() const { return MoveType((move >> 12) & 0x3); }
-		constexpr PromotionType promotion_type() const { return PromotionType((move >> 14) & 0x3); }
-
-		bool operator==(Move m) const { return move == m.move; }
-		bool operator!=(Move m) const { return move != m.move; }
+		void generate();
+		void pawn_moves();
+		void king_moves();
+		void knight_moves();
+		void bishop_moves();
+		void rook_moves();
+		void queen_moves();
 	};
 }
 

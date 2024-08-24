@@ -142,6 +142,8 @@ constexpr Square operator+(Square s, int d) { return Square(int(s) + d); }
 inline Square& operator+=(Square& s, Direction d) { return s = s + d; }
 inline Square& operator-=(Square& s, Direction d) { return s = s - d; }
 
+inline bool operator==(Square s1, Square s2) { return int(s1) == int(s2); }
+
 // Additional operators to increment the ranks by some value
 constexpr File operator+(File s, int d) { return File(int(s) + d); }
 constexpr File operator-(File s, int d) { return File(int(s) - d); }
