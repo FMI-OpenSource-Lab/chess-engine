@@ -14,6 +14,8 @@ namespace ChessEngine
 	// Declare prototypes
 	constexpr inline U64 set_occupancy(int index, int bitsInMask, U64 attackMask);
 
+	extern constexpr Square getLS1B_square(U64 bitboard);
+	
 	extern constexpr int getLS1B(U64 bitboard);
 	extern constexpr void resetLSB(U64& bitboard);
 	extern constexpr int countBits(U64 bitboard);
@@ -155,25 +157,31 @@ namespace ChessEngine
 			return -1;
 	}
 
+	constexpr Square getLS1B_square(U64 bitboard)
+	{
+		// check if bb is not 0
+		if (bitboard)
+		{
+			// count trailing bits before LS1B
+			U64 twosComplement = ~bitboard + 1; // -bitboard is equivelent
+			return get_square(countBits((bitboard & twosComplement) - 1));
+		}
+		else
+			return NONE;
+	}
+
 	constexpr void resetLSB(U64& bitboard)
 	{
 		bitboard &= bitboard - 1;
 	}
 
+	// Counting algorithm that works better where most bits in bitboard are 0
 	constexpr int countBits(U64 bitboard)
 	{
-		// init variable for count
 		int count = 0;
 
-		// loop unltill board is empty
-		while (bitboard)
-		{
-			// increment
-			count++;
-
-			// reset LSB
-			bitboard &= bitboard - 1;
-		}
+		for (count = 0; bitboard; count++)
+			resetLSB(bitboard);
 
 		return count;
 	}

@@ -84,17 +84,14 @@ namespace ChessEngine
 		return black_p_able_to_push(bpawns, emptyRank6);
 	}
 
-	// extern inline void generate_moves();
+	extern inline void generate_moves();
 
 	struct GenerateMoves
 	{
-		void generate();
 		void pawn_moves();
-		void king_moves();
-		void knight_moves();
-		void bishop_moves();
-		void rook_moves();
-		void queen_moves();
+		void castle_moves();
+
+		void piece_moves(PieceType pt);
 	};
 }
 

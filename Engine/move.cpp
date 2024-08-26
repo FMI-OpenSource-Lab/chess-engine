@@ -6,27 +6,29 @@
 
 namespace ChessEngine
 {
-	void GenerateMoves::generate()
+	void generate_moves()
 	{
 		printf("\n");
 
-		// generate pawn moves
-		pawn_moves();
+		GenerateMoves gm;
 
-		// generate king moves
-		king_moves();
+		// generate pawn moves
+		gm.pawn_moves();
+
+		// generate castle moves
+		gm.castle_moves();
 
 		// generate knight moves
-		knight_moves();
+		gm.piece_moves(KNIGHT);
 
 		// generate bishop moves
-		bishop_moves();
+		gm.piece_moves(BISHOP);
 
 		// generate rook moves
-		rook_moves();
+		gm.piece_moves(ROOK);
 
 		// generate queen moves
-		queen_moves();
+		gm.piece_moves(QUEEN);
 	}
 
 	void GenerateMoves::pawn_moves()
@@ -153,7 +155,7 @@ namespace ChessEngine
 		}
 	}
 
-	void GenerateMoves::king_moves()
+	void GenerateMoves::castle_moves()
 	{
 		// kingside castle is available
 		if ((castle & WK) && !side)
@@ -210,41 +212,48 @@ namespace ChessEngine
 		}
 	}
 
-	void GenerateMoves::knight_moves()
+	// King, Knight, Rook, Bishop and Queen moves generator
+	void GenerateMoves::piece_moves(PieceType pt)
 	{
-		U64 knight_bb = !side ? bitboards[WHITE_KNIGHT] : bitboards[BLACK_KNIGHT];
-		U64 empty = !side ? ~occupancies[WHITE] : ~occupancies[BLACK];
+		Piece p = static_cast<Piece>(!side ? pt - 1 : pt + 5);
+
+		// bitboard containing the pieces
+		U64 bitboard = bitboards[p];
+		// target squares
+		U64 empty = ~occupancies[side];
+		// occupanices for the opposide side
+		U64 occ = occupancies[~side];
 		U64 attacks;
-
-		while (knight_bb)
+		
+		while (bitboard)
 		{
-			int source_square_index = getLS1B(knight_bb);
+			Square source = getLS1B_square(bitboard);
 
-			attacks = knightAttacks[source_square_index] & empty;
+			attacks =
+				pt == KNIGHT ? knightAttacks[source]
+				: pt == BISHOP ? bishopAttacks(occupancies[BOTH], source)
+				: pt == ROOK ? rookAttacks(occupancies[BOTH], source)
+				: pt == QUEEN ? queenAttacks(occupancies[BOTH], source) 
+				: kingAttacks[source];
+
+			attacks &= empty;
 
 			while (attacks)
 			{
 				int target = getLS1B(attacks);
 
-				// TODO: Make quiet move and capture move
-				// make bitboard mask of every knight capture move
+				// quiet moves
+				if (!get_bit(occ, target))
+					printf("%s%s piece quiet move\n",
+						squareToCoordinates[source], squareToCoordinates[target]);
+				else
+					printf("%s%s piece target capture\n",
+						squareToCoordinates[source], squareToCoordinates[target]);
+
+				resetLSB(attacks);
 			}
+
+			resetLSB(bitboard);
 		}
-
-	}
-
-	void GenerateMoves::bishop_moves()
-	{
-
-	}
-
-	void GenerateMoves::rook_moves()
-	{
-
-	}
-
-	void GenerateMoves::queen_moves()
-	{
-
 	}
 }
