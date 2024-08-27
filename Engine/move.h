@@ -8,12 +8,48 @@
 
 namespace ChessEngine
 {
-	// A move needs 16 bits to be stored
-	//
-	// bit  0-5: destination square (from 0 to 63)
-	// bit  6-11: source square (from 0 to 63)
-	// bit 12-13: promotion piece type - 2 (from KNIGHT-2 to QUEEN-2)
-	// bit 14-15: special move flag: promotion (1), en passant (2), castling (3)
+	/*
+		Binary move bits
+
+		0000 0000 0000 0000 0011 1111 source square				| 6 bits
+		0000 0000 0000 1111 1100 0000 target square				| 6 bits
+		0000 0000 1111 0000 0000 0000 piece						| 4 bits
+		0000 1111 0000 0000 0000 0000 promoted piece			| 4 bits
+		0001 0000 0000 0000 0000 0000 capture flag				| 1 bit
+		0010 0000 0000 0000 0000 0000 double push flag			| 1 bit
+		0100 0000 0000 0000 0000 0000 enpassant capture flag	| 1 bit
+		1000 0000 0000 0000 0000 0000 castling flag				| 1 bit
+
+		Hexidecimal constants
+
+		source square			| 0x3f
+		target square			| 0xfc0
+		piece					| 0xf000
+		promoted piece			| 0xf0000
+		capture flag			| 0x100000
+		double push flag		| 0x200000
+		enpassan capture flag	| 0x400000
+		castling flag			| 0x800000
+	*/
+
+#define encode_move(source, target, piece, promoted, capturef, doublef, enpassantf, castlingf)	\
+	(source << 0) |			\
+	(target << 6) |			\
+	(piece << 12) |			\
+	(promoted << 16) |		\
+	(capturef << 20) |		\
+	(doublef << 21) |		\
+	(enpassantf << 22) |	\
+	(castlingf << 23)
+
+#define get_move_source(move) (move & 0x3f)
+#define get_move_target(move) ((move & 0xfc0) >> 6)
+#define get_move_piece(move) ((move & 0xf000) >> 12)
+#define get_move_promoted(move) ((move & 0xf0000) >> 16)
+#define get_move_capture(move) (move & 0x100000)
+#define get_move_double(move) (move & 0x200000)
+#define get_move_enpassant(move) (move & 0x400000)
+#define get_move_castling(move) (move & 0x800000)
 
 	enum MoveType : uint16_t
 	{
@@ -30,6 +66,22 @@ namespace ChessEngine
 		PROMOTION_ROOK,
 		PROMOTION_QUEEN,
 	};
+
+	typedef struct
+	{
+		// moves
+		int moves[256];
+
+		// move count
+		int count;
+	} moves;
+	
+	extern inline void generate_moves(moves* move_list);
+
+	extern inline void pawn_moves(moves* move_list);
+	extern inline void castle_moves(moves* move_list);
+	extern inline void piece_moves(PieceType pt, moves* move_list);
+
 
 	// Get all pawn attacks on the respective bits on the board
 	inline U64 all_board_pawn_attacks(U64 wattacks[], U64 wpawns)
@@ -84,15 +136,8 @@ namespace ChessEngine
 		return black_p_able_to_push(bpawns, emptyRank6);
 	}
 
-	extern inline void generate_moves();
-
-	struct GenerateMoves
-	{
-		void pawn_moves();
-		void castle_moves();
-
-		void piece_moves(PieceType pt);
-	};
+	extern void print_move(int move);
+	extern inline void print_move_list(moves* move_list);
+	extern inline void add_move(moves* move_list, int move);
 }
-
 #endif // !MOVE_H

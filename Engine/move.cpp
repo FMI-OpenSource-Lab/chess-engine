@@ -6,32 +6,35 @@
 
 namespace ChessEngine
 {
-	void generate_moves()
+	void generate_moves(moves* move_list)
 	{
 		printf("\n");
 
-		GenerateMoves gm;
+		move_list->count = 0;
 
 		// generate pawn moves
-		gm.pawn_moves();
+		pawn_moves(move_list);
 
 		// generate castle moves
-		gm.castle_moves();
+		castle_moves(move_list);
 
 		// generate knight moves
-		gm.piece_moves(KNIGHT);
+		piece_moves(KNIGHT, move_list);
 
 		// generate bishop moves
-		gm.piece_moves(BISHOP);
+		piece_moves(BISHOP, move_list);
 
 		// generate rook moves
-		gm.piece_moves(ROOK);
+		piece_moves(ROOK, move_list);
 
 		// generate queen moves
-		gm.piece_moves(QUEEN);
+		piece_moves(QUEEN, move_list);
+
+		// generate queen moves
+		piece_moves(KING, move_list);
 	}
 
-	void GenerateMoves::pawn_moves()
+	inline void pawn_moves(moves* move_list)
 	{
 		// target and source squares
 		Square target, source;
@@ -58,6 +61,8 @@ namespace ChessEngine
 		// promotion rank depending on the side playing
 		U64 promotion_rank = is_white ? Rank8_Bits : Rank1_Bits;
 
+		Piece piece = !side ? WHITE_PAWN : BLACK_PAWN;
+		
 		while (pushed_pawnes)
 		{
 			// target square that the pawn will land
@@ -70,14 +75,21 @@ namespace ChessEngine
 			// promotion
 			if (target & promotion_rank)
 			{
-				printf("promotion: %s%s qrbn\n",
-					squareToCoordinates[source], squareToCoordinates[target]);
+				for (Piece p = WHITE_QUEEN; p >= WHITE_KNIGHT; --p)
+				{
+					if (!side)
+						add_move(move_list,
+							encode_move(source, target, piece, p, 0, 0, 0, 0));
+					else
+						add_move(move_list,
+							encode_move(source, target, piece, p + 6, 0, 0, 0, 0));
+				}
 			}
 			else
 			{
 				// for single push
-				printf("target: %s%s\n",
-					squareToCoordinates[source], squareToCoordinates[target]);
+				add_move(move_list,
+					encode_move(source, target, piece, 0, 0, 0, 0, 0));
 
 				// for double push
 				if (double_pushed_pawnes)
@@ -85,8 +97,9 @@ namespace ChessEngine
 					target = get_square(getLS1B(double_pushed_pawnes));
 					source = is_white ? target + 16 : target - 16;
 
-					printf("double push: %s%s\n",
-						squareToCoordinates[source], squareToCoordinates[target]);
+					add_move(move_list,
+						encode_move(source, target, piece, 0, 0, 1, 0, 0));
+
 
 					resetLSB(double_pushed_pawnes);
 				}
@@ -113,14 +126,20 @@ namespace ChessEngine
 			// promotion
 			if (target & promotion_rank)
 			{
-				printf("promotion capture: %s%s qrbn\n",
-					squareToCoordinates[source_square], squareToCoordinates[target]);
+				for (Piece p = WHITE_QUEEN; p >= WHITE_KNIGHT; --p)
+				{
+					if (!side)
+						add_move(move_list,
+							encode_move(source_square, target, piece, p, 1, 0, 0, 0));
+					else
+						add_move(move_list,
+							encode_move(source_square, target, piece, p + 6, 1, 0, 0, 0));
+				}
 			}
 			else
 			{
-				// print messeges
-				printf("target capture: %s%s\n",
-					squareToCoordinates[source_square], squareToCoordinates[target]);
+				add_move(move_list,
+					encode_move(source_square, target, piece, 0, 1, 0, 0, 0));
 			}
 
 			resetLSB(attacks);
@@ -148,14 +167,13 @@ namespace ChessEngine
 				// get the targeted enpassant squares
 				int target_enpassant_idx = getLS1B(enpassant_attacks);
 
-				printf("pawn enpassant capture: %s%s\n",
-					squareToCoordinates[source_square_idx],
-					squareToCoordinates[target_enpassant_idx]);
+				add_move(move_list,
+					encode_move(source_square_idx, target_enpassant_idx, piece, 0, 1, 0, 1, 0));
 			}
 		}
 	}
 
-	void GenerateMoves::castle_moves()
+	inline void castle_moves(moves* move_list)
 	{
 		// kingside castle is available
 		if ((castle & WK) && !side)
@@ -166,7 +184,8 @@ namespace ChessEngine
 				!is_square_attacked(E1, BLACK) &&
 				!is_square_attacked(F1, BLACK))
 			{
-				printf("castling move: e1g1\n");
+				add_move(move_list,
+					encode_move(E1, G1, WHITE_KING, 0, 0, 0, 0, 1));
 			}
 		}
 
@@ -180,7 +199,8 @@ namespace ChessEngine
 				!is_square_attacked(E1, BLACK) &&
 				!is_square_attacked(D1, BLACK))
 			{
-				printf("castling move: e1c1\n");
+				add_move(move_list,
+					encode_move(E1, C1, WHITE_KING, 0, 0, 0, 0, 1));
 			}
 		}
 
@@ -193,7 +213,8 @@ namespace ChessEngine
 				!is_square_attacked(E8, WHITE) &&
 				!is_square_attacked(F8, WHITE))
 			{
-				printf("castling move: e8g8\n");
+				add_move(move_list,
+					encode_move(E8, G8, BLACK_KING, 0, 0, 0, 0, 1));
 			}
 		}
 
@@ -207,13 +228,14 @@ namespace ChessEngine
 				!is_square_attacked(E8, WHITE) &&
 				!is_square_attacked(D8, WHITE))
 			{
-				printf("castling move: e8c8\n");
+				add_move(move_list,
+					encode_move(E8, C8, BLACK_KING, 0, 0, 0, 0, 1));
 			}
 		}
 	}
 
 	// King, Knight, Rook, Bishop and Queen moves generator
-	void GenerateMoves::piece_moves(PieceType pt)
+	inline void piece_moves(PieceType pt, moves* move_list)
 	{
 		Piece p = static_cast<Piece>(!side ? pt - 1 : pt + 5);
 
@@ -224,7 +246,7 @@ namespace ChessEngine
 		// occupanices for the opposide side
 		U64 occ = occupancies[~side];
 		U64 attacks;
-		
+
 		while (bitboard)
 		{
 			Square source = getLS1B_square(bitboard);
@@ -233,7 +255,7 @@ namespace ChessEngine
 				pt == KNIGHT ? knightAttacks[source]
 				: pt == BISHOP ? bishopAttacks(occupancies[BOTH], source)
 				: pt == ROOK ? rookAttacks(occupancies[BOTH], source)
-				: pt == QUEEN ? queenAttacks(occupancies[BOTH], source) 
+				: pt == QUEEN ? queenAttacks(occupancies[BOTH], source)
 				: kingAttacks[source];
 
 			attacks &= empty;
@@ -244,16 +266,67 @@ namespace ChessEngine
 
 				// quiet moves
 				if (!get_bit(occ, target))
-					printf("%s%s piece quiet move\n",
-						squareToCoordinates[source], squareToCoordinates[target]);
+				{
+					add_move(move_list,
+						encode_move(source, target, p, 0, 0, 0, 0, 0));
+				}
 				else
-					printf("%s%s piece target capture\n",
-						squareToCoordinates[source], squareToCoordinates[target]);
+				{
+					add_move(move_list,
+						encode_move(source, target, p, 0, 1, 0, 0, 0));
+				}
 
 				resetLSB(attacks);
 			}
 
 			resetLSB(bitboard);
 		}
+	}
+
+	void print_move(int move)
+	{
+		printf("%s%s%c\n",
+			squareToCoordinates[get_move_source(move)],
+			squareToCoordinates[get_move_target(move)],
+			ascii_pieces[get_move_promoted(move)]);
+	}
+
+	inline void print_move_list(moves* move_list)
+	{
+		if (!move_list->count)
+		{
+			printf("\n	 No moves in the move list\n");
+			return;
+		}
+
+		printf("\n	 move     piece   capture   double flag   enpassant flag   castling flag\n\n");
+
+		for (size_t move_count = 0; move_count < move_list->count; move_count++)
+		{
+			int move = move_list->moves[move_count];
+			int promoted_index = get_move_promoted(move);
+
+			printf("	 %s%s%c    %c       %d         %d             %d                %d\n",
+				squareToCoordinates[get_move_source(move)],
+				squareToCoordinates[get_move_target(move)],
+				!promoted_index ? ' ' : ascii_pieces[promoted_index],
+				ascii_pieces[get_move_piece(move)],
+				get_move_capture(move) ? 1 : 0,
+				get_move_double(move) ? 1 : 0,
+				get_move_enpassant(move) ? 1 : 0,
+				get_move_castling(move) ? 1 : 0
+			);
+		}
+
+		std::cout << "\n	 Total number of moves: " << move_list->count << "\n\n";
+	}
+
+	inline void add_move(moves* move_list, int move)
+	{
+		// store move
+		move_list->moves[move_list->count] = move;
+
+		// increment move count
+		move_list->count++;
 	}
 }
