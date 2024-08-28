@@ -5,9 +5,6 @@
 
 #define NAME "iuli 1.0"
 
-#include <cassert>
-//#include <cstdint>
-
 #if defined(_MSC_VER)
 	// Disable some silly and noisy warnings from MSVC compiler
 #pragma warning(disable: 4127)  // Conditional expression is constant
@@ -124,6 +121,7 @@ enum CastlingRigths : int {
 };
 
 inline CastlingRigths operator|(CastlingRigths& c, CastlingRigths a) { return CastlingRigths(int(c) | int(a)); };
+inline CastlingRigths operator&(CastlingRigths& c, int d) { return CastlingRigths(int(c) & int(d)); }
 
 constexpr Direction operator+(Direction d1, Direction d2) { return Direction(int(d1) + int(d2)); }
 constexpr Direction operator*(int i, Direction d) { return Direction(i * int(d)); }
@@ -133,6 +131,9 @@ constexpr Rank rank_of(Square s) { return Rank(s >> 3); }
 constexpr Square get_square(Rank rank, File file) { return static_cast<Square>(static_cast<int>(rank) * 8 + static_cast<int>(file)); }
 constexpr Square get_square(int rank, int file) { return static_cast<Square>(rank * 8 + file); }
 constexpr Square get_square(int square_index) { return static_cast<Square>(square_index); }
+constexpr Square make_square(File f, Rank r) { return Square((r << 3) + f); }
+
+inline bool operator==(Square s1, Square s2) { return int(s1) == int(s2); }
 
 // Additional operators to add a Direction to a Square
 constexpr Square operator+(Square s, Direction d) { return Square(int(s) + int(d)); }
@@ -141,8 +142,6 @@ constexpr Square operator-(Square s, int d) { return Square(int(s) - d); }
 constexpr Square operator+(Square s, int d) { return Square(int(s) + d); }
 inline Square& operator+=(Square& s, Direction d) { return s = s + d; }
 inline Square& operator-=(Square& s, Direction d) { return s = s - d; }
-
-inline bool operator==(Square s1, Square s2) { return int(s1) == int(s2); }
 
 // Additional operators to increment the ranks by some value
 constexpr File operator+(File s, int d) { return File(int(s) + d); }
@@ -153,7 +152,6 @@ inline File& operator+=(File& f, int i) { return f = f + i; }
 // Toggle the colour
 constexpr Color operator~(Color c) { return Color(c ^ 1); }
 
-constexpr Square make_square(File f, Rank r) { return Square((r << 3) + f); }
 
 // bit macros
 #define get_bit(bitboard, square) (bitboard & (1ULL << square)) // checks for available bit

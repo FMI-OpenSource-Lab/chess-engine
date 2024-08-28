@@ -7,6 +7,9 @@
 
 namespace ChessEngine
 {
+	// Empty fen string
+	static const char* EMPTY_FEN = "8/8/8/8/8/8/8/8 b - - ";
+
 	// Starting fen string
 	static const char* START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ";
 

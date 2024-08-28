@@ -1,4 +1,5 @@
 #include "move.h"
+#include "consts.h"
 #include "position.h"
 #include "attacks.h"
 
@@ -62,7 +63,7 @@ namespace ChessEngine
 		U64 promotion_rank = is_white ? Rank8_Bits : Rank1_Bits;
 
 		Piece piece = !side ? WHITE_PAWN : BLACK_PAWN;
-		
+
 		while (pushed_pawnes)
 		{
 			// target square that the pawn will land
@@ -328,5 +329,114 @@ namespace ChessEngine
 
 		// increment move count
 		move_list->count++;
+	}
+
+	int make_move(int move, int move_flag)
+	{
+		// quite moves
+		if (move_flag == MT_NORMAL)
+		{
+			// copy board state
+			copy_board();
+
+			// parse move
+			int source_square = get_move_source(move);
+			int target_square = get_move_target(move);
+
+			int piece = get_move_piece(move);
+			int promoted_piece = get_move_promoted(move);
+
+			int capture_f = get_move_capture(move);
+			int doublep_f = get_move_double(move);
+			int enpassant_f = get_move_enpassant(move);
+			int castling_f = get_move_castling(move);
+
+			// move piece
+			rm_bit(bitboards[piece], source_square);
+			set_bit(bitboards[piece], target_square);
+
+			// capture moves
+			if (capture_f)
+			{
+				// bitboard piece index (ranges depending on side)
+				Piece start_piece = !side ? BLACK_PAWN : WHITE_PAWN;
+				Piece end_piece = !side ? BLACK_KING : WHITE_KING;
+
+				// loop over bitboards opp to the current side to move
+				for (Piece bb_piece = start_piece; bb_piece <= end_piece; ++bb_piece)
+				{
+					if (get_bit(bitboards[bb_piece], target_square))
+					{
+						// remove if there is a piece on the target square
+						rm_bit(bitboards[bb_piece], target_square);
+						break;
+					}
+				}
+			}
+
+			// pawn promotions
+			if (promoted_piece)
+			{
+				// delete pawn from target
+				rm_bit(bitboards[!side ? WHITE_PAWN : BLACK_PAWN], target_square);
+
+				// set up promoted piece chessboard
+				set_bit(bitboards[promoted_piece], target_square);
+			}
+
+			// enpassant
+			if (enpassant_f)
+				// errase pawn
+				!side
+				? rm_bit(bitboards[BLACK_PAWN], target_square + 8)
+				: rm_bit(bitboards[WHITE_PAWN], target_square - 8);
+
+
+			//reset enpassant
+			enpassant = NONE;
+
+			// set enpassant square if double push happened
+			if (doublep_f)
+				enpassant = static_cast<Square>(!side ? target_square + 8 : target_square - 8);
+
+			if (castling_f)
+				switch (target_square)
+				{
+					// White castles kingside
+				case G1:
+					rm_bit(bitboards[WHITE_ROOK], H1);
+					set_bit(bitboards[WHITE_ROOK], F1);
+					break;
+					// White castles queenside
+				case C1:
+					rm_bit(bitboards[WHITE_ROOK], A1);
+					set_bit(bitboards[WHITE_ROOK], D1);
+					break;
+
+					// Black castles kingside
+				case G8:
+					rm_bit(bitboards[BLACK_ROOK], H8);
+					set_bit(bitboards[BLACK_ROOK], F8);
+					break;
+					// Black castles queenside
+				case C8:
+					rm_bit(bitboards[BLACK_ROOK], A8);
+					set_bit(bitboards[BLACK_ROOK], D8);
+					break;
+				}
+
+			// update castling rights
+			castle = castle & CASTLING_RIGHTS_TABLE[source_square];
+			castle = castle & CASTLING_RIGHTS_TABLE[target_square];
+		}
+		// capture moves
+		else
+		{
+			if (get_move_capture(move))
+				make_move(move, MT_NORMAL);
+
+			// don't make the move
+			return 0;
+		}
 	}
 }

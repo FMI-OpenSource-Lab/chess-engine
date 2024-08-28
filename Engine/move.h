@@ -2,6 +2,7 @@
 #define MOVE_H
 
 #include <cstdint>
+#include <string.h>
 
 #include "defs.h"
 #include "bitboard.h"
@@ -51,12 +52,32 @@ namespace ChessEngine
 #define get_move_enpassant(move) (move & 0x400000)
 #define get_move_castling(move) (move & 0x800000)
 
+
+	// 96 -> sizeof(bitboards)
+	// 24 -> sizeof(occuapncies)
+
+#define copy_board() \
+	U64 bitboards_copy[12], occupancies_copy[3];	\
+		Color side_copy;							\
+		Square enpassant_copy;						\
+		CastlingRigths castle_copy;					\
+		memcpy(bitboards_copy, bitboards, 96);		\
+		memcpy(occupancies_copy, occupancies, 24);	\
+		side_copy = side,							\
+		enpassant_copy = enpassant,					\
+		castle_copy = castle;						\
+
+#define restore_board() \
+		memcpy(bitboards, bitboards_copy, 96);		\
+		memcpy(occupancies, occupancies_copy, 24);  \
+		side = side_copy,							\
+		enpassant = enpassant_copy,					\
+		castle = castle_copy;						\
+
 	enum MoveType : uint16_t
 	{
 		MT_NORMAL,
-		MT_EN_PASSANT,
-		MT_CASTLING,
-		MT_PROMOTION
+		MT_ONLY_CAPTURES
 	};
 
 	enum PromotionType : uint8_t
@@ -75,13 +96,13 @@ namespace ChessEngine
 		// move count
 		int count;
 	} moves;
-	
+
 	extern inline void generate_moves(moves* move_list);
 
 	extern inline void pawn_moves(moves* move_list);
 	extern inline void castle_moves(moves* move_list);
 	extern inline void piece_moves(PieceType pt, moves* move_list);
-
+	extern int make_move(int move, int move_flag);
 
 	// Get all pawn attacks on the respective bits on the board
 	inline U64 all_board_pawn_attacks(U64 wattacks[], U64 wpawns)
