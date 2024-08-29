@@ -13,7 +13,13 @@
 #endif
 
 // define bitboard data type
-#define U64 unsigned long long 
+#define U64 unsigned long long
+
+#ifdef _WIN64
+	#include<windows.h>
+#else
+	#include<sys/time.h>
+#endif
 
 enum Square : int {
 	A8, B8, C8, D8, E8, F8, G8, H8,

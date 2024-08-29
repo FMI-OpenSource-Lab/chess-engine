@@ -1,12 +1,24 @@
 ﻿#include "bitboard.h"
 #include "attacks.h"
 #include "position.h"
-#include "move.h"
+#include "movegen.h"
+#include "perft.h"
 
 #include <iostream>
 #include <string.h>
 
 using namespace ChessEngine;
+
+int get_time_ms()
+{
+#ifdef _WIN64
+	return GetTickCount();
+#else
+	struct timeval time_value;
+	gettimeofday(&time_value, NULL);
+	return time_value.tv_sec * 1000 + time_value.tv_usec / 1000;
+#endif // _WIN64
+}
 
 void init_all()
 {
@@ -17,27 +29,15 @@ void init_all()
 	Bitboards::init();
 
 	// load the starting fen
-	Position::init("r3k2r/p2pqpb1/bn2pnp1/2pPN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq c6 0 1 ");
+	Position::init(TEST_FEN);
 
-	moves move_list[1];
+	// start time
+	int start = get_time_ms();
 
-	generate_moves(move_list);
+	perft_driver(2);
 
-	for (int move_count = 0; move_count < move_list->count; ++move_count)
-	{
-		int move = move_list->moves[move_count];
-
-		// preserve 
-		copy_board();
-
-		make_move(move, MT_NORMAL);
-		print_board();
-		std::cin.get();
-
-		restore_board();
-		print_board();
-		std::cin.get();
-	}
+	printf("Time taken to execute: %d ms\n", get_time_ms() - start);
+	printf("Nodes: %ld\n", nodes);
 }
 
 int main()
