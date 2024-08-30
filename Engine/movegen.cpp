@@ -2,6 +2,8 @@
 #include "consts.h"
 #include "position.h"
 #include "attacks.h"
+#include "move.h"
+#include "perft.h"
 
 namespace ChessEngine
 {
@@ -11,9 +13,6 @@ namespace ChessEngine
 
 		// generate pawn moves
 		pawn_moves(move_list);
-
-		// generate castle moves
-		castle_moves(move_list);
 
 		// generate knight moves
 		piece_moves(KNIGHT, move_list);
@@ -60,6 +59,7 @@ namespace ChessEngine
 
 		Piece piece = !side ? WHITE_PAWN : BLACK_PAWN;
 
+		// all pushed pawns bb
 		while (pushed_pawnes)
 		{
 			// target square that the pawn will land
@@ -70,15 +70,14 @@ namespace ChessEngine
 				: target - 8;
 
 			// promotion
-			if (target & promotion_rank)
+			if ((1ULL << target) & promotion_rank)
 			{
 				for (Piece p = WHITE_QUEEN; p >= WHITE_KNIGHT; --p)
 				{
-					if (is_white)
-						add_move(move_list,
-							encode_move(source, target, piece, p, 0, 0, 0, 0));
-					else
-						add_move(move_list,
+					is_white
+						? add_move(move_list,
+							encode_move(source, target, piece, p, 0, 0, 0, 0))
+						: add_move(move_list,
 							encode_move(source, target, piece, p + 6, 0, 0, 0, 0));
 				}
 			}
@@ -112,24 +111,21 @@ namespace ChessEngine
 		while (attacks)
 		{
 			// target square that the pawn will land
-			target = get_square(getLS1B(attacks));
+			target = getLS1B_square(attacks);
 
 			// By appling bitwise AND to the attack table and the pawn placement bitboard
 			// gets the source square index
-			int source_square = is_white
-				? getLS1B(pawnAttacks[BLACK][target] & pawns)
-				: getLS1B(pawnAttacks[WHITE][target] & pawns);
+			int source_square = getLS1B(pawnAttacks[~side][target] & pawns);
 
 			// promotion
-			if (target & promotion_rank)
+			if ((1ULL << target) & promotion_rank)
 			{
 				for (Piece p = WHITE_QUEEN; p >= WHITE_KNIGHT; --p)
 				{
-					if (!side)
-						add_move(move_list,
-							encode_move(source_square, target, piece, p, 1, 0, 0, 0));
-					else
-						add_move(move_list,
+					is_white
+						? add_move(move_list,
+							encode_move(source_square, target, piece, p, 1, 0, 0, 0))
+						: add_move(move_list,
 							encode_move(source_square, target, piece, p + 6, 1, 0, 0, 0));
 				}
 			}
@@ -151,21 +147,24 @@ namespace ChessEngine
 			// source square/s bitboard
 			U64 source_bb = pawnAttacks[~side][enpassant] & pawns;
 
-			// get the source square bit 
-			// will get leftmost pawn if there are two pawns with en passant possibilities
-			int source_square_idx = getLS1B(source_bb);
-			// TODO: Deal with two en passant possibilities later
-
-			// single out the attack bits that correlate with en passant square
-			U64 enpassant_attacks = pawnAttacks[side][source_square_idx] & ep_bb;
-
-			if (enpassant_attacks)
+			while (source_bb)
 			{
-				// get the targeted enpassant squares
-				int target_enpassant_idx = getLS1B(enpassant_attacks);
+				// get the source square bit 
+				int source_square_idx = getLS1B(source_bb);
 
-				add_move(move_list,
-					encode_move(source_square_idx, target_enpassant_idx, piece, 0, 1, 0, 1, 0));
+				// single out the attack bits that correlate with en passant square
+				U64 enpassant_attacks = pawnAttacks[side][source_square_idx] & ep_bb;
+
+				if (enpassant_attacks)
+				{
+					// get the targeted enpassant squares
+					int target_enpassant_idx = getLS1B(enpassant_attacks);
+
+					add_move(move_list,
+						encode_move(source_square_idx, target_enpassant_idx, piece, 0, 1, 0, 1, 0));
+				}
+
+				resetLSB(source_bb);
 			}
 		}
 	}
@@ -243,6 +242,10 @@ namespace ChessEngine
 		// occupanices for the opposide side
 		U64 occ = occupancies[~side];
 		U64 attacks;
+
+		if (pt == KING)
+			// generate castle moves
+			castle_moves(move_list);
 
 		while (bitboard)
 		{
@@ -330,6 +333,8 @@ namespace ChessEngine
 						break;
 					}
 				}
+
+				captures++;
 			}
 
 			// pawn promotions
@@ -340,14 +345,21 @@ namespace ChessEngine
 
 				// set up promoted piece chessboard
 				set_bit(bitboards[promoted_piece], target_square);
+
+				promotions++;
 			}
 
 			// enpassant
 			if (enpassant_f)
+			{
+
 				// errase pawn
 				!side
-				? rm_bit(bitboards[BLACK_PAWN], target_square + 8)
-				: rm_bit(bitboards[WHITE_PAWN], target_square - 8);
+					? rm_bit(bitboards[BLACK_PAWN], target_square + 8)
+					: rm_bit(bitboards[WHITE_PAWN], target_square - 8);
+
+				ep++;
+			}
 
 
 			//reset enpassant
@@ -358,6 +370,7 @@ namespace ChessEngine
 				enpassant = static_cast<Square>(!side ? target_square + 8 : target_square - 8);
 
 			if (castling_f)
+			{
 				switch (target_square)
 				{
 					// White castles kingside
@@ -382,6 +395,9 @@ namespace ChessEngine
 					set_bit(bitboards[BLACK_ROOK], D8);
 					break;
 				}
+
+				castles++;
+			}
 
 			// update castling rights
 			castle = castle & CASTLING_RIGHTS_TABLE[source_square];

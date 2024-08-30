@@ -73,7 +73,7 @@ namespace ChessEngine
 		castle = castle_copy;						\
 
 	// Get all pawn attacks on the respective bits on the board
-	extern inline U64 all_board_pawn_attacks(U64 wattacks[], U64 wpawns);
+	extern inline U64 all_board_pawn_attacks(U64 attacks[], U64 pawns);
 
 	// go nort
 	constexpr U64 down_one(U64 b) { return b << 8; }

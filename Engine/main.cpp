@@ -3,16 +3,18 @@
 #include "position.h"
 #include "movegen.h"
 #include "perft.h"
+#include "move.h"
 
 #include <iostream>
 #include <string.h>
+#include <bitset>
 
 using namespace ChessEngine;
 
 int get_time_ms()
 {
 #ifdef _WIN64
-	return GetTickCount();
+	return GetTickCount64();
 #else
 	struct timeval time_value;
 	gettimeofday(&time_value, NULL);
@@ -37,7 +39,8 @@ void init_all()
 	perft_driver(2);
 
 	printf("Time taken to execute: %d ms\n", get_time_ms() - start);
-	printf("Nodes: %ld\n", nodes);
+	printf("\nNodes		Captures	E.p.	Castles		Promotions\n");
+	printf("%ld		%ld		%ld	%ld		%ld\n", nodes, captures, ep, castles, promotions);
 }
 
 int main()

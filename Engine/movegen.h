@@ -3,13 +3,12 @@
 #define MOVEGEN_H
 
 #include "defs.h"
-#include "move.h"
 
 #include<cstdint>
 
 namespace ChessEngine
 {
-	enum MoveType : uint16_t
+	enum MoveType : int
 	{
 		MT_NORMAL,
 		MT_ONLY_CAPTURES

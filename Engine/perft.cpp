@@ -6,6 +6,10 @@
 namespace ChessEngine
 {
 	long nodes = 0;
+	long captures = 0;
+	long ep = 0;
+	long castles = 0;
+	long promotions = 0;
 
 	inline void perft_driver(int depth)
 	{

@@ -9,15 +9,16 @@
 namespace ChessEngine
 {
 	// Get all pawn attacks on the respective bits on the board
-	inline U64 all_board_pawn_attacks(U64 wattacks[], U64 wpawns)
+	inline U64 all_board_pawn_attacks(U64 attacks[], U64 pawns)
 	{
 		U64 pawn_attack_bb = 0ULL;
 
-		while (wpawns)
+		while (pawns)
 		{
-			int source = getLS1B(wpawns);
-			pawn_attack_bb |= wattacks[source] | wpawns;
-			resetLSB(wpawns);
+			int source = getLS1B(pawns);
+
+			pawn_attack_bb |= attacks[source];
+			resetLSB(pawns);
 		}
 
 		return pawn_attack_bb;
