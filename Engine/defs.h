@@ -157,7 +157,7 @@ inline File& operator+=(File& f, int i) { return f = f + i; }
 
 // Toggle the colour
 constexpr Color operator~(Color c) { return Color(c ^ 1); }
-
+constexpr Color& operator^=(Color& c, int d) { return c = Color(c ^ d); }
 
 // bit macros
 #define get_bit(bitboard, square) (bitboard & (1ULL << square)) // checks for available bit

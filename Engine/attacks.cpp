@@ -186,12 +186,12 @@ namespace ChessEngine
 		// generate king attacks
 		if (bitboard >> 8)				attacks |= (bitboard >> 8); // upwards
 		if ((bitboard >> 9) & not_H)	attacks |= (bitboard >> 9); // up left
-		if ((bitboard >> 9) & not_A)	attacks |= (bitboard >> 7); // up right
+		if ((bitboard >> 7) & not_A)	attacks |= (bitboard >> 7); // up right
 		if ((bitboard >> 1) & not_H)	attacks |= (bitboard >> 1); // direct left
 
 		if (bitboard << 8)				attacks |= (bitboard << 8); // upwards
 		if ((bitboard << 9) & not_A)	attacks |= (bitboard << 9); // up left
-		if ((bitboard << 9) & not_H)	attacks |= (bitboard << 7); // up right
+		if ((bitboard << 7) & not_H)	attacks |= (bitboard << 7); // up right
 		if ((bitboard << 1) & not_A)	attacks |= (bitboard << 1); // direct left
 
 		return attacks;
