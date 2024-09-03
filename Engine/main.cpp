@@ -18,8 +18,7 @@ void init_all()
 	// Initialize bitboards
 	Bitboards::init();
 
-	parse_position("position startpos moves e2e4");
-	print_board();
+	uci_loop();
 }
 
 int main()

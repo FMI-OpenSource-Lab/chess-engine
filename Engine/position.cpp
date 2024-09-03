@@ -18,7 +18,7 @@ namespace ChessEngine
 	void Position::init(const char* fen)
 	{
 		set(fen);
-		print_board();
+		//print_board();
 	}
 
 	void set(const char* fen)
