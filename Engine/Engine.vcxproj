@@ -142,11 +142,13 @@
     <ClInclude Include="consts.h" />
     <ClInclude Include="defs.h" />
     <ClInclude Include="attacks.h" />
+    <ClInclude Include="eval.h" />
     <ClInclude Include="move.h" />
     <ClInclude Include="movegen.h" />
     <ClInclude Include="perft.h" />
     <ClInclude Include="position.h" />
     <ClInclude Include="random.h" />
+    <ClInclude Include="score.h" />
     <ClInclude Include="search.h" />
     <ClInclude Include="uci.h" />
   </ItemGroup>

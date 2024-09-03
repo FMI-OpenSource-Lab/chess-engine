@@ -77,5 +77,11 @@
     <ClInclude Include="search.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="eval.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="score.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

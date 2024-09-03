@@ -5,6 +5,7 @@
 #include "perft.h"
 #include "move.h"
 #include "uci.h"
+#include "score.h"
 
 #include <iostream>
 
@@ -17,13 +18,26 @@ void init_all()
 
 	// Initialize bitboards
 	Bitboards::init();
-
-	uci_loop();
 }
 
 int main()
 {
 	init_all();
+
+	bool debug = true;
+
+	if (debug)
+	{
+		std::cout << "Debugging\n\n";
+
+		Position::init("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1");
+		print_board();
+
+		std::cout << evaluate() << "\n";
+	}
+	else
+		uci_loop();
+
 
 	system("pause");
 	return 0;
