@@ -6,6 +6,7 @@
 #include "move.h"
 #include "uci.h"
 #include "score.h"
+#include "search.h"
 
 #include <iostream>
 
@@ -30,10 +31,10 @@ int main()
 	{
 		std::cout << "Debugging\n\n";
 
-		Position::init("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1");
+		Position::init(TEST_FEN);
 		print_board();
-
-		std::cout << evaluate() << "\n";
+		
+		search_position(2);
 	}
 	else
 		uci_loop();

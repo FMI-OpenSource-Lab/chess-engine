@@ -8,45 +8,45 @@ namespace ChessEngine
 	Bitboard kingAttacks[64];
 
 	// check if square is attacked
-	extern bool is_square_attacked(const Square& square, const Color color)
+	bool is_square_attacked(const Square& square, const Color color)
 	{
 		// !color -> white
 
 		// This gets the pawn attacks at the white side and square
 		// then applies bitwise AND to the opposide piece
 		bool is_pawn_attacks = !color
-			? pawnAttacks[BLACK][square] & bitboards[get_piece('P')]
-			: pawnAttacks[WHITE][square] & bitboards[get_piece('p')];
+			? pawnAttacks[BLACK][square] & bitboards[WHITE_PAWN]
+			: pawnAttacks[WHITE][square] & bitboards[BLACK_PAWN];
 
 		bool is_knight_attacks = knightAttacks[square]
 			& bitboards[
 				!color
-					? get_piece('N')
-					: get_piece('n')];
+					? WHITE_KNIGHT
+					: BLACK_KNIGHT];
 
 		bool is_king_attacks = kingAttacks[square]
 			& bitboards[
 				!color
-					? get_piece('K')
-					: get_piece('k')];
+					? WHITE_KING
+					: BLACK_KING];
 
 		bool is_bishop_attacks = bishopAttacks(occupancies[BOTH], square)
 			& bitboards[
 				!color
-					? get_piece('B')
-					: get_piece('b')];
+					? WHITE_BISHOP
+					: BLACK_BISHOP];
 
 		bool is_rook_attacks = rookAttacks(occupancies[BOTH], square)
 			& bitboards[
 				!color
-					? get_piece('R')
-					: get_piece('r')];
+					? WHITE_ROOK
+					: BLACK_ROOK];
 
 		bool is_queen_attacks = queenAttacks(occupancies[BOTH], square)
 			& bitboards[
 				!color
-					? get_piece('Q')
-					: get_piece('q')];
+					? WHITE_QUEEN
+					: BLACK_QUEEN];
 
 		return is_pawn_attacks	||
 			is_knight_attacks	||
@@ -80,7 +80,7 @@ namespace ChessEngine
 
 	/* --------------- Mask attacks-------------------- */
 
-	constexpr U64 pawn_attacks_mask(const Color& color, const Square& square)
+	U64 pawn_attacks_mask(const Color& color, const Square& square)
 	{
 		// result attacks
 		Bitboard attacks = 0ULL;
@@ -108,7 +108,7 @@ namespace ChessEngine
 		return attacks;
 	}
 
-	constexpr Bitboard knight_attacks_mask(const Square& square)
+	Bitboard knight_attacks_mask(const Square& square)
 	{
 		// result attacks
 		Bitboard attacks = 0ULL;
@@ -135,7 +135,7 @@ namespace ChessEngine
 	}
 
 	// mask bishop attacks
-	constexpr Bitboard bishop_attacks_mask(const Square& square)
+	Bitboard bishop_attacks_mask(const Square& square)
 	{
 		Bitboard attacks = 0ULL;
 
@@ -154,7 +154,7 @@ namespace ChessEngine
 	}
 
 	// mask bishop attacks
-	constexpr Bitboard rook_attacks_mask(const Square& square)
+	Bitboard rook_attacks_mask(const Square& square)
 	{
 		Bitboard attacks = 0ULL;
 
@@ -172,7 +172,7 @@ namespace ChessEngine
 		return attacks;
 	}
 
-	constexpr Bitboard king_attacks_mask(const Square& square)
+	Bitboard king_attacks_mask(const Square& square)
 	{
 		// result attacks
 		Bitboard attacks = 0ULL;
@@ -200,7 +200,7 @@ namespace ChessEngine
 	/* --------------- Generating attacks-------------------- */
 
 	// generate bishop attacks
-	constexpr Bitboard bishop_attacks_generate(const Square& square, const Bitboard& blockPiece)
+	Bitboard bishop_attacks_generate(const Square& square, const Bitboard& blockPiece)
 	{
 		Bitboard attacks = 0ULL;
 
@@ -247,7 +247,7 @@ namespace ChessEngine
 	}
 
 	// generate rook attacks
-	constexpr Bitboard rook_attacks_generate(const Square& square, const Bitboard& blockPiece)
+	Bitboard rook_attacks_generate(const Square& square, const Bitboard& blockPiece)
 	{
 		Bitboard attacks = 0ULL;
 

@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "defs.h"
+#include "bitboard.h"
 
 namespace ChessEngine
 {
@@ -73,7 +74,20 @@ namespace ChessEngine
 		castle = castle_copy;						\
 
 	// Get all pawn attacks on the respective bits on the board
-	extern inline U64 all_board_pawn_attacks(U64 attacks[], U64 pawns);
+	inline U64 all_board_pawn_attacks(U64 attacks[], U64 pawns)
+	{
+		U64 pawn_attack_bb = 0ULL;
+
+		while (pawns)
+		{
+			int source = getLS1B(pawns);
+
+			pawn_attack_bb |= attacks[source];
+			resetLSB(pawns);
+		}
+
+		return pawn_attack_bb;
+	}
 
 	// go nort
 	constexpr U64 down_one(U64 b) { return b << 8; }
@@ -83,10 +97,20 @@ namespace ChessEngine
 	// Determine pawn push target squares or their stop squares set-wise
 	// To generate the single-step targets for all pawns
 	// requires vertical shift by one rank and intersection with the set of empty squares.
-	extern inline U64 white_single_push_target(U64 wpawns, U64 empty);
-	extern inline U64 black_single_push_target(U64 bpawns, U64 empty);
+	inline U64 white_single_push_target(U64 wpawns, U64 empty) { return up_one(wpawns) & empty; }
 
-	extern inline U64 white_double_push_target(U64 wpawns, U64 empty);
-	extern inline U64 black_double_push_target(U64 bpawns, U64 empty);
+	inline U64 black_single_push_target(U64 bpawns, U64 empty) { return down_one(bpawns) & empty; }
+
+	inline U64 white_double_push_target(U64 wpawns, U64 empty)
+	{
+		U64 singlePushs = white_single_push_target(wpawns, empty);
+		return up_one(singlePushs) & empty & Rank4_Bits;
+	}
+
+	inline U64 black_double_push_target(U64 bpawns, U64 empty)
+	{
+		U64 singlePushs = black_single_push_target(bpawns, empty);
+		return down_one(singlePushs) & empty & Rank5_Bits;
+	}
 }
 #endif // !MOVE_H

@@ -4,10 +4,13 @@
 #include<iostream>
 #include <sstream>
 #include <memory>
+#include <cstring>
 
 namespace ChessEngine
 {
-	U64 bitboards[12];
+	char ascii_pieces[13] = "PNBRQKpnbrqk";
+
+		U64 bitboards[12];
 	U64 occupancies[3];
 
 	// side to move
@@ -150,7 +153,7 @@ namespace ChessEngine
 		// occupancies[BOTH] |= occupancies[BLACK];
 	}
 
-	extern inline void print_board()
+	void print_board()
 	{
 		std::cout << "\n";
 
@@ -191,7 +194,7 @@ namespace ChessEngine
 			(castle & BQ) ? 'q' : '-');
 	}
 
-	inline Piece get_piece(const char& symbol)
+	Piece get_piece(const char& symbol)
 	{
 		switch (symbol)
 		{
@@ -208,7 +211,8 @@ namespace ChessEngine
 		case 'R': return WHITE_ROOK;
 		case 'Q': return WHITE_QUEEN;
 		case 'K': return WHITE_KING;
-		default: return EMPTY;
 		}
+
+		return EMPTY;
 	}
 }

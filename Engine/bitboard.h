@@ -39,8 +39,8 @@ namespace ChessEngine
 	inline U64 operator&(U64 b, Square s) { return b & squareBB(s); }
 	inline U64 operator|(U64 b, Square s) { return b | squareBB(s); }
 	inline U64 operator^(U64 b, Square s) { return b ^ squareBB(s); }
-	inline U64& operator|=(U64 b, Square s) { return b |= squareBB(s); }
-	inline U64& operator^=(U64 b, Square s) { return b ^= squareBB(s); }
+	inline U64& operator|=(U64 &b, Square s) { return b |= squareBB(s); }
+	inline U64& operator^=(U64 &b, Square s) { return b ^= squareBB(s); }
 
 	inline U64 operator&(Square s, U64 b) { return b & s; }
 	inline U64 operator|(Square s, U64 b) { return b | s; }
@@ -172,7 +172,7 @@ namespace ChessEngine
 		{
 			// count trailing bits before LS1B
 			U64 twosComplement = ~bitboard + 1; // -bitboard is equivelent
-			return std::log2(bitboard & twosComplement);
+			return u64_log2(bitboard & twosComplement);
 		}
 		else
 			return -1;

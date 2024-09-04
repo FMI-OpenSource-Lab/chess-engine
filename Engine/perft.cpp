@@ -9,15 +9,11 @@
 namespace ChessEngine
 {
 	long nodes = 0;
-	long captures = 0;
-	long ep = 0;
-	long castles = 0;
-	long promotions = 0;
 
 	int get_time_ms()
 	{
 #ifdef _WIN64
-		return GetTickCount64();
+		return GetTickCount();
 #else
 		struct timeval time_value;
 		gettimeofday(&time_value, NULL);
@@ -118,7 +114,7 @@ namespace ChessEngine
 		std::cout << std::setw(10) << "Time\n";
 		std::cout << "--------------------------------------\n";
 
-		for (size_t i = 0; i <= depth; i++)
+		for (int i = 0; i <= depth; i++)
 		{
 			int start_time = get_time_ms();
 			nodes = 0;

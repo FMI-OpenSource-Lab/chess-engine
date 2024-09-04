@@ -24,7 +24,7 @@ namespace ChessEngine
 	} moves;
 
 	// Generate moves functions
-	extern inline void generate_moves(moves* move_list);
+	extern void generate_moves(moves* move_list);
 
 	extern inline void pawn_moves(moves* move_list);
 	extern inline void castle_moves(moves* move_list);

@@ -33,14 +33,14 @@ namespace ChessEngine
 	extern bool is_square_attacked(const Square& square, const Color color);
 
 	// mask attacks
-	extern constexpr Bitboard pawn_attacks_mask(const Color& color, const Square& square);
-	extern constexpr Bitboard knight_attacks_mask(const Square& square);
-	extern constexpr Bitboard bishop_attacks_mask(const Square& square);
-	extern constexpr Bitboard rook_attacks_mask(const Square& square);
-	extern constexpr Bitboard king_attacks_mask(const Square& square);
+	extern Bitboard pawn_attacks_mask(const Color& color, const Square& square);
+	extern Bitboard knight_attacks_mask(const Square& square);
+	extern Bitboard bishop_attacks_mask(const Square& square);
+	extern Bitboard rook_attacks_mask(const Square& square);
+	extern Bitboard king_attacks_mask(const Square& square);
 
 	// generate attacks
-	extern constexpr Bitboard bishop_attacks_generate(const Square& square, const Bitboard& blockPiece);
-	extern constexpr Bitboard rook_attacks_generate(const Square& square, const Bitboard& blockPiece);
+	extern Bitboard bishop_attacks_generate(const Square& square, const Bitboard& blockPiece);
+	extern Bitboard rook_attacks_generate(const Square& square, const Bitboard& blockPiece);
 }
 #endif // !ATTACKS_H

@@ -42,7 +42,7 @@ namespace ChessEngine
 	// castling bit
 	extern CastlingRigths castle;
 
-	static char ascii_pieces[13] = "PNBRQKpnbrqk";
+	extern char ascii_pieces[13];
 
 	//static char tricky_position[] = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ";
 
@@ -58,12 +58,12 @@ namespace ChessEngine
 	}
 
 	// fen string input output
-	void set(const char* fen);
+	extern void set(const char* fen);
 
 	// Board representation
-	extern inline void print_board();
+	extern void print_board();
 
 	// Helper methods
-	inline Piece get_piece(const char& symbol);
+	extern Piece get_piece(const char& symbol);
 }
 #endif // !POSITION_H

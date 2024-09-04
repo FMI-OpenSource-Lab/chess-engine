@@ -81,7 +81,7 @@ namespace ChessEngine
 						? add_move(move_list,
 							encode_move(source, target, pawn_type, p, 0, 0, 0, 0))
 						: add_move(move_list,
-							encode_move(source, target, pawn_type, p + 6, 0, 0, 0, 0));
+							encode_move(source, target, pawn_type, (p + 6), 0, 0, 0, 0));
 				}
 			}
 			else
@@ -134,7 +134,7 @@ namespace ChessEngine
 							? add_move(move_list,
 								encode_move(source, target, pawn_type, p, 1, 0, 0, 0))
 							: add_move(move_list,
-								encode_move(source, target, pawn_type, p + 6, 1, 0, 0, 0));
+								encode_move(source, target, pawn_type, (p + 6), 1, 0, 0, 0));
 					}
 				}
 				else
@@ -358,8 +358,8 @@ namespace ChessEngine
 			{
 				// errase pawn
 				(side == WHITE)
-					? rm_bit(bitboards[BLACK_PAWN], target_square + 8)
-					: rm_bit(bitboards[WHITE_PAWN], target_square - 8);
+					? rm_bit(bitboards[BLACK_PAWN], (target_square + 8))
+					: rm_bit(bitboards[WHITE_PAWN], (target_square - 8));
 			}
 
 
@@ -435,22 +435,20 @@ namespace ChessEngine
 			return 1;
 		}
 		// capture moves
-		else
-		{
-			// move is the capture
-			if (get_move_capture(move))
-				make_move(move, MT_NORMAL);
-			else // move is not a capture
-				// don't make the move
-				return 0;
-		}
+		// move is the capture
+		if (get_move_capture(move))
+			make_move(move, MT_NORMAL);
+
+		// move is not a capture
+		// don't make the move
+		return 0;
 	}
 
 	void print_move(int move)
 	{
 		int piece = get_move_piece(move);
 
-		printf("%c%s%s\n",
+		printf("%c%s%s",
 			(piece != 0 && piece != 6) ? ascii_pieces[piece] : '\0',
 			squareToCoordinates[get_move_source(move)],
 			squareToCoordinates[get_move_target(move)]);
