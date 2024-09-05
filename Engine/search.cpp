@@ -15,10 +15,13 @@ namespace ChessEngine
 
 	int quiescence(int alpha, int beta)
 	{
+		// increment nodes
+		nodes++;
+
 		// evaluate pos
 		int current_eval = evaluate();
 
-		// fail hard beta-cutoff
+		// fail hard beta proning
 		if (current_eval >= beta)
 			// node (move) fails high
 			return beta;
@@ -179,11 +182,11 @@ namespace ChessEngine
 
 		if (best_move)
 		{
-			std::cout << "info score cp " << score
-				<< " depth " << depth
-				<< " nodes " << nodes << "\n";
-			// pseudo code
-			std::cout << "best move: ";
+			std::cout	<< "info score cp " << score
+						<< " depth " << depth
+						<< " nodes " << nodes << "\n";
+
+			std::cout << "bestmove ";
 			print_move(best_move);
 			std::cout << "\n";
 		}

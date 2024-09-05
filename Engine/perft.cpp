@@ -91,8 +91,8 @@ namespace ChessEngine
 				squareToCoordinates[get_move_source(move_list->moves[move_count])],
 				squareToCoordinates[get_move_target(move_list->moves[move_count])],
 				get_move_promoted(move_list->moves[move_count])
-					? tolower(ascii_pieces[get_move_promoted(move_list->moves[move_count])])
-					: ' ',
+				? tolower(ascii_pieces[get_move_promoted(move_list->moves[move_count])])
+				: ' ',
 				old_nodes);
 		}
 
@@ -116,7 +116,7 @@ namespace ChessEngine
 
 		for (int i = 0; i <= depth; i++)
 		{
-			int start_time = get_time_ms();
+			ULONGLONG start_time = get_time_ms();
 			nodes = 0;
 
 			perft_driver(i);

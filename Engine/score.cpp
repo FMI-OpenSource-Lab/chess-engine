@@ -1,6 +1,7 @@
 #include "score.h"
 
 #include "defs.h"
+#include "move.h"
 #include "consts.h"
 #include "position.h"
 #include "bitboard.h"
@@ -49,5 +50,49 @@ namespace ChessEngine
 
 		//return final eval based on side
 		return !side ? score : -score;
+	}
+
+	int score_move(int move)
+	{
+		// score capture moves
+		if (get_move_capture(move))
+		{
+			// target piece 
+			Piece target = WHITE_PAWN;
+
+			Piece start = !side ? BLACK_PAWN : WHITE_PAWN;
+			Piece end = !side ? BLACK_KING : WHITE_KING;
+
+			for (Piece p = start; p <= end; ++p)
+			{
+				if (get_bit(bitboards[p], get_move_target(move)))
+				{
+					target = p;
+					break;
+				}
+			}
+
+			// score move by MVV LVA lookup [source][target]
+			return MVV_LVA[get_move_piece(move)][target];
+		}
+		else // quiet move
+		{
+
+		}
+
+		return 0;
+	}
+
+	int sort_move(moves* move_list)
+	{
+		const int ml_count = move_list->count;
+
+		// move scores
+		int move_scores[ml_count];
+
+		for (int c = 0; c < move_list->count; c++)
+		{
+			move_scores[c] = score_move(move_list->moves[c]);
+		}
 	}
 }

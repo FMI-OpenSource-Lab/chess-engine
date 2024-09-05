@@ -35,7 +35,7 @@ namespace ChessEngine
 					for (Piece p = WHITE_QUEEN; p >= WHITE_KNIGHT; --p)
 						// promoted to Queen, Rook, Bishop, Knight
 						if ((promoted == p || promoted == (p + 6))
-							&& move_string[4] == ascii_pieces[p])
+							&& move_string[4] == tolower(ascii_pieces[p]))
 							return move;
 
 					continue;
@@ -117,7 +117,7 @@ namespace ChessEngine
 		else
 			depth = 6;
 
-		std::cout << "Depth: " << depth << "\n";
+		// std::cout << "depth " << depth << "\n";
 
 		search_position(depth);
 	}
@@ -190,6 +190,8 @@ namespace ChessEngine
 				std::cout << "id author Iulian Dashev\n";
 				std::cout << "uciok\n";
 			}
+
+			else if (!strncmp(input_buffer, "d", 1)) print_board();
 		}
 	}
 }

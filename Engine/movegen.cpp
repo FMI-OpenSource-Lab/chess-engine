@@ -446,12 +446,12 @@ namespace ChessEngine
 
 	void print_move(int move)
 	{
-		int piece = get_move_piece(move);
+		int promoted_piece = get_move_promoted(move);
 
-		printf("%c%s%s",
-			(piece != 0 && piece != 6) ? ascii_pieces[piece] : '\0',
+		printf("%s%s%c",
 			squareToCoordinates[get_move_source(move)],
-			squareToCoordinates[get_move_target(move)]);
+			squareToCoordinates[get_move_target(move)],
+			promoted_piece ? tolower(ascii_pieces[promoted_piece]) : '\0');
 	}
 
 	inline void print_move_list(moves* move_list)

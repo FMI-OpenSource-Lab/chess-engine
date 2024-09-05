@@ -24,7 +24,6 @@ void init_all()
 int main()
 {
 	init_all();
-
 	bool debug = true;
 
 	if (debug)
@@ -32,13 +31,17 @@ int main()
 		std::cout << "Debugging\n\n";
 
 		Position::init(TEST_FEN);
-		print_board();
-		
-		search_position(2);
+
+		moves move_list[1];
+		generate_moves(move_list);
+
+		for (int c = 0; c <= move_list->count; c++)
+		{
+			score_move(move_list->moves[c]);
+		}
 	}
 	else
 		uci_loop();
-
 
 	system("pause");
 	return 0;
