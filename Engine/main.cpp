@@ -30,15 +30,10 @@ int main()
 	{
 		std::cout << "Debugging\n\n";
 
-		Position::init(TEST_FEN);
+		Position::init("r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 b - - 0 9");
+		print_board();
 
-		moves move_list[1];
-		generate_moves(move_list);
-
-		for (int c = 0; c <= move_list->count; c++)
-		{
-			score_move(move_list->moves[c]);
-		}
+		search_position(1);
 	}
 	else
 		uci_loop();

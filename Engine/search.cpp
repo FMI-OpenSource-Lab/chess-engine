@@ -5,8 +5,10 @@
 #include "move.h"
 #include "movegen.h"
 #include "perft.h"
+#include "position.h"
 
 #include <iostream>
+#include <corecrt_math.h>
 
 namespace ChessEngine
 {
@@ -47,7 +49,7 @@ namespace ChessEngine
 			ply++;
 
 			// only legal moves
-			if (!make_move(move_list->moves[mc], MT_ONLY_CAPTURES))
+			if (make_move(move_list->moves[mc], MT_ONLY_CAPTURES) == 0)
 			{
 				ply--;
 				continue; // skip to next move
@@ -69,11 +71,8 @@ namespace ChessEngine
 
 			// better move
 			if (score > alpha)
-			{
 				// PV node (move)
 				alpha = score;
-
-			}
 		}
 
 		return alpha;
@@ -88,10 +87,12 @@ namespace ChessEngine
 		// increment nodes
 		nodes++;
 
-		U64 king = !side ? bitboards[WHITE_KING] : bitboards[BLACK_KING];
-		Square king_square = getLS1B_square(king);
+		Square king_square = getLS1B_square(!side ? bitboards[WHITE_KING] : bitboards[BLACK_KING]);
+		int in_check = is_square_attacked(king_square , ~side);
 
-		int in_check = is_square_attacked(king_square, ~side);
+		// incerase depth if king is exposed to check
+		if (in_check) depth++;
+
 		int legal_moves = 0; // legal moves counter
 
 		// to store the current best
@@ -113,7 +114,7 @@ namespace ChessEngine
 			ply++;
 
 			// only legal moves
-			if (!make_move(move_list->moves[mc], MT_NORMAL))
+			if (make_move(move_list->moves[mc], MT_NORMAL) == 0)
 			{
 				ply--;
 				continue; // skip to next move
@@ -143,14 +144,14 @@ namespace ChessEngine
 				alpha = score;
 
 				// if root
-				if (!ply)
+				if (ply == 0)
 					// best move with the best score
 					current_best = move_list->moves[mc];
 			}
 		}
 
 		// dont have any legal moves in current position
-		if (!legal_moves)
+		if (legal_moves == 0)
 		{
 			// 2 cases are present at this time
 			// a: king is in check
@@ -182,13 +183,29 @@ namespace ChessEngine
 
 		if (best_move)
 		{
-			std::cout	<< "info score cp " << score
-						<< " depth " << depth
-						<< " nodes " << nodes << "\n";
+			std::cout << "info score cp " << score
+				<< " depth " << depth
+				<< " nodes " << nodes << "\n";
 
 			std::cout << "bestmove ";
 			print_move(best_move);
 			std::cout << "\n";
 		}
+	}
+
+	int minimax(moves* move_list ,int depth, bool maximizingPlayer) 
+	{
+		generate_moves(move_list);
+		// if depth is 0 or game is over
+		if (depth == 0) return evaluate();
+
+		// if playing with white
+		if (maximizingPlayer)
+		{
+			int maxEval = -INFINITY;
+		}
+
+		// playing with black
+
 	}
 }

@@ -1,11 +1,6 @@
 #ifndef SCORE_H
 #define SCORE_H
 
-
-#include "defs.h"
-#include "consts.h"
-#include "position.h"
-#include "bitboard.h"
 #include "movegen.h"
 
 #include<array>
@@ -151,9 +146,11 @@ namespace ChessEngine
 		{100, 200, 300, 400, 500, 600,  100, 200, 300, 400, 500, 600}}
 	};
 
-	extern inline int evaluate();
-	extern inline int score_move(int move);
+	extern int evaluate();
+	extern int score_move(int move);
 	extern int sort_move(moves* move_list);
+
+	extern void print_move_scores(moves* move_list);
 }
 
 #endif // !SCORE_H

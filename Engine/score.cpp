@@ -6,6 +6,9 @@
 #include "position.h"
 #include "bitboard.h"
 
+#include <algorithm>
+#include <memory>
+
 namespace ChessEngine
 {
 	int evaluate()
@@ -44,7 +47,7 @@ namespace ChessEngine
 				case BLACK_KING:	score -= KING_SCORE[MIRROR_SCORE[square]]; break;
 				}
 
-				resetLSB(bitboard);
+				rm_bit(bitboard, square);
 			}
 		}
 
@@ -52,7 +55,7 @@ namespace ChessEngine
 		return !side ? score : -score;
 	}
 
-	int score_move(int move)
+	inline int score_move(int move)
 	{
 		// score capture moves
 		if (get_move_capture(move))
@@ -85,14 +88,39 @@ namespace ChessEngine
 
 	int sort_move(moves* move_list)
 	{
-		const int ml_count = move_list->count;
-
 		// move scores
-		int move_scores[ml_count];
+		std::unique_ptr<int[]> move_scores = std::make_unique<int[]>(move_list->count);
 
+		std::cout << "\n\n";
 		for (int c = 0; c < move_list->count; c++)
-		{
 			move_scores[c] = score_move(move_list->moves[c]);
+
+		for (int curr_mv = 0; curr_mv < move_list->count; curr_mv++)
+			for (int next_mv = curr_mv + 1; next_mv < move_list->count; next_mv++)
+			{
+				// cmp current and next move scores
+				if (move_scores[curr_mv] < move_scores[next_mv])
+				{
+					// swap the scores
+					std::swap(move_scores[curr_mv], move_scores[next_mv]);
+					// swap the moves
+					std::swap(move_list->moves[curr_mv], move_list->moves[next_mv]);
+				}
+			}
+
+		return 0;
+	}
+
+	void print_move_scores(moves* move_list)
+	{
+		printf("     Move scores:\n\n");
+
+		// loop over moves within a move list
+		for (int count = 0; count < move_list->count; count++)
+		{
+			printf("     move: ");
+			print_move(move_list->moves[count]);
+			printf(" score: %d\n", score_move(move_list->moves[count]));
 		}
 	}
 }
