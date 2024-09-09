@@ -24,16 +24,23 @@ void init_all()
 int main()
 {
 	init_all();
-	bool debug = false;
+	bool debug = true;
 
 	if (debug)
 	{
 		std::cout << "Debugging\n\n";
-
-		Position::init("r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 b - - 0 9");
+		
+		Position::init(START_FEN);
 		print_board();
 
-		search_position(2);
+		Move m{ E2, E4 };
+		Move p{ m.encode(E4, E5, WHITE_PAWN, EMPTY, 0, 0, 0, 0) };
+
+		std::cout << p.promoted() << "\n";
+		std::cout << p.target_square() << "\n";
+
+
+		//search_position(2);
 	}
 	else
 		uci_loop();

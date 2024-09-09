@@ -72,7 +72,7 @@ enum Piece : int {
 	BLACK_ROOK,
 	BLACK_QUEEN,
 	BLACK_KING,
-	EMPTY,
+	EMPTY
 };
 
 enum Color
@@ -134,10 +134,19 @@ constexpr Direction operator*(int i, Direction d) { return Direction(i * int(d))
 
 constexpr File file_of(Square s) { return File(s % 8); }
 constexpr Rank rank_of(Square s) { return Rank(s >> 3); }
-constexpr Square get_square(Rank rank, File file) { return static_cast<Square>(static_cast<int>(rank) * 8 + static_cast<int>(file)); }
-constexpr Square get_square(int rank, int file) { return static_cast<Square>(rank * 8 + file); }
-constexpr Square get_square(int square_index) { return static_cast<Square>(square_index); }
+
+constexpr Square convert_to_square(Rank rank, File file) { return static_cast<Square>(static_cast<int>(rank) * 8 + static_cast<int>(file)); }
+constexpr Square convert_to_square(int rank, int file) { return static_cast<Square>(rank * 8 + file); }
+constexpr Square convert_to_square(int square_index) { return static_cast<Square>(square_index); }
+
 constexpr Square make_square(File f, Rank r) { return Square((r << 3) + f); }
+
+constexpr Piece make_piece(Color c, PieceType pt) { return Piece(!c ? pt - 1 : pt + 5); }
+constexpr PieceType type_of_piece(Piece p) { return PieceType(p & 7); }
+
+constexpr bool is_square_ok(Square s) { return s >= A1 && s <= H8; }
+
+constexpr Direction pawn_push_direction(Color c) { return c == WHITE ? NORTH : SOUTH; }
 
 inline bool operator==(Square s1, Square s2) { return int(s1) == int(s2); }
 
@@ -157,7 +166,9 @@ inline File& operator+=(File& f, int i) { return f = f + i; }
 
 // Toggle the colour
 constexpr Color operator~(Color c) { return Color(c ^ 1); }
-constexpr Color& operator^=(Color& c, int d) { return c = Color(c ^ d); }
+
+// Toggle the piece (WHITE_PAWN to BLACK_PAWN)
+constexpr Piece operator~(Piece p) { return Piece(p ^ 8); }
 
 // bit macros
 #define get_bit(bitboard, square) (bitboard & (1ULL << square)) // checks for available bit

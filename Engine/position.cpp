@@ -95,7 +95,7 @@ namespace ChessEngine
 				}
 				else // its a piece
 				{
-					Square sq = get_square(rank, file);
+					Square sq = convert_to_square(rank, file);
 					Piece piece = get_piece(c);
 
 					set_bit(bitboards[piece], sq);
@@ -133,7 +133,7 @@ namespace ChessEngine
 			int rank = 8 - (fen_ptr[1] - '0');
 
 			// init enpassant suqare
-			enpassant = get_square(rank, file);
+			enpassant = convert_to_square(rank, file);
 		}
 		else
 			enpassant = NONE;

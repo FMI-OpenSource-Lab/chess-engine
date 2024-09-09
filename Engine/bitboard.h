@@ -181,7 +181,7 @@ namespace ChessEngine
 	constexpr Square getLS1B_square(U64 bitboard)
 	{
 		int lsb = getLS1B(bitboard);
-		return lsb == -1 ? NONE : get_square(lsb);
+		return lsb == -1 ? NONE : convert_to_square(lsb);
 	}
 
 	constexpr void resetLSB(U64& bitboard)

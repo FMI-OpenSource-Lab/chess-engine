@@ -7,6 +7,8 @@
 #include "defs.h"
 #include "bitboard.h"
 
+#include <assert.h>
+
 namespace ChessEngine
 {
 	/*
@@ -32,6 +34,72 @@ namespace ChessEngine
 		enpassan capture flag	| 0x400000
 		castling flag			| 0x800000
 	*/
+
+	class Move
+	{
+	public:
+		Move() = default;
+		constexpr explicit Move(std::uint32_t m) :
+			move(m) {}
+
+		constexpr Move(Square target, Square source) :
+			move((target << 6) + source) {}
+
+		template<MoveType mt>
+		static constexpr Move make(Square target, Square source, PieceType pt = KNIGHT)
+		{
+			return Move(mt + ((pt - KNIGHT) << 12) + (target << 6) + source);
+		}
+
+		constexpr Square source_square() const
+		{
+			assert(is_ok());
+			return Square((move >> 6) & 0x3f);
+		}
+
+		constexpr Square target_square() const
+		{
+			assert(is_ok());
+			return Square(move & 0x3F);
+		}
+
+		constexpr Piece piece() const { return Piece((move & 0xf000) >> 12); }
+		constexpr Piece promoted() const { return Piece((move & 0xf0000) >> 16); }
+
+		constexpr std::uint32_t capture_flag() const { return move & 0x100000; }
+		constexpr std::uint32_t doublep_flag() const { return move & 0x200000; }
+		constexpr std::uint32_t enpassant_flag() const { return move & 0x400000; }
+		constexpr std::uint32_t castling_flag() const { return move & 0x800000; }
+
+		std::uint32_t encode(Square source, Square target, Piece piece, Piece promoted, std::int32_t capturef, std::int32_t doublef, std::int32_t enpassantf, std::int32_t castlingf) {
+			return (
+				(source << 0) |
+				(target << 6) |
+				(piece << 12) |
+				(promoted << 16) |
+				(capturef << 20) |
+				(doublef << 21) |
+				(enpassantf << 22) |
+				(castlingf << 23));
+		}
+
+		constexpr bool is_ok() const { return none().move != move && null().move != move; }
+
+		constexpr std::uint32_t raw() { return move; }
+
+		// null and none moves
+		// has the same source and target square whilst other moves have different source and destination squares
+		static constexpr Move null() { return Move(64); }
+		static constexpr Move none() { return Move(0); }
+
+		// overloads
+		constexpr bool operator==(const Move& m) const { return move == m.move; }
+		constexpr bool operator!=(const Move& m) const { return move != m.move; }
+		constexpr explicit operator bool() const { return move != 0; }
+	protected:
+		std::uint32_t move;
+	};
+
 
 #define encode_move(source, target, piece, promoted, capturef, doublef, enpassantf, castlingf)	\
 	(source << 0) |			\

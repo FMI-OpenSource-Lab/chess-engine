@@ -64,7 +64,7 @@ namespace ChessEngine
 		{
 			for (File file = FILE_A; file <= FILE_H; ++file)
 			{
-				Square square = get_square(rank, file);
+				Square square = convert_to_square(rank, file);
 
 				if (!file)
 					printf(" %d ", 8 - rank);

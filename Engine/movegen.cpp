@@ -66,7 +66,7 @@ namespace ChessEngine
 		while (pushed_pawnes)
 		{
 			// target square that the pawn will land
-			target = get_square(getLS1B(pushed_pawnes));
+			target = convert_to_square(getLS1B(pushed_pawnes));
 			// shift up or down the source square depending on the side playing
 			source = is_white
 				? target + 8
@@ -252,7 +252,7 @@ namespace ChessEngine
 	// King, Knight, Rook, Bishop and Queen moves generator
 	inline void piece_moves(PieceType pt, moves* move_list)
 	{
-		Piece p = static_cast<Piece>(!side ? pt - 1 : pt + 5);
+		Piece p = make_piece(side, pt);
 
 		// bitboard of the current pieces of same type
 		U64 bitboard = bitboards[p];
@@ -415,7 +415,7 @@ namespace ChessEngine
 			occupancies[BOTH] |= occupancies[WHITE] | occupancies[BLACK];
 
 			// change side
-			side ^= 1;
+			side = ~side;
 
 			// king is not exposed to check
 			Square king_sq = getLS1B_square(
