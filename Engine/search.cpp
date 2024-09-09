@@ -8,7 +8,8 @@
 #include "position.h"
 
 #include <iostream>
-#include <corecrt_math.h>
+#include <limits>
+#include <math.h>
 
 namespace ChessEngine
 {
@@ -88,7 +89,7 @@ namespace ChessEngine
 		nodes++;
 
 		Square king_square = getLS1B_square(!side ? bitboards[WHITE_KING] : bitboards[BLACK_KING]);
-		int in_check = is_square_attacked(king_square , ~side);
+		int in_check = is_square_attacked(king_square, ~side);
 
 		// incerase depth if king is exposed to check
 		if (in_check) depth++;
@@ -179,13 +180,18 @@ namespace ChessEngine
 	void search_position(int depth)
 	{
 		// find best move within a given position
-		int score = negamax(-50000, 50000, depth);
+		// int score = negamax(-50000, 50000, depth);
+		bool maximPlayer = (side == WHITE) ? true : false;
 
+		int score = minimax(-VALUE_INFINITE, VALUE_INFINITE, depth, maximPlayer);
+		// std::cout << "Minimax eval: " << score << "\n";
+		// std::cout << "nodes: " << nodes << "\n";
 		if (best_move)
 		{
 			std::cout << "info score cp " << score
 				<< " depth " << depth
-				<< " nodes " << nodes << "\n";
+				<< " nodes " << nodes
+				<< " side " << side << "\n";
 
 			std::cout << "bestmove ";
 			print_move(best_move);
@@ -193,19 +199,100 @@ namespace ChessEngine
 		}
 	}
 
-	int minimax(moves* move_list ,int depth, bool maximizingPlayer) 
+	// Alpha beta pruning
+	int minimax(int alpha, int beta, int depth, bool maximizingPlayer)
 	{
-		generate_moves(move_list);
 		// if depth is 0 or game is over
-		if (depth == 0) return evaluate();
+		if (depth == 0) return quiescence(alpha, beta);
+
+		Square king_square = getLS1B_square(!side ? bitboards[WHITE_KING] : bitboards[BLACK_KING]);
+		int in_check = is_square_attacked(king_square, ~side);
+
+		// incerase depth if king is exposed to check
+		if (in_check) depth++;
 
 		// if playing with white
 		if (maximizingPlayer)
 		{
-			int maxEval = -INFINITY;
+			int maxEval = INT_MIN;
+
+			// create and generate moves
+			moves move_list[1];
+			generate_moves(move_list);
+
+			for (auto& mv : move_list->moves)
+			{
+				// do move
+				copy_board();
+
+				ply++;
+
+				// only legal moves
+				if (!make_move(mv, MT_NORMAL))
+				{
+					ply--;
+					continue;
+				}
+
+				print_board();
+				std::cin.get();
+
+				int eval = minimax(depth - 1, alpha, beta, false);
+
+				// undo move
+				restore_board();
+
+				maxEval = max(maxEval, eval);
+				alpha = max(alpha, eval);
+
+				if (beta <= alpha)
+				{
+					best_move = mv;
+					break;
+				}
+			}
+
+			return maxEval;
 		}
-
 		// playing with black
+		else
+		{
+			int minEval = INT_MAX;
 
+			// create and generate moves
+			moves move_list[1];
+			generate_moves(move_list);
+
+			for (auto& mv : move_list->moves)
+			{
+				// do move
+				copy_board();
+
+				ply++;
+
+				// only legal moves
+				if (make_move(mv, MT_NORMAL) == 0)
+				{
+					ply--;
+					continue;
+				}
+
+				int eval = minimax(depth - 1, alpha, beta, true);
+
+				// undo move
+				restore_board();
+
+				minEval = min(minEval, eval);
+				beta = min(beta, eval);
+
+				if (beta <= alpha)
+				{
+					best_move = mv;
+					break;
+				}
+			}
+
+			return minEval;
+		}
 	}
 }

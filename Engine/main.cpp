@@ -24,7 +24,7 @@ void init_all()
 int main()
 {
 	init_all();
-	bool debug = true;
+	bool debug = false;
 
 	if (debug)
 	{
@@ -33,7 +33,7 @@ int main()
 		Position::init("r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 b - - 0 9");
 		print_board();
 
-		search_position(1);
+		search_position(2);
 	}
 	else
 		uci_loop();
