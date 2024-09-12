@@ -8,12 +8,6 @@
 
 namespace ChessEngine
 {
-	enum MoveType : int
-	{
-		MT_NORMAL,
-		MT_ONLY_CAPTURES
-	};
-
 	typedef struct
 	{
 		// moves

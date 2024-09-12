@@ -150,9 +150,6 @@ namespace ChessEngine
 		// generate enpassant moves
 		if (enpassant != NONE)
 		{
-			// en passant bitboard
-			U64 ep_bb = 1ULL << enpassant;
-
 			// source square/s bitboard
 			U64 source_bb = pawnAttacks[~side][enpassant] & pawns;
 
@@ -162,7 +159,7 @@ namespace ChessEngine
 				source = getLS1B_square(source_bb);
 
 				// single out the attack bits that correlate with en passant square
-				U64 enpassant_attacks = pawnAttacks[side][source] & ep_bb;
+				U64 enpassant_attacks = pawnAttacks[side][source] & square_to_BB(enpassant);
 
 				if (enpassant_attacks)
 				{

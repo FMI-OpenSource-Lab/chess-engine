@@ -3,37 +3,58 @@
 
 #include <cstdint>
 #include <string.h>
+#include <assert.h>
+#include <ostream>
 
 #include "defs.h"
 #include "bitboard.h"
 
-#include <assert.h>
 
 namespace ChessEngine
 {
 	/*
 		Binary move bits
 
-		0000 0000 0000 0000 0011 1111 source square				| 6 bits
-		0000 0000 0000 1111 1100 0000 target square				| 6 bits
-		0000 0000 1111 0000 0000 0000 piece						| 4 bits
-		0000 1111 0000 0000 0000 0000 promoted piece			| 4 bits
-		0001 0000 0000 0000 0000 0000 capture flag				| 1 bit
-		0010 0000 0000 0000 0000 0000 double push flag			| 1 bit
-		0100 0000 0000 0000 0000 0000 enpassant capture flag	| 1 bit
-		1000 0000 0000 0000 0000 0000 castling flag				| 1 bit
+		0000 0000 0011 1111 source square				| 6 bits
+		0000 1111 1100 0000 target square				| 6 bits
+		0011 0000 0000 0000 promoted piece				| 2 bits
+		0100 0000 0000 0000 promotion flag				| 1 bits
+		1000 0000 0000 0000 enpassant capture flag		| 1 bit
+		1100 0000 0000 0000 castling flag				| 2 bit
 
-		Hexidecimal constants
+		Promoted piece types bits:
 
-		source square			| 0x3f
-		target square			| 0xfc0
-		piece					| 0xf000
-		promoted piece			| 0xf0000
-		capture flag			| 0x100000
-		double push flag		| 0x200000
-		enpassan capture flag	| 0x400000
-		castling flag			| 0x800000
+		00 -> 0: KNIGHT
+		01 -> 1: BISHOP
+		10 -> 2: ROOK
+		11 -> 3: QUEEN
+
+		Flags:
+
+		01 -> 1: promotion
+		10 -> 2: en passant (set only when pawn can be captured)
+		11 -> 3: castling
+
+		A move needs 16 bits to be stored
 	*/
+
+	enum MoveType
+	{
+		MT_NORMAL,
+		MT_ONLY_CAPTURES = 1 << 20,
+
+		MT_PROMOTION	= 1 << 14,
+		MT_EN_PASSANT	= 2 << 14,
+		MT_CASTLING		= 3 << 14
+	};
+
+	enum PromotionType
+	{
+		PROMOTE_KNIGHT,
+		PROMOTE_BISHOP	= 1 << 12,
+		PROMOTE_ROOK	= 2 << 12,
+		PROMOTE_QUEEN	= 3 << 12,
+	};
 
 	class Move
 	{
@@ -42,62 +63,48 @@ namespace ChessEngine
 		constexpr explicit Move(std::uint32_t m) :
 			move(m) {}
 
-		constexpr Move(Square target, Square source) :
+		constexpr Move(Square source, Square target) :
 			move((target << 6) + source) {}
 
+		constexpr Move(Square source, Square target, int flag) :
+			move(int(source) | target << 6 | flag << 12) {}
+
 		template<MoveType mt>
-		static constexpr Move make(Square target, Square source, PieceType pt = KNIGHT)
+		static constexpr Move make(Square source, Square target, PieceType pt = KNIGHT)
 		{
 			return Move(mt + ((pt - KNIGHT) << 12) + (target << 6) + source);
 		}
 
-		constexpr Square source_square() const
+		constexpr Square source_square() const { return Square(move & 0x3F);}
+
+		constexpr Square target_square() const { return Square((move >> 6) & 0x3F); }
+
+		constexpr PieceType promoted() const { return PieceType(((move >> 12) & 3) + KNIGHT); }
+
+		constexpr MoveType move_type() const
 		{
-			assert(is_ok());
-			return Square((move >> 6) & 0x3f);
+			return MoveType(move & (0b0011 << 14));
 		}
 
-		constexpr Square target_square() const
-		{
-			assert(is_ok());
-			return Square(move & 0x3F);
-		}
-
-		constexpr Piece piece() const { return Piece((move & 0xf000) >> 12); }
-		constexpr Piece promoted() const { return Piece((move & 0xf0000) >> 16); }
-
-		constexpr std::uint32_t capture_flag() const { return move & 0x100000; }
-		constexpr std::uint32_t doublep_flag() const { return move & 0x200000; }
-		constexpr std::uint32_t enpassant_flag() const { return move & 0x400000; }
-		constexpr std::uint32_t castling_flag() const { return move & 0x800000; }
-
-		std::uint32_t encode(Square source, Square target, Piece piece, Piece promoted, std::int32_t capturef, std::int32_t doublef, std::int32_t enpassantf, std::int32_t castlingf) {
-			return (
-				(source << 0) |
-				(target << 6) |
-				(piece << 12) |
-				(promoted << 16) |
-				(capturef << 20) |
-				(doublef << 21) |
-				(enpassantf << 22) |
-				(castlingf << 23));
-		}
-
-		constexpr bool is_ok() const { return none().move != move && null().move != move; }
-
-		constexpr std::uint32_t raw() { return move; }
+		constexpr std::uint16_t move_value() { return move; }
 
 		// null and none moves
 		// has the same source and target square whilst other moves have different source and destination squares
-		static constexpr Move null() { return Move(64); }
-		static constexpr Move none() { return Move(0); }
+		static constexpr Move null_move() { return Move(64); }
+		static constexpr Move invalid_move() { return Move(0); }
+
+		static constexpr bool same_move(Move a, Move b) { return a.move == b.move; }
+
+		friend std::ostream& operator<<(std::ostream& os, Move const& mv) {
+			return os << squareToCoordinates[mv.source_square()] << " " << squareToCoordinates[mv.target_square()] << std::endl;
+		}
 
 		// overloads
 		constexpr bool operator==(const Move& m) const { return move == m.move; }
 		constexpr bool operator!=(const Move& m) const { return move != m.move; }
 		constexpr explicit operator bool() const { return move != 0; }
 	protected:
-		std::uint32_t move;
+		std::uint16_t move;
 	};
 
 

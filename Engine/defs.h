@@ -139,9 +139,12 @@ constexpr Square convert_to_square(Rank rank, File file) { return static_cast<Sq
 constexpr Square convert_to_square(int rank, int file) { return static_cast<Square>(rank * 8 + file); }
 constexpr Square convert_to_square(int square_index) { return static_cast<Square>(square_index); }
 
-constexpr Square make_square(File f, Rank r) { return Square((r << 3) + f); }
+constexpr Square make_square(File f, Rank r) 
+{
+	return Square((r << 3) + f); 
+}
 
-constexpr Piece make_piece(Color c, PieceType pt) { return Piece(!c ? pt - 1 : pt + 5); }
+constexpr Piece make_piece(Color c, PieceType pt) { return Piece(c == WHITE ? (pt - 1) : (pt + 5)); }
 constexpr PieceType type_of_piece(Piece p) { return PieceType(p & 7); }
 
 constexpr bool is_square_ok(Square s) { return s >= A1 && s <= H8; }
@@ -157,6 +160,8 @@ constexpr Square operator-(Square s, int d) { return Square(int(s) - d); }
 constexpr Square operator+(Square s, int d) { return Square(int(s) + d); }
 inline Square& operator+=(Square& s, Direction d) { return s = s + d; }
 inline Square& operator-=(Square& s, Direction d) { return s = s - d; }
+
+inline Square operator|(Square s1, Square s2) { return Square(int(s1) | int(s2)); }
 
 // Additional operators to increment the ranks by some value
 constexpr File operator+(File s, int d) { return File(int(s) + d); }

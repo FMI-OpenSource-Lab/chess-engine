@@ -25,7 +25,7 @@ namespace ChessEngine
 	extern U64 rookAttacks(U64 occ, Square sq);
 	extern U64 queenAttacks(U64 occ, Square sq);
 
-	constexpr U64 squareBB(Square square)
+	constexpr U64 square_to_BB(Square square)
 	{
 		return (1ULL << square);
 	}
@@ -36,17 +36,17 @@ namespace ChessEngine
 	};
 
 	// overloads of bitwise operators between bitboard and square for testing purposes
-	inline U64 operator&(U64 b, Square s) { return b & squareBB(s); }
-	inline U64 operator|(U64 b, Square s) { return b | squareBB(s); }
-	inline U64 operator^(U64 b, Square s) { return b ^ squareBB(s); }
-	inline U64& operator|=(U64 &b, Square s) { return b |= squareBB(s); }
-	inline U64& operator^=(U64 &b, Square s) { return b ^= squareBB(s); }
+	inline U64 operator&(U64 b, Square s) { return b & square_to_BB(s); }
+	inline U64 operator|(U64 b, Square s) { return b | square_to_BB(s); }
+	inline U64 operator^(U64 b, Square s) { return b ^ square_to_BB(s); }
+	inline U64& operator|=(U64 &b, Square s) { return b |= square_to_BB(s); }
+	inline U64& operator^=(U64 &b, Square s) { return b ^= square_to_BB(s); }
 
 	inline U64 operator&(Square s, U64 b) { return b & s; }
 	inline U64 operator|(Square s, U64 b) { return b | s; }
 	inline U64 operator^(Square s, U64 b) { return b ^ s; }
 
-	inline U64 operator|(Square s1, Square s2) { return squareBB(s1) | s2; }
+	inline U64 operator|(Square s1, Square s2) { return square_to_BB(s1) | s2; }
 
 	// Files
 	constexpr U64 FileA_Bits = 0x0101010101010101ULL; // first row is ones

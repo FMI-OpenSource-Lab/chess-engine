@@ -8,7 +8,8 @@
 #include "score.h"
 #include "search.h"
 
-#include <iostream>
+#include <ostream>
+#include <bitset>
 
 using namespace ChessEngine;
 
@@ -29,16 +30,35 @@ int main()
 	if (debug)
 	{
 		std::cout << "Debugging\n\n";
-		
+
 		Position::init(START_FEN);
 		print_board();
 
-		Move m{ E2, E4 };
-		Move p{ m.encode(E4, E5, WHITE_PAWN, EMPTY, 0, 0, 0, 0) };
+		Move a{ B7, C8};
+		a = a.make<MT_PROMOTION>(a.source_square(), a.target_square(), QUEEN);
 
-		std::cout << p.promoted() << "\n";
-		std::cout << p.target_square() << "\n";
+		std::string move_value = std::bitset<24>(a.move_value()).to_string();
 
+		std::cout << "\nraw:	" << a.move_value() << "\n";
+		std::cout << "raw binary:\n";
+
+		int iter = 0;
+		for (size_t i = 0; i < move_value.length(); i++)
+		{
+			if (i % 5 == 0)
+			{
+				move_value.insert(i, " ");
+				// iter++;
+			}
+		}
+		move_value[0] = '\0';
+
+		std::cout << move_value << "\n";
+
+		std::cout << "\npromoted: " << a.promoted() << "\n";
+		std::cout << "move type: " << a.move_type() << "\n";
+
+		std::cout << a;
 
 		//search_position(2);
 	}
