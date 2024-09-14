@@ -5,6 +5,11 @@
 
 #define NAME "iuli 1.0"
 
+#if defined(_WIN64) && defined(_MSC_VER)  // No Makefile used
+#include <intrin.h>                   // Microsoft header for _BitScanForward64()
+#define IS_64BIT
+#endif
+
 #if defined(_MSC_VER)
 	// Disable some silly and noisy warnings from MSVC compiler
 #pragma warning(disable: 4127)  // Conditional expression is constant
@@ -16,10 +21,17 @@
 #define U64 unsigned long long
 
 #ifdef _WIN64
-	#include<windows.h>
+#include<windows.h>
 #else
-	#include<sys/time.h>
+#include<sys/time.h>
 #endif
+
+#ifdef IS_64BIT
+constexpr bool Is64Bit = true;
+#else 
+constexpr bool Is64Bit = false;
+#endif // IS_64BIT
+
 
 enum Square : int {
 	A8, B8, C8, D8, E8, F8, G8, H8,
@@ -33,7 +45,7 @@ enum Square : int {
 	NONE,
 
 	SQUARE_ZERO = 0,
-	SQUARE_NB = 64
+	SQUARE_TOTAL = 64
 };
 
 constexpr const char* squareToCoordinates[] = {
@@ -118,16 +130,24 @@ enum Rank : int {
 	RANK_NB
 };
 
-enum CastlingRigths : int {
+enum CastlingRights : int {
 	CASTLE_NB = 0,
 	WK = 1,
 	WQ = 2,
 	BK = 4,
-	BQ = 8
+	BQ = 8,
+
+	KINGSIDE = WK | BK,
+	QUEENSIDE = WQ | BQ,
+	WHITE_CASTLE = WK | WQ,
+	BLACK_CASTLE = BK | BQ,
+	ANY = WHITE_CASTLE | BLACK_CASTLE,
+
+	CASTLING_RIGHT_NB = 16
 };
 
-inline CastlingRigths operator|(CastlingRigths& c, CastlingRigths a) { return CastlingRigths(int(c) | int(a)); };
-inline CastlingRigths operator&(CastlingRigths& c, int d) { return CastlingRigths(int(c) & int(d)); }
+inline CastlingRights operator|(CastlingRights& c, CastlingRights a) { return CastlingRights(int(c) | int(a)); };
+inline CastlingRights operator&(CastlingRights& c, int d) { return CastlingRights(int(c) & int(d)); }
 
 constexpr Direction operator+(Direction d1, Direction d2) { return Direction(int(d1) + int(d2)); }
 constexpr Direction operator*(int i, Direction d) { return Direction(i * int(d)); }
@@ -139,13 +159,14 @@ constexpr Square convert_to_square(Rank rank, File file) { return static_cast<Sq
 constexpr Square convert_to_square(int rank, int file) { return static_cast<Square>(rank * 8 + file); }
 constexpr Square convert_to_square(int square_index) { return static_cast<Square>(square_index); }
 
-constexpr Square make_square(File f, Rank r) 
+constexpr Square make_square(File f, Rank r)
 {
-	return Square((r << 3) + f); 
+	return Square((r << 3) + f);
 }
 
-constexpr Piece make_piece(Color c, PieceType pt) { return Piece(c == WHITE ? (pt - 1) : (pt + 5)); }
-constexpr PieceType type_of_piece(Piece p) { return PieceType(p & 7); }
+constexpr Piece get_piece(Color c, PieceType pt) { return Piece(pt + (c * 6)); }
+constexpr PieceType type_of_piece(Piece p, Color c) { return PieceType(p - (c * 6)); }
+constexpr Color get_piece_color(Piece p) { return Color(p / 6); }
 
 constexpr bool is_square_ok(Square s) { return s >= A1 && s <= H8; }
 
@@ -180,6 +201,14 @@ constexpr Piece operator~(Piece p) { return Piece(p ^ 8); }
 #define set_bit(bitboard, square) (bitboard |= (1ULL << square)) // set piece to square
 #define rm_bit(bitboard, square) ((bitboard) &= ~(1ULL << square)) // if theres a 1 remove it, if 0 don't
 
+constexpr int TOTAL_MAX_DEPTH = 512;
+
+typedef unsigned short PLY_TYPE; // 16 bit 
+typedef unsigned int Value; // 32 bit
+
+constexpr int MAX_MOVES = 256;
+constexpr int MAX_PLY = 246;
+
 // Allow to use ++File, --File, ++Rank, --Rank and etc.
 #define ENABLE_INCR_OPERATORS_ON(T) \
 		inline T& operator++(T& d) { return d = T(int(d) + 1); } \
@@ -193,5 +222,7 @@ ENABLE_INCR_OPERATORS_ON(File)
 ENABLE_INCR_OPERATORS_ON(Rank)
 
 #undef ENABLE_INCR_OPERATORS_ON
+
+// namespace ChessEngine
 
 #endif // !DEFS_H

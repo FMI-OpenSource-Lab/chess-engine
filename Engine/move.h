@@ -107,6 +107,7 @@ namespace ChessEngine
 		std::uint16_t move;
 	};
 
+	const Move NO_MOVE = Move();
 
 #define encode_move(source, target, piece, promoted, capturef, doublef, enpassantf, castlingf)	\
 	(source << 0) |			\
@@ -134,7 +135,7 @@ namespace ChessEngine
 	U64 bitboards_copy[12], occupancies_copy[3];	\
 		Color side_copy;							\
 		Square enpassant_copy;						\
-		CastlingRigths castle_copy;					\
+		CastlingRights castle_copy;					\
 		memcpy(bitboards_copy, bitboards, 96);		\
 		memcpy(occupancies_copy, occupancies, 24);	\
 		side_copy = side,							\

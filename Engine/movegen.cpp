@@ -249,7 +249,7 @@ namespace ChessEngine
 	// King, Knight, Rook, Bishop and Queen moves generator
 	inline void piece_moves(PieceType pt, moves* move_list)
 	{
-		Piece p = make_piece(side, pt);
+		Piece p = get_piece(side, pt);
 
 		// bitboard of the current pieces of same type
 		U64 bitboard = bitboards[p];

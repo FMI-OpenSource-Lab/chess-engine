@@ -1,7 +1,7 @@
 #include "position.h"
 #include "attacks.h"
 
-#include<iostream>
+#include <iostream>
 #include <sstream>
 #include <memory>
 #include <cstring>
@@ -10,13 +10,13 @@ namespace ChessEngine
 {
 	char ascii_pieces[13] = "PNBRQKpnbrqk";
 
-		U64 bitboards[12];
+	U64 bitboards[12];
 	U64 occupancies[3];
 
 	// side to move
 	Color side;
 	Square enpassant;
-	CastlingRigths castle;
+	CastlingRights castle;
 
 	void Position::init(const char* fen)
 	{

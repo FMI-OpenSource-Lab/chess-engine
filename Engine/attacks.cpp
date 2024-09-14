@@ -1,5 +1,6 @@
 #include "attacks.h"
 #include "position.h"
+#include "bitboard.h"
 
 namespace ChessEngine
 {
@@ -48,11 +49,11 @@ namespace ChessEngine
 					? WHITE_QUEEN
 					: BLACK_QUEEN];
 
-		return is_pawn_attacks	||
-			is_knight_attacks	||
-			is_king_attacks		||
-			is_bishop_attacks	||
-			is_rook_attacks		||
+		return is_pawn_attacks ||
+			is_knight_attacks ||
+			is_king_attacks ||
+			is_bishop_attacks ||
+			is_rook_attacks ||
 			is_queen_attacks;
 	}
 

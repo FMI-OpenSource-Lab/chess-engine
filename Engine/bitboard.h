@@ -3,11 +3,11 @@
 #define BITBOARD_H
 
 #include <cassert>
-#include <cstdint>
 #include <iostream>
 #include <array>
 
 #include "consts.h"
+#include "attacks.h"
 
 namespace ChessEngine
 {
@@ -20,10 +20,12 @@ namespace ChessEngine
 	extern constexpr void resetLSB(U64& bitboard);
 	extern constexpr int countBits(U64 bitboard);
 
-	void init_sliders_attacks(PieceType py);
+	extern void init_sliders_attacks(PieceType py);
 	extern U64 bishopAttacks(U64 occ, Square sq);
 	extern U64 rookAttacks(U64 occ, Square sq);
 	extern U64 queenAttacks(U64 occ, Square sq);
+	extern void init_pseudo_attacks();
+	extern U64 siding_attacks(PieceType pt, Square s, U64 occ);
 
 	constexpr U64 square_to_BB(Square square)
 	{
@@ -39,8 +41,8 @@ namespace ChessEngine
 	inline U64 operator&(U64 b, Square s) { return b & square_to_BB(s); }
 	inline U64 operator|(U64 b, Square s) { return b | square_to_BB(s); }
 	inline U64 operator^(U64 b, Square s) { return b ^ square_to_BB(s); }
-	inline U64& operator|=(U64 &b, Square s) { return b |= square_to_BB(s); }
-	inline U64& operator^=(U64 &b, Square s) { return b ^= square_to_BB(s); }
+	inline U64& operator|=(U64& b, Square s) { return b |= square_to_BB(s); }
+	inline U64& operator^=(U64& b, Square s) { return b ^= square_to_BB(s); }
 
 	inline U64 operator&(Square s, U64 b) { return b & s; }
 	inline U64 operator|(Square s, U64 b) { return b | s; }
@@ -82,15 +84,83 @@ namespace ChessEngine
 	constexpr U64 not_AB = 18229723555195321596ULL;	// ~FileA_Bits & ~FileB_Bits bitboard value where the HG files are set to zero
 
 	// define magic bishop attack table [squares][occupancy]
-	extern U64 mBishopAttacks[64][512]; // 256 K
+	extern U64 mBishopAttacks[SQUARE_TOTAL][512]; // 256 K
 
 	// define magic rook attack table [squares][occupancy]
-	extern U64 mRookAttacks[64][4096]; // 2048K
+	extern U64 mRookAttacks[SQUARE_TOTAL][4096]; // 2048K
+
+	// array that returns a line that connects two points between squares
+	// e.g. [A1][H8] will return a bitboard with this diagonal
+	// helpful for generating the rook, bishop and queen attacks
+	extern U64 point_to_point_in_line_bb[SQUARE_TOTAL][SQUARE_TOTAL];
+
+	// array that returns the squares between two points
+	extern U64 between_points_bb[SQUARE_TOTAL][SQUARE_TOTAL];
+
+	// every pseudo attack for the given piece on the given square
+	extern U64 pseudo_attacks[PIECE_TYPE_NB][SQUARE_TOTAL];
+
+	extern unsigned short square_distance[SQUARE_TOTAL][SQUARE_TOTAL];
 
 	struct SMagic {
 		U64 mask;  // to mask relevant squares of both lines (no outer squares)
 		U64 magic; // magic 64-bit factor
 	};
+
+	extern SMagic mBishopTbl[];
+	extern SMagic mRookTbl[];
+
+	// moves the bb one or two steps
+	template<Direction d>
+	constexpr U64 move_to(U64 b)
+	{
+		return d == NORTH ? b << 8
+			: d == SOUTH ? b >> 8
+			: d == NORTH + NORTH ? b << 16
+			: d == SOUTH + SOUTH ? b >> 16
+			: d == EAST ? (b & not_H) << 1
+			: d == WEST ? (b & not_A) >> 1
+			: d == NORTH_EAST ? (b & not_H) << 9
+			: d == NORTH_WEST ? (b & not_A) << 7
+			: d == SOUTH_EAST ? (b & not_H) >> 7
+			: d == SOUTH_WEST ? (b & not_A) >> 9
+			: 0;
+	}
+
+	template<Color c>
+	constexpr U64 pawn_attacks_bb(U64 bb)
+	{
+		return c == WHITE
+			? move_to<NORTH_WEST>(bb) | move_to<NORTH_EAST>(bb)
+			: move_to<SOUTH_WEST>(bb) | move_to<SOUTH_EAST>(bb);
+	}
+
+	// Gets the square 1 and square 2 and returns the line between those two squares as a unsigned long long type
+	inline U64 line_bb(Square s1, Square s2)
+	{
+		return point_to_point_in_line_bb[s1][s2];
+	}
+
+	inline U64 between_bb(Square s1, Square s2) 
+	{
+		return between_points_bb[s1][s2];
+	}
+
+	template<PieceType pt>
+	inline U64 attacks_bb(Square s, U64 occ)
+	{
+		switch (pt)
+		{
+		case BISHOP:
+			return bishopAttacks(occ, s);
+		case ROOK:
+			return rookAttacks(occ, s);
+		case QUEEN:
+			return attacks_bb<BISHOP>(s, occ) | attacks_bb<ROOK>(s, occ);
+		default:
+			return pseudo_attacks[pt][s];
+		}
+	}
 
 	inline void print_bitboard(U64 bitboard)
 	{

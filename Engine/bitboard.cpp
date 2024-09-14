@@ -1,29 +1,37 @@
-#include "bitboard.h"
-#include "attacks.h"
+#define NOMINMAX
 
 #include<iostream>
 
+#include "bitboard.h"
+#include "defs.h"
+
 namespace ChessEngine {
+	unsigned short square_distance[SQUARE_TOTAL][SQUARE_TOTAL];
 
-	U64 mBishopAttacks[64][512];
-	U64 mRookAttacks[64][4096];
+	U64 mBishopAttacks[SQUARE_TOTAL][512];
+	U64 mRookAttacks[SQUARE_TOTAL][4096];
 
-	SMagic mBishopTbl[64];
-	SMagic mRookTbl[64];
+	U64 point_to_point_in_line_bb[SQUARE_TOTAL][SQUARE_TOTAL];
+	U64 between_points_bb[SQUARE_TOTAL][SQUARE_TOTAL];
+	U64 pseudo_attacks[PIECE_TYPE_NB][SQUARE_TOTAL];
+
+	SMagic mBishopTbl[SQUARE_TOTAL];
+	SMagic mRookTbl[SQUARE_TOTAL];
 
 	void init_sliders_attacks(PieceType py)
 	{
 		// loop over 64 board squares
-		for (int square = 0; square < 64; square++)
+		for (Square sq = A8; sq <= H1; ++sq)
 		{
-			Square sq = static_cast<Square>(square);
-
 			// init bishop & rook masks
-			mBishopTbl[square].mask = bishop_attacks_mask(sq);
-			mRookTbl[square].mask = rook_attacks_mask(sq);
+			mBishopTbl[sq].mask = bishop_attacks_mask(sq);
+			mRookTbl[sq].mask = rook_attacks_mask(sq);
 
 			// init current mask
-			U64 attack_mask = py == BISHOP ? mBishopTbl[square].mask : mRookTbl[square].mask;
+			U64 attack_mask =
+				py == BISHOP
+				? mBishopTbl[sq].mask
+				: mRookTbl[sq].mask;
 
 			// init relevant occupancy bit count
 			int relevant_bits_count = countBits(attack_mask);
@@ -68,15 +76,32 @@ namespace ChessEngine {
 		}
 	}
 
-	// get bishop attacks assuming current board occupancy
-	//    occupancy &= bishop_masks[square];
-	//    occupancy *= BISHOP_MAGIC_NUMBERS[square];
-	//    occupancy >>= 64 - RELEVANT_BISHOP_BITS[square];
-	//
-	//    // return bishop attacks
-	//    return bishop_attacks[square][occupancy];
+	U64 siding_attacks(PieceType pt, Square s, U64 occ)
+	{
+		U64 attacks = 0ULL;
+		Direction rook_dirs[4] = { NORTH, SOUTH, EAST, WEST };
+		Direction bishop_dirs[4] = { NORTH_EAST, SOUTH_EAST, SOUTH_WEST, NORTH_WEST };
 
-	extern U64 bishopAttacks(U64 occ, Square sq)
+		for (Direction d : (pt == ROOK ? rook_dirs : bishop_dirs))
+		{
+			Square source = s;
+			Square target = Square(source + d);
+
+			U64 distance_bb = square_distance[source][target] <= 2 ? square_to_BB(target) : U64(0);
+
+			while (is_square_ok(target) && distance_bb)
+			{
+				attacks |= (source += d);
+
+				if (occ & source)
+					break;
+			}
+		}
+
+		return attacks;
+	}
+
+	U64 bishopAttacks(U64 occ, Square sq)
 	{
 		occ &= mBishopTbl[sq].mask;
 		occ *= mBishopTbl[sq].magic;
@@ -85,7 +110,7 @@ namespace ChessEngine {
 		return mBishopAttacks[sq][occ];
 	}
 
-	extern U64 rookAttacks(U64 occ, Square sq)
+	U64 rookAttacks(U64 occ, Square sq)
 	{
 		occ &= mRookTbl[sq].mask;
 		occ *= mRookTbl[sq].magic;
@@ -94,36 +119,73 @@ namespace ChessEngine {
 		return mRookAttacks[sq][occ];
 	}
 
-	extern U64 queenAttacks(U64 occ, Square sq)
+	U64 queenAttacks(U64 occ, Square sq)
 	{
-		// result attacks bitboard
-		U64 queenAttacks = 0ULL;
+		return 0ULL;
+	}
 
-		U64 bishop_occupancies = occ;
-		U64 rook_occupancies = occ;
+	void init_pseudo_attacks()
+	{
+		int king_offsets[8] = { -9, -8, -7, -1, 1, 7, 8, 9 };
+		int knight_offsets[8] = { -17, -15, -10, -6, 6, 10, 15, 17 };
 
-		// get bishop attacks depending on the current board occupancies
-		bishop_occupancies &= mBishopTbl[sq].mask;
-		bishop_occupancies *= mBishopTbl[sq].magic;
-		bishop_occupancies >>= 64 - RELEVANT_BISHOP_BITS[sq];
+		for (Square s = A8; s <= H1; ++s)
+		{
+			// generate the pawn attacks
+			pawnAttacks[WHITE][s] = pawn_attacks_bb<WHITE>(square_to_BB(s));
+			pawnAttacks[BLACK][s] = pawn_attacks_bb<BLACK>(square_to_BB(s));
 
-		// get bishop attacks
-		queenAttacks = mBishopAttacks[sq][bishop_occupancies];
+			// generate pseudo attacks for king
+			pseudo_attacks[KNIGHT][s] |= king_attacks_mask(s);
 
-		// get rook attacks depending on the current board occupancies
-		rook_occupancies &= mRookTbl[sq].mask;
-		rook_occupancies *= mRookTbl[sq].magic;
-		rook_occupancies >>= 64 - RELEVANT_ROOK_BITS[sq];
+			// generate pseudo attacks for knight
+			pseudo_attacks[KNIGHT][s] |= knight_attacks_mask(s);
 
-		queenAttacks |= mRookAttacks[sq][rook_occupancies];
+			// generate pseudo attacks for rook and bishop
+			pseudo_attacks[BISHOP][s] = attacks_bb<BISHOP>(s, 0ULL);
+			pseudo_attacks[ROOK][s] = attacks_bb<ROOK>(s, 0ULL);
 
-		// return queen attacks
-		return queenAttacks;
+			// generate pseudo attacks for queen
+			pseudo_attacks[QUEEN][s] =
+				pseudo_attacks[BISHOP][s] | pseudo_attacks[ROOK][s];
+
+			// calculate the line that is formed between two points
+			// bishops because they are the only pieces that can move horizontaly and diagonaly (except the queen, but she is a combination of rook and bishop)
+			for (Square pa_square = A8; pa_square <= H1; ++pa_square)
+			{
+				if (pseudo_attacks[BISHOP][s] & pa_square)
+				{
+					point_to_point_in_line_bb[s][pa_square] =
+						(attacks_bb<BISHOP>(s, 0ULL) & attacks_bb<BISHOP>(pa_square, 0ULL)) | s | pa_square;
+
+					between_points_bb[s][pa_square] =
+						(attacks_bb<BISHOP>(s, square_to_BB(pa_square)) & attacks_bb<BISHOP>(pa_square, square_to_BB(s)));
+				}
+
+				if (pseudo_attacks[ROOK][s] & pa_square)
+				{
+					point_to_point_in_line_bb[s][pa_square] = (attacks_bb<ROOK>(s, 0ULL) & attacks_bb<ROOK>(pa_square, 0ULL)) | s | pa_square;
+
+					between_points_bb[s][pa_square] =
+						(attacks_bb<ROOK>(s, square_to_BB(pa_square)) & attacks_bb<ROOK>(pa_square, square_to_BB(s)));
+				}
+
+				between_points_bb[s][pa_square] |= pa_square;
+			}
+		}
 	}
 
 	void Bitboards::init()
 	{
 		init_sliders_attacks(BISHOP);
 		init_sliders_attacks(ROOK);
+
+		for (Square x = A8; x <= H8; ++x)
+			for (Square y = A8; y <= H8; ++y)
+				square_distance[x][y] = std::max(
+					std::abs(file_of(x) - file_of(y)),
+					std::abs(rank_of(x) - rank_of(y)));
+
+		init_pseudo_attacks();
 	}
 }
