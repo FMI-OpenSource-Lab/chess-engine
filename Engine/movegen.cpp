@@ -1,7 +1,6 @@
 #include "movegen.h"
 #include "consts.h"
 #include "position.h"
-#include "attacks.h"
 #include "move.h"
 #include "perft.h"
 #include "bitboard.h"
@@ -107,7 +106,7 @@ namespace ChessEngine
 		}
 
 		attacks =
-			all_board_pawn_attacks(pawnAttacks[side], pawns)
+			all_board_pawn_attacks(pawn_attacks[side], pawns)
 			& occupancies[~side];
 
 		while (attacks)
@@ -117,7 +116,7 @@ namespace ChessEngine
 
 			// By appling bitwise AND to the attack table and the pawn placement bitboard
 			// gets the source square index
-			U64 source_pawn_attacks = pawnAttacks[~side][target] & pawns;
+			U64 source_pawn_attacks = pawn_attacks[~side][target] & pawns;
 
 			while (source_pawn_attacks)
 			{
@@ -151,7 +150,7 @@ namespace ChessEngine
 		if (enpassant != NONE)
 		{
 			// source square/s bitboard
-			U64 source_bb = pawnAttacks[~side][enpassant] & pawns;
+			U64 source_bb = pawn_attacks[~side][enpassant] & pawns;
 
 			while (source_bb)
 			{
@@ -159,7 +158,7 @@ namespace ChessEngine
 				source = getLS1B_square(source_bb);
 
 				// single out the attack bits that correlate with en passant square
-				U64 enpassant_attacks = pawnAttacks[side][source] & square_to_BB(enpassant);
+				U64 enpassant_attacks = pawn_attacks[side][source] & square_to_BB(enpassant);
 
 				if (enpassant_attacks)
 				{
@@ -249,6 +248,8 @@ namespace ChessEngine
 	// King, Knight, Rook, Bishop and Queen moves generator
 	inline void piece_moves(PieceType pt, moves* move_list)
 	{
+		assert(pt != PAWN);
+
 		Piece p = get_piece(side, pt);
 
 		// bitboard of the current pieces of same type
@@ -264,11 +265,11 @@ namespace ChessEngine
 			Square source = getLS1B_square(bitboard);
 
 			attacks = (
-				pt == KNIGHT ? knightAttacks[source]
-				: pt == BISHOP ? bishopAttacks(occupancies[BOTH], source)
-				: pt == ROOK ? rookAttacks(occupancies[BOTH], source)
-				: pt == QUEEN ? queenAttacks(occupancies[BOTH], source)
-				: kingAttacks[source]
+				pt == KNIGHT ? attacks_bb_by<KNIGHT>(source)
+				: pt == BISHOP ? attacks_bb_by<BISHOP>(source, occupancies[BOTH])
+				: pt == ROOK ? attacks_bb_by<ROOK>(source, occupancies[BOTH])
+				: pt == QUEEN ? attacks_bb_by<QUEEN>(source, occupancies[BOTH])
+				: attacks_bb_by<KING>(source)
 				) & empty;
 
 			while (attacks)

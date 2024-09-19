@@ -95,15 +95,15 @@ enum Color
 };
 
 enum Direction : int {
-	NORTH = 8,
-	EAST = 1,
-	SOUTH = -NORTH,
-	WEST = -EAST,
+	DOWN = 8,
+	LEFT = 1,
+	UP = -DOWN,
+	RIGHT = -LEFT,
 
-	NORTH_EAST = NORTH + EAST,
-	SOUTH_EAST = SOUTH + EAST,
-	SOUTH_WEST = SOUTH + WEST,
-	NORTH_WEST = NORTH + WEST
+	DOWN_LEFT = DOWN + LEFT,
+	UP_LEFT = UP + LEFT,
+	UP_RIGHT = UP + RIGHT,
+	DOWN_RIGHT = DOWN + RIGHT
 };
 
 enum File : int {
@@ -168,9 +168,9 @@ constexpr Piece get_piece(Color c, PieceType pt) { return Piece(pt + (c * 6)); }
 constexpr PieceType type_of_piece(Piece p, Color c) { return PieceType(p - (c * 6)); }
 constexpr Color get_piece_color(Piece p) { return Color(p / 6); }
 
-constexpr bool is_square_ok(Square s) { return s >= A1 && s <= H8; }
+constexpr bool is_square_ok(Square s) { return s >= A8 && s <= H1; }
 
-constexpr Direction pawn_push_direction(Color c) { return c == WHITE ? NORTH : SOUTH; }
+constexpr Direction pawn_push_direction(Color c) { return c == WHITE ? DOWN : UP; }
 
 inline bool operator==(Square s1, Square s2) { return int(s1) == int(s2); }
 

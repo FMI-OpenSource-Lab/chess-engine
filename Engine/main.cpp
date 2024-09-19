@@ -1,7 +1,6 @@
 ﻿#include <bitset>
 
 #include "bitboard.h"
-#include "attacks.h"
 #include "position.h"
 #include "movegen.h"
 #include "perft.h"
@@ -15,7 +14,7 @@ using namespace ChessEngine;
 void init_all()
 {
 	// Initialize attacks
-	Attacks::init();
+	// Attacks::init();
 
 	// Initialize bitboards
 	Bitboards::init();
@@ -28,18 +27,16 @@ int main()
 
 	if (debug)
 	{
-		std::cout << "Debugging\n\n";
+		std::cout << "Debugging\n" << std::endl;
 
-		Position::init(START_FEN);
+		Position::init(TEST_FEN);
 		print_board();
 
-		print_bitboard(rookAttacks(0ULL, E4));
-		print_bitboard(siding_attacks(ROOK, E4, 0ULL));
-		
 		//search_position(2);
 	}
 	else
 		uci_loop();
+
 
 	system("pause");
 	return 0;

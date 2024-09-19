@@ -5,12 +5,15 @@
 #include <cassert>
 #include <iostream>
 #include <array>
+#include <vector>
 
 #include "consts.h"
-#include "attacks.h"
 
 namespace ChessEngine
 {
+#define BISHOP_ATTACKS_SIZE 512
+#define ROOK_ATTACKS_SIZE 4096
+
 	// Declare prototypes
 	constexpr inline U64 set_occupancy(int index, int bitsInMask, U64 attackMask);
 
@@ -20,12 +23,11 @@ namespace ChessEngine
 	extern constexpr void resetLSB(U64& bitboard);
 	extern constexpr int countBits(U64 bitboard);
 
-	extern void init_sliders_attacks(PieceType py);
-	extern U64 bishopAttacks(U64 occ, Square sq);
-	extern U64 rookAttacks(U64 occ, Square sq);
-	extern U64 queenAttacks(U64 occ, Square sq);
+	// extern void init_sliders_attacks(PieceType py);
 	extern void init_pseudo_attacks();
-	extern U64 siding_attacks(PieceType pt, Square s, U64 occ);
+
+	extern U64 bishopAttacks(U64 occ, Square s);
+	extern U64 rookAttacks(U64 occ, Square s);
 
 	constexpr U64 square_to_BB(Square square)
 	{
@@ -77,17 +79,21 @@ namespace ChessEngine
 	constexpr U64 LightSquares = 0x55AA55AA55AA55AAULL;
 	constexpr U64 DarkSquares = 0xAA55AA55AA55AA55ULL;
 
+	constexpr U64 rank_bb(Square s) { return Rank8_Bits << (rank_of(s) << 3); }
+	constexpr U64 file_bb(Square s) { return FileA_Bits << file_of(s); }
+	
+	constexpr U64 board_edges(Square s) { return ((Rank8_Bits | Rank1_Bits & ~rank_bb(s)) | (FileA_Bits | FileH_Bits) & ~file_bb(s)); }
+
 	// Not files
 	constexpr U64 not_A = 18374403900871474942ULL;	// ~FileA_Bits bitboard value where the A file is set to zero
 	constexpr U64 not_H = 9187201950435737471ULL;	// ~FileH_Bits bitboard value where the H file is set to zero
 	constexpr U64 not_HG = 4557430888798830399ULL;	// ~FileH_Bits & ~FileG_Bits bitboard value where the HG files are set to zero
 	constexpr U64 not_AB = 18229723555195321596ULL;	// ~FileA_Bits & ~FileB_Bits bitboard value where the HG files are set to zero
 
-	// define magic bishop attack table [squares][occupancy]
-	extern U64 mBishopAttacks[SQUARE_TOTAL][512]; // 256 K
-
-	// define magic rook attack table [squares][occupancy]
-	extern U64 mRookAttacks[SQUARE_TOTAL][4096]; // 2048K
+	//// define magic bishop attack table [squares][occupancy]
+	extern U64 mBishopAttacks[SQUARE_TOTAL][BISHOP_ATTACKS_SIZE];
+	//// define magic rook attack table [squares][occupancy]
+	extern U64 mRookAttacks[SQUARE_TOTAL][ROOK_ATTACKS_SIZE];
 
 	// array that returns a line that connects two points between squares
 	// e.g. [A1][H8] will return a bitboard with this diagonal
@@ -100,30 +106,42 @@ namespace ChessEngine
 	// every pseudo attack for the given piece on the given square
 	extern U64 pseudo_attacks[PIECE_TYPE_NB][SQUARE_TOTAL];
 
+	// pawn attacks table [side][square]
+	extern U64 pawn_attacks[2][64]; // 2 - sides to play, 64 - squares on a table
+
+	// distance in squares between square x and square y
 	extern unsigned short square_distance[SQUARE_TOTAL][SQUARE_TOTAL];
 
+	// extern U64 bishop_attacks[];
+	// extern U64 rook_attacks[];
+
 	struct SMagic {
+		U64* attack;
 		U64 mask;  // to mask relevant squares of both lines (no outer squares)
 		U64 magic; // magic 64-bit factor
+		int shift; // shift relevant bits
 	};
 
-	extern SMagic mBishopTbl[];
-	extern SMagic mRookTbl[];
+	extern SMagic bishop_magic_tbl[SQUARE_TOTAL];
+	extern SMagic rook_magic_tbl[SQUARE_TOTAL];
+
+	extern void init_magics(PieceType pt, SMagic magics[]);
+	extern U64 sliding_attacks(PieceType pt, Square s, U64 occ);
 
 	// moves the bb one or two steps
 	template<Direction d>
 	constexpr U64 move_to(U64 b)
 	{
-		return d == NORTH ? b << 8
-			: d == SOUTH ? b >> 8
-			: d == NORTH + NORTH ? b << 16
-			: d == SOUTH + SOUTH ? b >> 16
-			: d == EAST ? (b & not_H) << 1
-			: d == WEST ? (b & not_A) >> 1
-			: d == NORTH_EAST ? (b & not_H) << 9
-			: d == NORTH_WEST ? (b & not_A) << 7
-			: d == SOUTH_EAST ? (b & not_H) >> 7
-			: d == SOUTH_WEST ? (b & not_A) >> 9
+		return d == DOWN ? b << 8
+			: d == UP ? b >> 8
+			: d == DOWN + DOWN ? b << 16
+			: d == UP + UP ? b >> 16
+			: d == LEFT ? (b & not_H) << 1
+			: d == RIGHT ? (b & not_A) >> 1
+			: d == DOWN_LEFT ? (b & not_H) << 9
+			: d == DOWN_RIGHT ? (b & not_A) << 7
+			: d == UP_LEFT ? (b & not_H) >> 7
+			: d == UP_RIGHT ? (b & not_A) >> 9
 			: 0;
 	}
 
@@ -131,24 +149,20 @@ namespace ChessEngine
 	constexpr U64 pawn_attacks_bb(U64 bb)
 	{
 		return c == WHITE
-			? move_to<NORTH_WEST>(bb) | move_to<NORTH_EAST>(bb)
-			: move_to<SOUTH_WEST>(bb) | move_to<SOUTH_EAST>(bb);
+			? move_to<UP_RIGHT>(bb) | move_to<UP_LEFT>(bb)
+			: move_to<DOWN_RIGHT>(bb) | move_to<DOWN_LEFT>(bb);
 	}
 
 	// Gets the square 1 and square 2 and returns the line between those two squares as a unsigned long long type
-	inline U64 line_bb(Square s1, Square s2)
-	{
-		return point_to_point_in_line_bb[s1][s2];
-	}
+	inline U64 line_bb(Square s1, Square s2) { return point_to_point_in_line_bb[s1][s2];}
 
-	inline U64 between_bb(Square s1, Square s2) 
-	{
-		return between_points_bb[s1][s2];
-	}
+	inline U64 between_bb(Square s1, Square s2) { return between_points_bb[s1][s2]; }
 
 	template<PieceType pt>
-	inline U64 attacks_bb(Square s, U64 occ)
+	inline U64 attacks_bb_by(Square s, U64 occ)
 	{
+		assert(is_square_ok(s) && pt != PAWN);
+
 		switch (pt)
 		{
 		case BISHOP:
@@ -156,32 +170,39 @@ namespace ChessEngine
 		case ROOK:
 			return rookAttacks(occ, s);
 		case QUEEN:
-			return attacks_bb<BISHOP>(s, occ) | attacks_bb<ROOK>(s, occ);
-		default:
+			return attacks_bb_by<BISHOP>(s, occ) | attacks_bb_by<ROOK>(s, occ);
+		default: // king and knight
 			return pseudo_attacks[pt][s];
 		}
+	}
+
+	// For easier acces to knight and king attacks
+	template<PieceType pt>
+	inline U64 attacks_bb_by(Square s)
+	{
+		assert(is_square_ok(s) && (pt != PAWN));
+
+		return pseudo_attacks[pt][s];
 	}
 
 	inline void print_bitboard(U64 bitboard)
 	{
 		std::cout << std::endl;
 
-		// loop on ranks
-		for (unsigned short rank = 0; rank < 8; rank++)
+		for (Rank rank = RANK_1; rank <= RANK_8; ++rank)
 		{
-			// loop on files
-			for (unsigned short file = 0; file < 8; file++)
+			for (File file = FILE_A; file <= FILE_H; ++file)
 			{
-				// convert rank and file into square index
-				int sq = rank * 8 + file;
+				Square sq = make_square(file, rank);
+				std::string s = get_bit(bitboard, sq) ? " 1" : " 0";
 
-				if (!file) printf("  %d ", 8 - rank);
+				if (file == FILE_A)
+					std::cout << "  " << (8 - rank) << " ";
 
-				// print bit state (1 or 0)
-				printf(" %d", get_bit(bitboard, sq) ? 1 : 0);
+				std::cout << s;
 			}
 
-			std::cout << std::endl;
+			std::cout << "\n";
 		}
 
 		// print files
@@ -200,7 +221,7 @@ namespace ChessEngine
 		for (int count = 0; count < bitsInMask; count++)
 		{
 			// get the lsb square
-			int square = getLS1B(attackMask);
+			Square square = getLS1B_square(attackMask);
 
 			// remove LSB
 			rm_bit(attackMask, square);
@@ -208,7 +229,7 @@ namespace ChessEngine
 			// make occupancy on board
 			if (index & (1 << count))
 				// populate occupancy map
-				occupancy |= (1ULL << square);
+				occupancy |= square_to_BB(square);
 		}
 
 		return occupancy;
@@ -263,10 +284,7 @@ namespace ChessEngine
 	constexpr int countBits(U64 bitboard)
 	{
 		int count = 0;
-
-		for (count = 0; bitboard; count++)
-			resetLSB(bitboard);
-
+		for (count = 0; bitboard; count++, bitboard &= bitboard - 1);
 		return count;
 	}
 

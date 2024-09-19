@@ -61,153 +61,154 @@ namespace ChessEngine
 
 	using BITBOARD = U64;
 
-	//struct FENs
-	//{
-	//	std::string start = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-	//	std::string test = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ";
-	//	std::string empty = "8/8/8/8/8/8/8/8 b - - ";
-	//};
+	// Info structure stores information needed to restore a position
+	// to its previous state when a move is taken back
+	struct Info
+	{
+		// copied when making a move
+		CastlingRights _castling;
+		Square _enpassant;
+		PLY_TYPE _rule_fifty;
+		PLY_TYPE _ply;
 
-	//// Info structure stores information needed to restore a position
-	//// to its previous state when a move is taken back
-	//struct Info
-	//{
-	//	// thesea are copied when a move is made
-	//	CastlingRights _castle;
-	//	Square _enpassant;
-	//	Color _side;
-	//	PLY_TYPE _fifty_rule;
-	//	Value non_pawn_material[BOTH];
+		// not copied
+		Info* next;
+		Info* previous;
+		Piece captured_piece;
+		int repetition;
+		BITBOARD checks_bb;
+		BITBOARD pins_bb;
+		BITBOARD blocks_for_king_bb[BOTH];
+		BITBOARD checks_squares[PIECE_TYPE_NB];
+	};
 
-	//	// not copied when making a move
-	//	Info* prev;
-	//	Info* next;
-	//	Piece captured_piece;
-	//	int repetition;
-	//};
+	// List to keep track of position states along the setup
+	// std::deque is used because pointers to elements are not invalidated when list resizing
+	using InfoListPtr = std::unique_ptr<std::deque<Info>>;
 
-	//using InfoListPtr = std::unique_ptr<std::deque<Info>>;
+	// This class stores information to the board reperesentation as pieces,
+	// side to move, castling info, etc.
+	class _Position
+	{
+	public:
+		static void init();
 
-	//// This class stores information to the board reperesentation as pieces,
-	//// side to move, castling info, etc.
-	//class _Position
-	//{
-	//public:
-	//	static void init();
+		_Position() = default;
 
-	//	_Position() = default;
+		// FEN i/o
+		_Position& set(const char* fen, Info* info);
+		std::string fen() const;
+		void print_board();
 
-	//	// FEN i/o
-	//	_Position& set(const char* fen, Info* info);
-	//	std::string fen() const;
-	//	void print_board();
+		// Representation
+		inline BITBOARD get_pieces(Piece p) const { return bitboards[p]; }
+		inline BITBOARD get_pieces(PieceType pt, Color c) const { return bitboards[get_piece(c, pt)]; }
+		inline BITBOARD get_pieces(Color c) const
+		{
+			return get_pieces(PAWN, c) |
+				get_pieces(KNIGHT, c) |
+				get_pieces(BISHOP, c) |
+				get_pieces(ROOK, c) |
+				get_pieces(QUEEN, c) |
+				get_pieces(KING, c);
+		}
 
-	//	// Representation
-	//	inline BITBOARD get_pieces(Piece p) const { return bitboards[p]; }
-	//	inline BITBOARD get_pieces(PieceType pt, Color c) const { return bitboards[get_piece(c, pt)]; }
-	//	inline BITBOARD get_pieces(Color c) const
-	//	{
-	//		return get_pieces(PAWN, c) |
-	//			get_pieces(KNIGHT, c) |
-	//			get_pieces(BISHOP, c) |
-	//			get_pieces(ROOK, c) |
-	//			get_pieces(QUEEN, c) |
-	//			get_pieces(KING, c);
-	//	}
+		inline BITBOARD get_our_pieces() const { return get_pieces(side); }
+		inline BITBOARD get_opponent_pieces() const { return get_pieces(~side); }
+		inline BITBOARD get_all_pieces() const { return occupancies[BOTH]; }
+		inline BITBOARD get_all_empty_squares() const { return ~occupancies[BOTH]; }
 
-	//	inline BITBOARD get_our_pieces() const { return get_pieces(side); }
-	//	inline BITBOARD get_opponent_pieces() const { return get_pieces(~side); }
-	//	inline BITBOARD get_all_pieces() const { return occupancies[BOTH]; }
-	//	inline BITBOARD get_all_empty_squares() const { return ~occupancies[BOTH]; }
+		// Checking
+		BITBOARD checks() const;
+		BITBOARD blocks_for_king(Color c) const;
+		BITBOARD check_squares(PieceType pt) const;
+		BITBOARD pins(Color c) const;
 
-	//	// Attacks
-	//	BITBOARD	get_attackers_to(Square s) const;
-	//	BITBOARD	get_attackers_to(Square s, BITBOARD occ) const;
-	//	template<PieceType pt>
-	//	BITBOARD	get_attacks_by(Color c) const;
-	//	Square		get_king_pos(Color c) const;
-	//	bool		is_square_attacked(Square square, Color side_to_move) const;
+		// Attacks
+		BITBOARD	get_attackers_to(Square s) const;
+		BITBOARD	get_attackers_to(Square s, BITBOARD occ) const;
+		template<PieceType pt>
+		BITBOARD	get_attacks_by(Color c) const;
+		Square		get_king_pos(Color c) const;
+		BITBOARD	check_squares(Square s) const;
+		BITBOARD	pinners(Color c) const;
+		bool		is_square_attacked(Square square, Color side_to_move) const;
 
-	//	// State info
-	//	Info* info() const;
+		// State info
+		Info* info() const;
 
-	//	// Castling
-	//	bool			can_castle(CastlingRights cr) const;
-	//	CastlingRights	castling_rights(Color c) const;
-	//	Square			castling_rook_square(CastlingRights cr) const;
+		// Castling
+		bool			can_castle(CastlingRights cr) const;
+		CastlingRights	castling_rights(Color c) const;
+		Square			castling_rook_square(CastlingRights cr) const;
 
-	//	// Other
-	//	Square	ep_square() const;
-	//	Piece	get_piece_on(Square s) const { return piece_board[s]; }
-	//	Color	side_to_move() const { return side; }
-	//	bool	is_empty(Square s) const { return get_piece_on(s) == NONE; }
-	//	int		game_ply() const;
-	//	int		rule_fifty_count() const;
+		// Move properties
+		bool is_legal(Move m) const;
+		bool is_pseudo_legal(Move m) const;
+		bool is_capture(Move m) const;
+		bool gives_check(Move m) const;
+		Piece moved_piece(Move m) const;
+		Piece captured_piece() const;
 
-	//	Value non_pawn_material(Color c) const;
-	//	Value non_pawn_material() const;
+		// Position properties
+		Square	 ep_square() const;
+		Piece	 get_piece_on(Square s) const { return piece_board[s]; }
+		Color	 side_to_move() const { return side; }
+		bool	 is_empty(Square s) const { return get_piece_on(s) == NONE; }
+		bool	 is_draw(PLY_TYPE ply) const;
+		bool	 has_repeated() const;
+		PLY_TYPE game_ply() const;
+		PLY_TYPE rule_fifty_count() const;
 
-	//	// Debugging position
-	//	bool is_pos_ok() const;
+		Value non_pawn_material(Color c) const;
+		Value non_pawn_material() const;
 
-	//	// Doing and undoing moves
-	//	void do_move(Move m, Info& newInfo);
-	//	void do_move(Move m, Info& newInfo, bool gives_check);
-	//	void undo_move(Move m);
+		// Debugging position
+		bool is_pos_ok() const;
 
-	//	void remove_piece(Square s);
-	//	void place_piece(Piece p, Square s);
+		// Doing and undoing moves
+		void do_move(Move m, Info& newInfo);
+		void do_move(Move m, Info& newInfo, bool gives_check);
+		void undo_move(Move m);
 
-	//	friend std::ostream& operator<<(std::ostream& os, const _Position& position);
+		void remove_piece(Square s);
+		void place_piece(Piece p, Square s);
 
-	//private:
-	//	void set_castling_right(Color c, Square r_source);
-	//	void set_info();
-	//	void set_check_info();
+		// Static exchange eval
+		bool see(Move m, int threshold = 0) const;
 
-	//	// Data
-	//	BITBOARD bitboards[12];
-	//	BITBOARD occupancies[3];
+		friend std::ostream& operator<<(std::ostream& os, const _Position& position);
 
-	//	uint8_t	 castling_rights_mask[NONE];
-	//	Piece	 piece_board[SQUARE_TOTAL];
+	private:
+		void set_castling_right(Color c, Square r_source);
+		template<bool will>
+		void caslte(Color us, Square source, Square& target, Square& r_source, Square& r_target);
+		
+		void set_info();
+		void set_check_info();
 
-	//	Color	 side;
-	//	Square	 enpassant = NONE;
-	//	Square	 castling_rook_squares[CASTLING_RIGHT_NB];
-	//	PLY_TYPE gamePly;
-	//	CastlingRights castle = CASTLE_NB;
+		void move_piece(Square source, Square target);
 
-	//	// State info 
-	//	Info* info;
-	//};
+		// Data
+		BITBOARD bitboards[12];
+		BITBOARD occupancies[3];
+		BITBOARD type[PIECE_TYPE_NB];
 
-	//inline Square _Position::ep_square() const { return info->_enpassant; }
-	//inline bool _Position::can_castle(CastlingRights cr) const { return info->_castle & cr; }
-	//inline CastlingRights _Position::castling_rights(Color c) const
-	//{
-	//	return CastlingRights(c & CastlingRights(info->_castle));
-	//}
-	//inline Square _Position::castling_rook_square(CastlingRights cr) const
-	//{
-	//	assert(cr == WK || cr == WQ || cr == BK || cr == BQ);
-	//	return castling_rook_squares[cr];
-	//}
-	//inline BITBOARD _Position::get_attackers_to(Square s) const { return get_attackers_to(s, get_all_pieces()); }
+		int		 piece_count[PIECE_TYPE_NB];
+		uint8_t	 castling_rights_mask[NONE];
+		Square	 castling_r_square[CASTLING_RIGHT_NB];
+		Piece	 piece_board[SQUARE_TOTAL];
 
-	//template<PieceType pt>
-	//inline BITBOARD	_Position::get_attacks_by(Color c) const 
-	//{
-	//	if constexpr (pt == PAWN)
-	//		return c == WHITE ? pawnAttacks[WHITE][get_piece(WHITE, pt)] : pawnAttacks[BLACK][1];
-	//	else
-	//	{
-	//		BITBOARD threats = 0;
-	//		BITBOARD attackers = get_pieces(c, pt);
-	//		while(attackers)
-	//			threats |= 
-	//	}
-	//}
+		PLY_TYPE gamePly;
+		Color	 side;
+		
+		// State info 
+		Info* _info;
+	};
+
+	// check if square is attacked
+	extern bool is_square_attacked(const Square& square, const Color color);
+	extern void print_attacked_squares(Color c);
 
 	namespace Position
 	{

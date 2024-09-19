@@ -1,6 +1,5 @@
 #include "search.h"
 
-#include "attacks.h"
 #include "score.h"
 #include "move.h"
 #include "movegen.h"

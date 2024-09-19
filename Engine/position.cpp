@@ -1,5 +1,4 @@
 #include "position.h"
-#include "attacks.h"
 
 #include <iostream>
 #include <sstream>
@@ -214,5 +213,76 @@ namespace ChessEngine
 		}
 
 		return EMPTY;
+	}
+
+	// check if square is attacked
+	bool is_square_attacked(const Square& square, const Color color)
+	{
+		// !color -> white
+
+		// This gets the pawn attacks at the white side and square
+		// then applies bitwise AND to the opposide piece
+		bool is_pawn_attacks = !color
+			? pawn_attacks[BLACK][square] & bitboards[WHITE_PAWN]
+			: pawn_attacks[WHITE][square] & bitboards[BLACK_PAWN];
+
+		bool is_knight_attacks = attacks_bb_by<KNIGHT>(square)
+			& bitboards[
+				!color
+					? WHITE_KNIGHT
+					: BLACK_KNIGHT];
+
+		bool is_king_attacks = attacks_bb_by<KING>(square)
+			& bitboards[
+				!color
+					? WHITE_KING
+					: BLACK_KING];
+
+		bool is_bishop_attacks = attacks_bb_by<BISHOP>(square, occupancies[BOTH])
+			& bitboards[
+				!color
+					? WHITE_BISHOP
+					: BLACK_BISHOP];
+
+		bool is_rook_attacks = attacks_bb_by<ROOK>(square, occupancies[BOTH])
+			& bitboards[
+				!color
+					? WHITE_ROOK
+					: BLACK_ROOK];
+
+		bool is_queen_attacks = attacks_bb_by<QUEEN>(square, occupancies[BOTH])
+			& bitboards[
+				!color
+					? WHITE_QUEEN
+					: BLACK_QUEEN];
+
+		return is_pawn_attacks ||
+			is_knight_attacks ||
+			is_king_attacks ||
+			is_bishop_attacks ||
+			is_rook_attacks ||
+			is_queen_attacks;
+	}
+
+	void print_attacked_squares(Color color)
+	{
+		std::cout << std::endl;
+
+		for (Rank rank = RANK_1; rank <= RANK_8; ++rank)
+		{
+			for (File file = FILE_A; file <= FILE_H; ++file)
+			{
+				Square square = convert_to_square(rank, file);
+
+				if (!file)
+					printf(" %d ", 8 - rank);
+
+				printf(" %d", is_square_attacked(square, color) ? 1 : 0);
+			}
+
+			std::cout << std::endl;
+		}
+
+		printf("\n    a b c d e f g h\n\n");
 	}
 }
