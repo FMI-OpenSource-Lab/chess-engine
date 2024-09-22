@@ -212,7 +212,7 @@ namespace ChessEngine
 		case 'K': return WHITE_KING;
 		}
 
-		return EMPTY;
+		return NO_PIECE;
 	}
 
 	// check if square is attacked

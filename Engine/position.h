@@ -66,7 +66,10 @@ namespace ChessEngine
 	struct Info
 	{
 		// copied when making a move
+		BITBOARD _bitboards[NO_PIECE];
+		BITBOARD _occupancies[BOTH + 1]; // +1 becase 
 		CastlingRights _castling;
+		Color _side;
 		Square _enpassant;
 		PLY_TYPE _rule_fifty;
 		PLY_TYPE _ply;
@@ -76,10 +79,6 @@ namespace ChessEngine
 		Info* previous;
 		Piece captured_piece;
 		int repetition;
-		BITBOARD checks_bb;
-		BITBOARD pins_bb;
-		BITBOARD blocks_for_king_bb[BOTH];
-		BITBOARD checks_squares[PIECE_TYPE_NB];
 	};
 
 	// List to keep track of position states along the setup
@@ -100,71 +99,64 @@ namespace ChessEngine
 		std::string fen() const;
 		void print_board();
 
-		// Representation
-		inline BITBOARD get_pieces(Piece p) const { return bitboards[p]; }
-		inline BITBOARD get_pieces(PieceType pt, Color c) const { return bitboards[get_piece(c, pt)]; }
-		inline BITBOARD get_pieces(Color c) const
+		// Squares
+		Square ep_square() const { return inf->_enpassant; }
+		Square castling_rook_square(CastlingRights cr) const;
+
+		// Bitboards
+		inline BITBOARD get_pieces_bb(PieceType pt = ALL_PIECES) const;
+		inline BITBOARD get_pieces_bb(Piece p) const { return bitboards[p]; }
+		inline BITBOARD get_pieces_bb(PieceType pt, Color c) const { return bitboards[get_piece(c, pt)]; }
+		inline BITBOARD get_pieces_bb(Color c) const
 		{
-			return get_pieces(PAWN, c) |
-				get_pieces(KNIGHT, c) |
-				get_pieces(BISHOP, c) |
-				get_pieces(ROOK, c) |
-				get_pieces(QUEEN, c) |
-				get_pieces(KING, c);
+			return get_pieces_bb(PAWN, c) |
+				get_pieces_bb(KNIGHT, c) |
+				get_pieces_bb(BISHOP, c) |
+				get_pieces_bb(ROOK, c) |
+				get_pieces_bb(QUEEN, c) |
+				get_pieces_bb(KING, c);
 		}
 
-		inline BITBOARD get_our_pieces() const { return get_pieces(side); }
-		inline BITBOARD get_opponent_pieces() const { return get_pieces(~side); }
-		inline BITBOARD get_all_pieces() const { return occupancies[BOTH]; }
-		inline BITBOARD get_all_empty_squares() const { return ~occupancies[BOTH]; }
+		inline BITBOARD get_our_pieces_bb() const { return get_pieces_bb(side); }
+		inline BITBOARD get_opponent_pieces_bb() const { return get_pieces_bb(~side); }
+		inline BITBOARD get_all_pieces_bb() const { return occupancies[BOTH]; }
+		inline BITBOARD get_all_empty_squares_bb() const { return ~occupancies[BOTH]; }
 
-		// Checking
-		BITBOARD checks() const;
-		BITBOARD blocks_for_king(Color c) const;
-		BITBOARD check_squares(PieceType pt) const;
-		BITBOARD pins(Color c) const;
-
-		// Attacks
 		BITBOARD	get_attackers_to(Square s) const;
 		BITBOARD	get_attackers_to(Square s, BITBOARD occ) const;
 		template<PieceType pt>
 		BITBOARD	get_attacks_by(Color c) const;
-		Square		get_king_pos(Color c) const;
-		BITBOARD	check_squares(Square s) const;
-		BITBOARD	pinners(Color c) const;
-		bool		is_square_attacked(Square square, Color side_to_move) const;
 
-		// State info
-		Info* info() const;
+		// Booleans
+		bool is_square_attacked(Square square, Color side_to_move) const;
 
-		// Castling
-		bool			can_castle(CastlingRights cr) const;
-		CastlingRights	castling_rights(Color c) const;
-		Square			castling_rook_square(CastlingRights cr) const;
+		bool can_castle(CastlingRights cr) const;
 
-		// Move properties
 		bool is_legal(Move m) const;
 		bool is_pseudo_legal(Move m) const;
 		bool is_capture(Move m) const;
-		bool gives_check(Move m) const;
-		Piece moved_piece(Move m) const;
-		Piece captured_piece() const;
 
-		// Position properties
-		Square	 ep_square() const;
-		Piece	 get_piece_on(Square s) const { return piece_board[s]; }
-		Color	 side_to_move() const { return side; }
-		bool	 is_empty(Square s) const { return get_piece_on(s) == NONE; }
-		bool	 is_draw(PLY_TYPE ply) const;
-		bool	 has_repeated() const;
+		bool gives_check(Move m) const;
+		bool is_empty(Square s) const { return get_piece_on(s) == NO_PIECE; }
+		bool is_draw(PLY_TYPE ply) const;
+		bool has_repeated() const;
+
+		bool is_pos_ok() const;
+
+		bool see(Move m, int threshold = 0) const; // Static exchange evaluation
+
+		// Pieces
+		Piece moved_piece(Move m) const { return get_piece_on(m.source_square()); };
+		Piece captured_piece() const;
+		Piece get_piece_on(Square s) const { return piece_board[s]; }
+
+		// PLY
 		PLY_TYPE game_ply() const;
 		PLY_TYPE rule_fifty_count() const;
 
+		// Value
 		Value non_pawn_material(Color c) const;
 		Value non_pawn_material() const;
-
-		// Debugging position
-		bool is_pos_ok() const;
 
 		// Doing and undoing moves
 		void do_move(Move m, Info& newInfo);
@@ -174,37 +166,96 @@ namespace ChessEngine
 		void remove_piece(Square s);
 		void place_piece(Piece p, Square s);
 
-		// Static exchange eval
-		bool see(Move m, int threshold = 0) const;
+		// Caslte & side
+		CastlingRights	castling_rights(Color c) const
+		{
+			return c & CastlingRights(inf->_castling);
+		}
 
+		Color	 side_to_move() const { return side; }
+
+		// State info
+		Info* info() const;
+
+		// Overrides
 		friend std::ostream& operator<<(std::ostream& os, const _Position& position);
 
 	private:
 		void set_castling_right(Color c, Square r_source);
 		template<bool will>
 		void caslte(Color us, Square source, Square& target, Square& r_source, Square& r_target);
-		
+
 		void set_info();
 		void set_check_info();
 
 		void move_piece(Square source, Square target);
 
 		// Data
-		BITBOARD bitboards[12];
-		BITBOARD occupancies[3];
+		BITBOARD bitboards[NO_PIECE];
+		BITBOARD occupancies[BOTH + 1];
 		BITBOARD type[PIECE_TYPE_NB];
 
-		int		 piece_count[PIECE_TYPE_NB];
-		uint8_t	 castling_rights_mask[NONE];
-		Square	 castling_r_square[CASTLING_RIGHT_NB];
 		Piece	 piece_board[SQUARE_TOTAL];
+
+		uint8_t	 castling_rights_mask[NONE];
 
 		PLY_TYPE gamePly;
 		Color	 side;
-		
+
 		// State info 
-		Info* _info;
+		Info* inf;
 	};
+
+	inline BITBOARD _Position::get_pieces_bb(PieceType pt) const { return type[pt]; }
+
+	inline bool _Position::can_castle(CastlingRights cr) const {
+		return inf->_castling & cr;
+	}
+
+	inline BITBOARD _Position::get_attackers_to(Square s, BITBOARD occ) const
+	{
+		return
+			(pawn_attacks_bb<BLACK>(s) & get_pieces_bb(PAWN, WHITE))
+			| (pawn_attacks_bb<WHITE>(s) & get_pieces_bb(PAWN, BLACK))
+			| (attacks_bb_by<KNIGHT>(s) & get_pieces_bb(KNIGHT))
+			| (attacks_bb_by<ROOK>(s, occ) & (get_pieces_bb(ROOK) | get_pieces_bb(QUEEN)))
+			| (attacks_bb_by<BISHOP>(s, occ) & (get_pieces_bb(BISHOP) | get_pieces_bb(QUEEN)))
+			| (attacks_bb_by<KING>(s) & get_pieces_bb(KING));
+	}
+
+	inline BITBOARD _Position::get_attackers_to(Square s) const
+	{
+		return get_attackers_to(s, get_all_pieces_bb());
+	}
+
+	template<PieceType pt>
+	inline BITBOARD _Position::get_attacks_by(Color c) const
+	{
+		if (pt == PAWN)
+			return c == WHITE
+			? pawn_attacks_bb<WHITE>(get_pieces_bb(PAWN, WHITE))
+			: pawn_attacks_bb<BLACK>(get_pieces_bb(PAWN, BLACK));
+
+		BITBOARD attacks = 0;
+		BITBOARD bb = get_pieces_bb(pt, c);
+
+		while (bb)
+		{
+			attacks |= attacks_bb_by<pt>(getLS1B_square(bb), get_all_pieces(side));
+			resetLSB(bb);
+		}
+
+		return attacks;
+	}
+
+	inline Piece _Position::captured_piece() const { return inf->captured_piece; }
+
+	//inline void _Position::place_piece(Piece p, Square s) 
+	//{
+	//	piece_board[s] = p;
+	//	type[ALL_PIECES] |= type[type_of_piece(p, side)] |= s;
+	//	occupancies[p >> 3] |= s;
+	//}
 
 	// check if square is attacked
 	extern bool is_square_attacked(const Square& square, const Color color);

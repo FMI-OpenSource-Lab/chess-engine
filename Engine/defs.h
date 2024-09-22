@@ -84,7 +84,7 @@ enum Piece : int {
 	BLACK_ROOK,
 	BLACK_QUEEN,
 	BLACK_KING,
-	EMPTY
+	NO_PIECE
 };
 
 enum Color
@@ -145,6 +145,10 @@ enum CastlingRights : int {
 
 	CASTLING_RIGHT_NB = 16
 };
+
+inline CastlingRights operator&(Color c, CastlingRights cr) {
+	return	CastlingRights((c == WHITE ? WHITE_CASTLE : BLACK_CASTLE) & cr );
+}
 
 inline CastlingRights operator|(CastlingRights& c, CastlingRights a) { return CastlingRights(int(c) | int(a)); };
 inline CastlingRights operator&(CastlingRights& c, int d) { return CastlingRights(int(c) & int(d)); }
