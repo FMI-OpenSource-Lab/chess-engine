@@ -28,8 +28,10 @@ int main()
 	if (debug)
 	{
 		std::cout << "Debugging\n" << std::endl;
+		_Position p;
+		Info *inf{};
 
-		Position::init(TEST_FEN);
+		p.set(START_FEN, inf);
 		print_board();
 
 		//search_position(2);

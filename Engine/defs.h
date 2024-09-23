@@ -170,6 +170,9 @@ constexpr Square make_square(File f, Rank r)
 
 constexpr Piece get_piece(Color c, PieceType pt) { return Piece(pt + (c * 6)); }
 constexpr PieceType type_of_piece(Piece p, Color c) { return PieceType(p - (c * 6)); }
+
+constexpr PieceType type_of_piece(Piece p) { return PieceType((p % 6) + 1); }
+
 constexpr Color get_piece_color(Piece p) { return Color(p / 6); }
 
 constexpr bool is_square_ok(Square s) { return s >= A8 && s <= H1; }

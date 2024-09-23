@@ -87,6 +87,7 @@ namespace ChessEngine
 		}
 
 		constexpr std::uint16_t move_value() { return move; }
+		constexpr bool is_move_ok() const { return invalid_move().move != move && null_move().move != move; }
 
 		// null and none moves
 		// has the same source and target square whilst other moves have different source and destination squares

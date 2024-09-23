@@ -153,6 +153,13 @@ namespace ChessEngine
 			: move_to<DOWN_RIGHT>(bb) | move_to<DOWN_LEFT>(bb);
 	}
 
+	constexpr U64 pawn_attacks_bb(Color c, U64 bb)
+	{
+		return c == WHITE
+			? pawn_attacks_bb<WHITE>(bb)
+			: pawn_attacks_bb<BLACK>(bb);
+	}
+
 	// Gets the square 1 and square 2 and returns the line between those two squares as a unsigned long long type
 	inline U64 line_bb(Square s1, Square s2) { return point_to_point_in_line_bb[s1][s2];}
 
@@ -171,6 +178,21 @@ namespace ChessEngine
 			return rookAttacks(occ, s);
 		case QUEEN:
 			return attacks_bb_by<BISHOP>(s, occ) | attacks_bb_by<ROOK>(s, occ);
+		default: // king and knight
+			return pseudo_attacks[pt][s];
+		}
+	}
+
+	inline U64 attacks_bb_by(PieceType pt, Square s, U64 occ)
+	{
+		switch (pt)
+		{
+		case BISHOP:
+			return attacks_bb_by<BISHOP>(s, occ);
+		case ROOK:
+			return attacks_bb_by<ROOK>(s, occ);
+		case QUEEN:
+			return attacks_bb_by<QUEEN>(s, occ);
 		default: // king and knight
 			return pseudo_attacks[pt][s];
 		}
