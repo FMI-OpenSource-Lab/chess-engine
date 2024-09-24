@@ -146,40 +146,18 @@ enum CastlingRights : int {
 	CASTLING_RIGHT_NB = 16
 };
 
-inline CastlingRights operator&(Color c, CastlingRights cr) {
-	return	CastlingRights((c == WHITE ? WHITE_CASTLE : BLACK_CASTLE) & cr );
-}
+constexpr bool is_square_ok(Square s) { return s >= A8 && s <= H1; }
 
+// Castling Rights operator overloads
+inline CastlingRights operator&(Color c, CastlingRights cr) {
+	return	CastlingRights((c == WHITE ? WHITE_CASTLE : BLACK_CASTLE) & cr ); }
 inline CastlingRights operator|(CastlingRights& c, CastlingRights a) { return CastlingRights(int(c) | int(a)); };
 inline CastlingRights operator&(CastlingRights& c, int d) { return CastlingRights(int(c) & int(d)); }
 
+// Direction operator overloads
 constexpr Direction operator+(Direction d1, Direction d2) { return Direction(int(d1) + int(d2)); }
 constexpr Direction operator*(int i, Direction d) { return Direction(i * int(d)); }
-
-constexpr File file_of(Square s) { return File(s % 8); }
-constexpr Rank rank_of(Square s) { return Rank(s >> 3); }
-
-constexpr Square convert_to_square(Rank rank, File file) { return static_cast<Square>(static_cast<int>(rank) * 8 + static_cast<int>(file)); }
-constexpr Square convert_to_square(int rank, int file) { return static_cast<Square>(rank * 8 + file); }
-constexpr Square convert_to_square(int square_index) { return static_cast<Square>(square_index); }
-
-constexpr Square make_square(File f, Rank r)
-{
-	return Square((r << 3) + f);
-}
-
-constexpr Piece get_piece(Color c, PieceType pt) { return Piece(pt + (c * 6)); }
-constexpr PieceType type_of_piece(Piece p, Color c) { return PieceType(p - (c * 6)); }
-
-constexpr PieceType type_of_piece(Piece p) { return PieceType((p % 6) + 1); }
-
-constexpr Color get_piece_color(Piece p) { return Color(p / 6); }
-
-constexpr bool is_square_ok(Square s) { return s >= A8 && s <= H1; }
-
-constexpr Direction pawn_push_direction(Color c) { return c == WHITE ? DOWN : UP; }
-
-inline bool operator==(Square s1, Square s2) { return int(s1) == int(s2); }
+constexpr Direction pawn_push_direction(Color c) { return c == WHITE ? UP : DOWN; }
 
 // Additional operators to add a Direction to a Square
 constexpr Square operator+(Square s, Direction d) { return Square(int(s) + int(d)); }
@@ -190,6 +168,8 @@ inline Square& operator+=(Square& s, Direction d) { return s = s + d; }
 inline Square& operator-=(Square& s, Direction d) { return s = s - d; }
 
 inline Square operator|(Square s1, Square s2) { return Square(int(s1) | int(s2)); }
+
+inline bool operator==(Square s1, Square s2) { return int(s1) == int(s2); }
 
 // Additional operators to increment the ranks by some value
 constexpr File operator+(File s, int d) { return File(int(s) + d); }
@@ -202,6 +182,24 @@ constexpr Color operator~(Color c) { return Color(c ^ 1); }
 
 // Toggle the piece (WHITE_PAWN to BLACK_PAWN)
 constexpr Piece operator~(Piece p) { return Piece(p ^ 8); }
+
+// Rank and File operator overloads
+constexpr File file_of(Square s) { return File(s % 8); }
+constexpr Rank rank_of(Square s) { return Rank(s >> 3); }
+
+// Square helper methods
+constexpr Square convert_to_square(int rank, int file) { return Square(rank * 8 + file); }
+constexpr Square convert_to_square(Rank rank, File file) { return convert_to_square(rank, file); }
+constexpr Square make_square(File f, Rank r) { return Square((r << 3) + f); }
+constexpr Square sq_relative_to_side(Square s, Color c) { return Square(int(s) ^ (c * 56)); }
+
+// Piece, PieceType and Color helper methods
+constexpr Piece get_piece(Color c, PieceType pt) { return Piece(pt + (c * 6)); }
+
+constexpr PieceType type_of_piece(Piece p, Color c) { return PieceType(p - (c * 6)); }
+constexpr PieceType type_of_piece(Piece p) { return PieceType((p % 6) + 1); }
+
+constexpr Color get_piece_color(Piece p) { return Color(p / 6); }
 
 // bit macros
 #define get_bit(bitboard, square) (bitboard & (1ULL << square)) // checks for available bit

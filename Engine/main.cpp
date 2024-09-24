@@ -28,11 +28,12 @@ int main()
 	if (debug)
 	{
 		std::cout << "Debugging\n" << std::endl;
-		_Position p;
-		Info *inf{};
+		
+		// relative s ^ (c * 56)
+		Square s = A1;
+		Color c = BLACK;
 
-		p.set(START_FEN, inf);
-		print_board();
+		std::cout << sq_relative_to_side(s, c);
 
 		//search_position(2);
 	}

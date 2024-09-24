@@ -65,7 +65,7 @@ namespace ChessEngine
 		while (pushed_pawnes)
 		{
 			// target square that the pawn will land
-			target = convert_to_square(getLS1B(pushed_pawnes));
+			target = Square(getLS1B(pushed_pawnes));
 			// shift up or down the source square depending on the side playing
 			source = is_white
 				? target + 8

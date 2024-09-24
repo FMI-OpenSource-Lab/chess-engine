@@ -123,7 +123,7 @@ namespace ChessEngine
 		// reset boards and state variables
 		memset(this, 0, sizeof(_Position));
 		memset(info, 0, sizeof(Info));
-		
+
 		side = WHITE;
 		enpassant = NONE;
 		castle = CASTLE_NB;
@@ -381,32 +381,32 @@ namespace ChessEngine
 
 	bool _Position::is_legal(Move m) const
 	{
-		assert(m.is_move_ok());
+		// Base cases for legal move
+		if (!m.is_move_ok() || 
+			get_piece_color(moved_piece(m)) != side || 
+			get_piece_on(square<KING>(side)) != get_piece(side, KING))
+			return false;
 
 		Color us = side;
 		Square source = m.source_square();
 		Square target = m.target_square();
 
-		assert(get_piece_color(moved_piece(m)) == us);
-		
+		// En passant captures
 		if (m.move_type() == MT_EN_PASSANT)
 		{
-			Square k_sq = square<KING>(us);
-			Square capture_square = target - pawn_push_direction(us);
-			BITBOARD occ = (get_all_pieces_bb() ^ source ^ capture_square) | target;
+			// if en pass exists
+			if (target != ep_square()) return false;
 
-			assert(target == ep_square());
-			assert(get_piece_on(target) == NONE);
-			assert(moved_piece(m) == get_piece(us, PAWN));
-			assert(get_piece_on(capture_square) == get_piece(~us, PAWN));
+			Square king_square = square<KING>(us);
+			Square capture_square = ep_square() - pawn_push_direction(us);
+			BITBOARD occ = pawn_attacks_bb(us, get_pieces_bb(PAWN, us)) & ep_square();
 
-			return !(attacks_bb_by<ROOK>(k_sq, occ) & (get_pieces_bb(ROOK, ~us) | get_pieces_bb(QUEEN, ~us)))
-				&& !(attacks_bb_by<BISHOP>(k_sq, occ) & (get_pieces_bb(BISHOP, ~us) | get_pieces_bb(QUEEN, ~us)));
+			// check if moved piece is a pawn
+			// check if the piece which is going to be en passant captured is a pawn
+			// check if there is no piece on the en passant (target) square
+			// check if en passant reveals a check (direct attack) -> this can happen only with the slider pieces (rook, bishop, queen)
 		}
 
-		if (m.move_type() == MT_CASTLING)
-		{
-			// relative s ^ (c * 56)
-		}
+		// TODO: Castling legal moves
 	}
 }

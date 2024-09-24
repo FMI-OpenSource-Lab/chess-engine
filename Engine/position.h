@@ -98,11 +98,9 @@ namespace ChessEngine
 
 		// FEN i/o
 		_Position& set(const char* fen, Info* info);
-		void print_board();
 
 		// Squares
 		Square ep_square() const { return inf->_enpassant; }
-		Square castling_rook_square(CastlingRights cr) const;
 		template<PieceType pt>
 		Square square(Color c) const { return getLS1B_square(get_pieces_bb(pt, c)); }
 
@@ -139,7 +137,6 @@ namespace ChessEngine
 		bool is_pseudo_legal(Move m) const;
 		bool is_capture(Move m) const;
 
-		bool gives_check(Move m) const;
 		bool is_empty(Square s) const { return get_piece_on(s) == NO_PIECE; }
 		bool is_draw(PLY_TYPE ply) const;
 		bool has_repeated() const;

@@ -49,7 +49,7 @@ namespace ChessEngine
 			ply++;
 
 			// only legal moves
-			if (make_move(move_list->moves[mc], MT_ONLY_CAPTURES) == 0)
+			if (make_move(move_list->moves[mc], MT_CAPTURE) == 0)
 			{
 				ply--;
 				continue; // skip to next move

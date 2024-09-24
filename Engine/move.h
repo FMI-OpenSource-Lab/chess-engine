@@ -41,7 +41,7 @@ namespace ChessEngine
 	enum MoveType
 	{
 		MT_NORMAL,
-		MT_ONLY_CAPTURES = 1 << 20,
+		MT_CAPTURE = 1 << 20, // not used
 
 		MT_PROMOTION	= 1 << 14,
 		MT_EN_PASSANT	= 2 << 14,
