@@ -382,8 +382,8 @@ namespace ChessEngine
 	bool _Position::is_legal(Move m) const
 	{
 		// Base cases for legal move
-		if (!m.is_move_ok() || 
-			get_piece_color(moved_piece(m)) != side || 
+		if (!m.is_move_ok() ||
+			get_piece_color(moved_piece(m)) != side ||
 			get_piece_on(square<KING>(side)) != get_piece(side, KING))
 			return false;
 
@@ -401,12 +401,71 @@ namespace ChessEngine
 			Square capture_square = ep_square() - pawn_push_direction(us);
 			BITBOARD occ = pawn_attacks_bb(us, get_pieces_bb(PAWN, us)) & ep_square();
 
-			// check if moved piece is a pawn
-			// check if the piece which is going to be en passant captured is a pawn
-			// check if there is no piece on the en passant (target) square
-			// check if en passant reveals a check (direct attack) -> this can happen only with the slider pieces (rook, bishop, queen)
+			// 1. check if moved piece is a pawn
+			bool is_pawn = moved_piece(m) == get_piece(us, PAWN);
+			// 2. check if the piece which is going to be en passant captured is a pawn
+			bool is_enpassanted_pawn = get_piece_on(capture_square) == get_piece(~us, PAWN);
+			// 3. check if there is no piece on the en passant (target) square
+			bool is_square_empty = is_empty(target);
+
+			// 4. check if en passant reveals a check (direct attack) -> this can happen only with the slider pieces (rook, bishop, queen)
+			BITBOARD rook_revealed_check = attacks_bb_by<ROOK>(king_square, occ) & (get_pieces_bb(ROOK, ~us) | get_pieces_bb(QUEEN, ~us)); // intersect rook and queen attack from king square to rook square
+
+			BITBOARD bishop_revealed_check = attacks_bb_by<BISHOP>(king_square, occ) & (get_pieces_bb(BISHOP, ~us) | get_pieces_bb(QUEEN, ~us)); // intersect with bishop attack to the bishop square
+
+			return is_pawn &&
+				is_enpassanted_pawn &&
+				is_square_empty &&
+				!rook_revealed_check &&
+				!bishop_revealed_check;
 		}
 
 		// TODO: Castling legal moves
+		if (m.move_type() == MT_CASTLING)
+		{
+			// if we are black our target square becomes G8 and C8
+			// if we are white our target square becomes G1 and C1
+			target = sq_relative_to_side(target > source ? G1 : C1, us);
+			// if the target square is greater than the source square we castle to the kingside and vice versa
+			Direction castle_dir = target > source ? RIGHT : LEFT;
+
+			// Check for attackers on the castling squares
+			for (Square s = target; s != source; s += castle_dir)
+				if (is_square_attacked(s, ~us)) return false;
+
+			// Check if the king squares on the rank are blocked
+			Square l_rook_square = sq_relative_to_side(target > source ? G1 : B1, us);
+
+			// Check for occupancy on the king rank
+			// If we have Knight on B1 for example we check that if the intersection between all the pieces on the board and the square  
+			for (Square s = l_rook_square; s != source; s += castle_dir)
+				if (get_all_pieces_bb() & s) return false;
+
+			// can castle
+			return true;
+		}
+
+		// If king is moving check if target square is attacked by our opponent
+		if (type_of_piece(get_piece_on(source)) == KING)
+			return !(get_attackers_to(target, get_all_pieces_bb() ^ source)
+				& get_pieces_bb(~us));
+
+		// Check if a piece is pinned
+		// Only legal option for a pinned piece is to move along the slide towards or away from the attacker, but not elsewhere revealing a check
+
+		// Get the bishop attacks from the source to the target squares and intesect with the king square 
+		BITBOARD pinned_diagonaly = ( 
+			(attacks_bb_by<BISHOP> (source, 0)) &
+			(attacks_bb_by<BISHOP>(source, 0)) | source | target
+			) & square<KING>(us);
+
+		// Get the rook attacks from the source square to the target square and intersect with the king square
+		BITBOARD pinned_hotizontaly = (
+			(attacks_bb_by<ROOK>(source, 0)) &
+			(attacks_bb_by<ROOK>(source, 0)) | source | target
+			) & square<KING>(us);
+
+		// if not absolute pinned or if it can move along the ray towards or away from the king
+		return !(pinned_diagonaly || pinned_hotizontaly);
 	}
 }

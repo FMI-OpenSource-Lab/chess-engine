@@ -27,7 +27,7 @@ namespace ChessEngine {
 	U64 mBishopAttacks[SQUARE_TOTAL][BISHOP_ATTACKS_SIZE]; // Bishop attacks
 	U64 mRookAttacks[SQUARE_TOTAL][ROOK_ATTACKS_SIZE]; // Rook attacks
 
-	namespace { 
+	namespace {
 		// Masks for king and knight squares 
 		U64 knight_attacks_mask(const Square& square);
 		U64 king_attacks_mask(const Square& square);
@@ -99,8 +99,6 @@ namespace ChessEngine {
 						(attacks_bb_by<ROOK>(s, square_to_BB(pa_square)) &
 							attacks_bb_by<ROOK>(pa_square, square_to_BB(s)));
 				}
-
-				between_points_bb[s][pa_square] |= pa_square;
 			}
 		}
 	}

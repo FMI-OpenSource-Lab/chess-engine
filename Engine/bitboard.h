@@ -95,14 +95,6 @@ namespace ChessEngine
 	//// define magic rook attack table [squares][occupancy]
 	extern U64 mRookAttacks[SQUARE_TOTAL][ROOK_ATTACKS_SIZE];
 
-	// array that returns a line that connects two points between squares
-	// e.g. [A1][H8] will return a bitboard with this diagonal
-	// helpful for generating the rook, bishop and queen attacks
-	extern U64 point_to_point_in_line_bb[SQUARE_TOTAL][SQUARE_TOTAL];
-
-	// array that returns the squares between two points
-	extern U64 between_points_bb[SQUARE_TOTAL][SQUARE_TOTAL];
-
 	// every pseudo attack for the given piece on the given square
 	extern U64 pseudo_attacks[PIECE_TYPE_NB][SQUARE_TOTAL];
 
@@ -159,11 +151,6 @@ namespace ChessEngine
 			? pawn_attacks_bb<WHITE>(bb)
 			: pawn_attacks_bb<BLACK>(bb);
 	}
-
-	// Gets the square 1 and square 2 and returns the line between those two squares as a unsigned long long type
-	inline U64 line_bb(Square s1, Square s2) { return point_to_point_in_line_bb[s1][s2];}
-
-	inline U64 between_bb(Square s1, Square s2) { return between_points_bb[s1][s2]; }
 
 	template<PieceType pt>
 	inline U64 attacks_bb_by(Square s, U64 occ)
