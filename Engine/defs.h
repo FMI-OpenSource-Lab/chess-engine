@@ -168,6 +168,7 @@ inline Square& operator+=(Square& s, Direction d) { return s = s + d; }
 inline Square& operator-=(Square& s, Direction d) { return s = s - d; }
 
 inline Square operator|(Square s1, Square s2) { return Square(int(s1) | int(s2)); }
+inline Square operator|(Square s1, int n) { return Square(int(s1) | n); }
 
 inline bool operator==(Square s1, Square s2) { return int(s1) == int(s2); }
 
@@ -189,7 +190,7 @@ constexpr Rank rank_of(Square s) { return Rank(s >> 3); }
 
 // Square helper methods
 constexpr Square convert_to_square(int rank, int file) { return Square(rank * 8 + file); }
-constexpr Square convert_to_square(Rank rank, File file) { return convert_to_square(rank, file); }
+constexpr Square convert_to_square(Rank rank, File file) { return convert_to_square(int(rank), int(file)); }
 constexpr Square make_square(File f, Rank r) { return Square((r << 3) + f); }
 constexpr Square sq_relative_to_side(Square s, Color c) { return Square(int(s) ^ (c * 56)); }
 

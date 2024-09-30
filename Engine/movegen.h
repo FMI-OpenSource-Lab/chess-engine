@@ -3,11 +3,22 @@
 #define MOVEGEN_H
 
 #include "defs.h"
+#include "move.h"
+#include "position.h"
 
 #include<cstdint>
 
 namespace ChessEngine
 {
+	enum GenerationTypes
+	{
+		CAPTURE,
+		QUIET,
+		LEGAL,
+		EVASION,
+		NON_EVATION
+	};
+
 	typedef struct
 	{
 		// moves

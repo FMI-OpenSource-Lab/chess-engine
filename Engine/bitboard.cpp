@@ -8,9 +8,6 @@ namespace ChessEngine {
 	// Table measuring the distance between 2 coordinates
 	unsigned short square_distance[SQUARE_TOTAL][SQUARE_TOTAL];
 
-	// a line that connects two coordinates
-	U64 point_to_point_in_line_bb[SQUARE_TOTAL][SQUARE_TOTAL];
-
 	// squares between 2 points
 	U64 between_points_bb[SQUARE_TOTAL][SQUARE_TOTAL];
 
@@ -72,17 +69,11 @@ namespace ChessEngine {
 			pseudo_attacks[QUEEN][s] =
 				pseudo_attacks[BISHOP][s] | pseudo_attacks[ROOK][s];
 
-			// calculate the line that is formed between two points
-			// for bishops and rooks because they are the only pieces that can move horizontaly and diagonaly (except the queen, but she is a combination of rook and bishop)
+			
 			for (Square pa_square = A8; pa_square <= H1; ++pa_square)
 			{
 				if (pseudo_attacks[BISHOP][s] & pa_square)
 				{
-					point_to_point_in_line_bb[s][pa_square] =
-						(attacks_bb_by<BISHOP>(s, 0ULL) &
-							attacks_bb_by<BISHOP>(pa_square, 0ULL)) | s |
-						pa_square;
-
 					between_points_bb[s][pa_square] =
 						(attacks_bb_by<BISHOP>(s, square_to_BB(pa_square)) &
 							attacks_bb_by<BISHOP>(pa_square, square_to_BB(s)));
@@ -90,11 +81,6 @@ namespace ChessEngine {
 
 				if (pseudo_attacks[ROOK][s] & pa_square)
 				{
-					point_to_point_in_line_bb[s][pa_square] =
-						(attacks_bb_by<ROOK>(s, 0ULL) &
-							attacks_bb_by<ROOK>(pa_square, 0ULL)) | s |
-						pa_square;
-
 					between_points_bb[s][pa_square] =
 						(attacks_bb_by<ROOK>(s, square_to_BB(pa_square)) &
 							attacks_bb_by<ROOK>(pa_square, square_to_BB(s)));

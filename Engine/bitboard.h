@@ -81,7 +81,7 @@ namespace ChessEngine
 
 	constexpr U64 rank_bb(Square s) { return Rank8_Bits << (rank_of(s) << 3); }
 	constexpr U64 file_bb(Square s) { return FileA_Bits << file_of(s); }
-	
+
 	constexpr U64 board_edges(Square s) { return ((Rank8_Bits | Rank1_Bits & ~rank_bb(s)) | (FileA_Bits | FileH_Bits) & ~file_bb(s)); }
 
 	// Not files
@@ -192,6 +192,35 @@ namespace ChessEngine
 		assert(is_square_ok(s) && (pt != PAWN));
 
 		return pseudo_attacks[pt][s];
+	}
+
+	// calculate the line that is formed between two points
+	// for bishops and rooks because they are the only pieces
+	// that can move horizontaly or diagonaly 
+	// (except the queen, but she is a combination of rook and bishop)
+	inline U64 in_between_bb(Square source, Square target)
+	{
+		PieceType pt = NO_PIECE_TYPE;
+
+		// source and target have commutative properties
+		// we can do [pt][source] & target or [pt][target] & source
+
+		// check if pseudo legal move exists in this diagonal
+		// and generate an attack thats going to serve as 
+		// an inbetween squares excluding source and target
+		if (pseudo_attacks[BISHOP][source] & target) return
+			attacks_bb_by(BISHOP, source, square_to_BB(target)) &
+			attacks_bb_by(BISHOP, target, square_to_BB(source));
+
+		// check if pseudo legal move exists in this line
+		// generate an attack thats going to serve as an inbetween squares
+		// excluding source and target
+		else if (pseudo_attacks[ROOK][source] & target) return
+			attacks_bb_by(ROOK, source, square_to_BB(target)) &
+			attacks_bb_by(ROOK, target, square_to_BB(source));
+
+		// no inbetween squares
+		return 0ULL;
 	}
 
 	inline void print_bitboard(U64 bitboard)

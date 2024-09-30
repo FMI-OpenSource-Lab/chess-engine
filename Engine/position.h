@@ -17,7 +17,7 @@ namespace ChessEngine
 
 	// Starting fen string
 	static const char* START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-
+	
 	// Some example fen string
 	static const char* TEST_FEN = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ";
 	static const char* TEST_ATTACKS_FEN = "8/8/8/3PN3/8/8/3p4/8 w - - ";
@@ -90,14 +90,14 @@ namespace ChessEngine
 	class _Position
 	{
 	public:
-		static void init();
+		//static void init();
 
 		_Position() = default;
-
+		_Position(const _Position&) = delete;
 		_Position& operator=(const _Position&) = delete;
 
 		// FEN i/o
-		_Position& set(const char* fen, Info* info);
+		_Position& _set(const char* fen, Info* info);
 
 		// Squares
 		Square ep_square() const { return inf->_enpassant; }
@@ -129,21 +129,21 @@ namespace ChessEngine
 		BITBOARD	get_attacks_by(Color c) const;
 
 		// Booleans
-		bool is_square_attacked(Square square, Color side_to_move) const;
+		// bool is_square_attacked(Square square, Color side_to_move) const;
 
 		bool can_castle(CastlingRights cr) const;
 
 		bool is_legal(Move m) const;
-		bool is_pseudo_legal(Move m) const;
 		bool is_capture(Move m) const;
 
 		bool is_empty(Square s) const { return get_piece_on(s) == NO_PIECE; }
 		bool is_draw(PLY_TYPE ply) const;
 		bool has_repeated() const;
+		bool gives_check(Move m) const;
 
 		bool is_pos_ok() const;
 
-		bool see(Move m, int threshold = 0) const; // Static exchange evaluation
+		bool static_evaluation(Move m, int threshold = 0) const; // Static exchange evaluation
 
 		// Pieces
 		Piece moved_piece(Move m) const { return get_piece_on(m.source_square()); };
@@ -181,7 +181,7 @@ namespace ChessEngine
 		friend std::ostream& operator<<(std::ostream& os, const _Position& position);
 
 	private:
-		template<bool will>
+		template<bool>
 		void caslte(Color us, Square source, Square& target, Square& r_source, Square& r_target);
 
 		void set_info();
