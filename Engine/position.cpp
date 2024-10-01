@@ -508,6 +508,57 @@ namespace ChessEngine
 		printf("\n    a b c d e f g h\n\n");
 	}
 
+	void _Position::update_blocks_and_pins(Color c) const
+	{
+		// Get the king square of the given color
+		Square king_square = square<KING>(c);
+
+		// Set blocked pieces and pinned piece to be 0
+		inf->blocking_pieces[c] = 0;
+		inf->pinned_pieces[~c] = 0;
+
+		// Snipes are all sliders that attack a square 
+		// when a piece and/or other pieces are removed
+
+		// We get the rook attacks from the king square as well as bishops
+		BITBOARD snipes =
+			(
+				(attacks_bb_by<ROOK>(king_square)
+					& (get_pieces_bb(QUEEN) | get_pieces_bb(ROOK)))
+				| (attacks_bb_by<BISHOP>(king_square)
+					& (get_pieces_bb(QUEEN) | get_pieces_bb(BISHOP)))
+				) & get_pieces_bb(~c);
+		
+		// All other pieces on the board except the sliders attacking
+		BITBOARD occ = get_all_pieces_bb() ^ snipes;
+
+		// Iterate through every sniper
+		while (snipes)
+		{
+			// get the sniper square then reduce the number of snipers
+			Square ssq = getLS1B_square(snipes); resetLSB(snipes);
+
+			// Check whether a line or ray between king square and sniper square exists
+			// Then intersect with the rest of board pieces
+			BITBOARD between = in_between_bb(king_square, ssq) & occ;
+
+			// get the bitboard of between attack with ls1b removed
+			BITBOARD more_than_one = between & (between - 1);
+
+			// If sniper attack exists and ray is not zero after removing the last bit
+			if (between && !more_than_one)
+			{
+				// append it into the blocking pieces array
+				inf->blocking_pieces[c] |= between;
+
+				// intersect between attack with pieces of the same color
+				if (between & get_pieces_bb(c))
+					// append to the opposing color our sniper as a pinner
+					inf->pinning_pieces[~c] |= ssq;
+			}
+		}
+	}
+
 	bool _Position::is_legal(Move m) const
 	{
 		// Base cases for legal move
@@ -621,23 +672,13 @@ namespace ChessEngine
 		//	Determine the direction between the source square and the king square
 		//	If both squares share a common line -> call an appropriate sliding
 		//	ray or line attack getter with king square and occ
-		//	to look whether the possible opponing sliders of that ray.
-		 
+		//	to look whether this SET intersects 
+		//  the possible opponing sliders of that ray.
+
 		//	Already checked if a possible true result 
 		//  is not caused by direct check of sliding capture
-		
-		BITBOARD btw_source_and_king = in_between_bb(source, opp_king_square);
-
-		BITBOARD snipes = (
-			(attacks_bb_by<ROOK>(opp_king_square, get_all_pieces_bb()) &
-				(get_pieces_bb(QUEEN) | get_pieces_bb(ROOK)))
-			| (attacks_bb_by<BISHOP>(opp_king_square, get_all_pieces_bb()) &
-				(get_pieces_bb(QUEEN) | get_pieces_bb(BISHOP)))
-			) & get_pieces_bb(~us);
-
-		if (btw_source_and_king & snipes)
-			return true;
-
+		if(get_blocking_pieces(~us) & target)
+			return 
 
 		//  if blockers from opposite site and source square is true
 		// return not aligned(from, to, opp_king_sq) || movetype == CASTLING

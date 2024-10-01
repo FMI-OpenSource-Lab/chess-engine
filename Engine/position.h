@@ -17,7 +17,7 @@ namespace ChessEngine
 
 	// Starting fen string
 	static const char* START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-	
+
 	// Some example fen string
 	static const char* TEST_FEN = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ";
 	static const char* TEST_ATTACKS_FEN = "8/8/8/3PN3/8/8/3p4/8 w - - ";
@@ -77,6 +77,8 @@ namespace ChessEngine
 		// not copied
 		Info* next;
 		Info* previous;
+		BITBOARD blocking_pieces[BOTH];
+		BITBOARD pinning_pieces[BOTH];
 		Piece captured_piece;
 		int repetition;
 	};
@@ -127,6 +129,8 @@ namespace ChessEngine
 		BITBOARD	get_attackers_to(Square s, BITBOARD occ) const;
 		template<PieceType pt>
 		BITBOARD	get_attacks_by(Color c) const;
+		BITBOARD	get_blocking_pieces(Color c) const { return inf->blocking_pieces[c]; }
+		BITBOARD	get_pinned_pieces(Color c) const { return inf->pinning_pieces[c]; }
 
 		// Booleans
 		// bool is_square_attacked(Square square, Color side_to_move) const;
@@ -165,6 +169,8 @@ namespace ChessEngine
 
 		void remove_piece(Square s);
 		void place_piece(Piece p, Square s);
+
+		void update_blocks_and_pins(Color c) const;
 
 		// Caslte & side
 		CastlingRights	castling_rights(Color c) const

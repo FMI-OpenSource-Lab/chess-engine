@@ -223,6 +223,22 @@ namespace ChessEngine
 		return 0ULL;
 	}
 
+	inline U64 aligned_squares_bb(Square source, Square target, Square king_sq)
+	{
+		U64 diagonal = (
+			(attacks_bb_by<BISHOP>(source, 0)) &
+			(attacks_bb_by<BISHOP>(source, 0)) | source | target
+			);
+
+		// Get the rook attacks from the source square to the target square and intersect with the king square
+		U64 horizontal = (
+			(attacks_bb_by<ROOK>(source, 0)) &
+			(attacks_bb_by<ROOK>(source, 0)) | source | target
+			);
+
+		return diagonal | horizontal | king_sq;
+	}
+
 	inline void print_bitboard(U64 bitboard)
 	{
 		std::cout << std::endl;
