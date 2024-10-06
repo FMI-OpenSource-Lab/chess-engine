@@ -28,23 +28,15 @@ int main()
 	if (debug)
 	{
 		std::cout << "Debugging\n" << std::endl;
-		Position::init("4k3/1p4pp/2p5/2N5/q6Q/3p3P/1P4PK/4R3 w - - 0 1");
+		Position::init("4k3/1p4pp/2p5/1B6/q3r2Q/3p3P/1P4PK/4R3 w - - 0 1");
 
 		Square ksq = getLS1B_square(bitboards[BLACK_KING]);
-		Square rsq = getLS1B_square(bitboards[WHITE_ROOK]);
 
 		Move m{ E4, C5 };
 
-		// Discovered check
-		//	Determine the direction between the source square and the king square
-		//	If both squares share a common line:
-		//  call an appropriate sliding ray or line attack getter
-		//  with king square and occ to look whether this SET intersects 
-		//  the possible opponing sliders of that ray.
+		// For inverted color
 
-		U64 btw_ksq_src = in_between_bb(ksq, m.source_square());
-		
-		U64 snipers = (
+		U64 snipers = ( // pieces that are pinning
 			(attacks_bb_by<ROOK>(ksq) &
 				(bitboards[WHITE_QUEEN] |
 					bitboards[BLACK_QUEEN] |
@@ -56,13 +48,34 @@ int main()
 					bitboards[BLACK_QUEEN] |
 					bitboards[WHITE_BISHOP] |
 					bitboards[BLACK_BISHOP]))
-			) & occupancies[side];
+			) & occupancies[WHITE];
 
-		U64 occ = bitboards[BOTH] ^ snipers;
+		U64 occ = occupancies[BOTH] ^ snipers; // everything without snipers
+		U64 blocks{};
+		U64 w_pinner{};
 
+		while (snipers)
+		{
+			Square ssq = getLS1B_square(snipers); resetLSB(snipers);
+			BITBOARD btw = in_between_bb(ksq, ssq) & occ; // blocker
+			BITBOARD cut_ls1b = btw & (btw - 1);
 
+			if (btw && !cut_ls1b) // make sure there is only 1 blocker to this attacker
+				// if more than one blocker means the piece is not absolutely pinned
+			{
+				blocks |= btw; // append blocking (pinned) piece to blocks
 
-		print_bitboard(snipers);
+				// get the white pinner piece
+				if (btw & occupancies[WHITE])
+					w_pinner |= ssq;
+			}
+		}
+
+		std::cout << "Blocks bb: \n";
+		print_bitboard(blocks);
+
+		std::cout << "Pinner pieces for WHITE bb: \n";
+		print_bitboard(w_pinner);
 
 		//search_position(2);
 	}

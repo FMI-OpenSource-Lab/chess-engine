@@ -508,14 +508,22 @@ namespace ChessEngine
 		printf("\n    a b c d e f g h\n\n");
 	}
 
+	void _Position::set_check_info() const
+	{
+		// init blockers and pinners for each side
+		update_blocks_and_pins(WHITE);
+		update_blocks_and_pins(BLACK);
+	}
+
 	void _Position::update_blocks_and_pins(Color c) const
 	{
 		// Get the king square of the given color
 		Square king_square = square<KING>(c);
 
-		// Set blocked pieces and pinned piece to be 0
-		inf->blocking_pieces[c] = 0;
-		inf->pinned_pieces[~c] = 0;
+		// Reset current color blockers
+		inf->blockers_for_king_checks[c] = 0;
+		// Reset opposite color pinner pieces
+		inf->pinner_pieces[~c] = 0;
 
 		// Snipes are all sliders that attack a square 
 		// when a piece and/or other pieces are removed
@@ -528,7 +536,7 @@ namespace ChessEngine
 				| (attacks_bb_by<BISHOP>(king_square)
 					& (get_pieces_bb(QUEEN) | get_pieces_bb(BISHOP)))
 				) & get_pieces_bb(~c);
-		
+
 		// All other pieces on the board except the sliders attacking
 		BITBOARD occ = get_all_pieces_bb() ^ snipes;
 
@@ -545,17 +553,37 @@ namespace ChessEngine
 			// get the bitboard of between attack with ls1b removed
 			BITBOARD more_than_one = between & (between - 1);
 
-			// If sniper attack exists and ray is not zero after removing the last bit
+			// Make sure that exists a check blocker and its the only blocker
+			// If there are more than one blocker the piece is still pinned, but not
+			// absolutely pinned
 			if (between && !more_than_one)
 			{
 				// append it into the blocking pieces array
-				inf->blocking_pieces[c] |= between;
+				inf->blockers_for_king_checks[c] |= between;
 
 				// intersect between attack with pieces of the same color
 				if (between & get_pieces_bb(c))
-					// append to the opposing color our sniper as a pinner
-					inf->pinning_pieces[~c] |= ssq;
+					// if such attack exists then the piece is pinned
+					// and we set our piece as a pinner
+					inf->pinner_pieces[~c] |= ssq;
 			}
+		}
+	}
+
+	BITBOARD _Position::get_checked_squares(PieceType pt) const
+	{
+		Square ksq = square<KING>(~side);
+
+		switch (pt)
+		{
+		case PAWN: return pawn_attacks_bb(~side, ksq);
+		case KNIGHT: return attacks_bb_by<KNIGHT>(ksq);
+		case BISHOP: return attacks_bb_by<BISHOP>(ksq, get_all_pieces_bb());
+		case ROOK: return attacks_bb_by<ROOK>(ksq, get_all_pieces_bb());
+		case QUEEN: return attacks_bb_by<QUEEN>(ksq, get_all_pieces_bb());
+		
+		default: // KING
+			return 0;;
 		}
 	}
 
@@ -628,25 +656,14 @@ namespace ChessEngine
 		// If king is moving check if target square is attacked by our opponent
 		if (type_of_piece(get_piece_on(source)) == KING)
 			return !(get_attackers_to(target, get_all_pieces_bb() ^ source)
-				& get_pieces_bb(~us));
+				& get_opponent_pieces_bb());
 
 		// Check if a piece is pinned
 		// Only legal option for a pinned piece is to move along the slide towards or away from the attacker, but not elsewhere revealing a check
 
-		// Get the bishop attacks from the source to the target squares and intesect with the king square 
-		BITBOARD pinned_diagonaly = (
-			(attacks_bb_by<BISHOP>(source, 0)) &
-			(attacks_bb_by<BISHOP>(source, 0)) | source | target
-			) & square<KING>(us);
-
-		// Get the rook attacks from the source square to the target square and intersect with the king square
-		BITBOARD pinned_hotizontaly = (
-			(attacks_bb_by<ROOK>(source, 0)) &
-			(attacks_bb_by<ROOK>(source, 0)) | source | target
-			) & square<KING>(us);
-
-		// if not absolute pinned or if it can move along the ray towards or away from the king
-		return !(pinned_diagonaly || pinned_hotizontaly);
+		// Checking if pieces are aligned and then if they are not pinned (blocking checks)
+		return are_squares_aligned(source, target, square<KING>(us)) ||
+			!(get_blocking_pieces(us) & source);
 	}
 
 	// This function helps the move generation to determine 
@@ -664,24 +681,23 @@ namespace ChessEngine
 		// Cases are calculated after making a move and test whether a 
 		// pseudo-legal move gives a check
 
-		// Direct check on the opposide king
-		if (get_attackers_to(opp_king_square))
+		// Direct check
+		// Get the attacks from the piece that is on the source square 
+		// then intersect with the target
+		// if its king result will be greater than 0, hence a check
+		// else result will be 0, hence not a check
+		if (get_checked_squares(type_of_piece(get_piece_on(source))) & target)
 			return true;
 
 		// Discovered check
-		//	Determine the direction between the source square and the king square
-		//	If both squares share a common line -> call an appropriate sliding
-		//	ray or line attack getter with king square and occ
-		//	to look whether this SET intersects 
-		//  the possible opponing sliders of that ray.
+		//  Get the pieces that block cheks (that are pinned)
+		//  then return true if they are not aligned or if we are castling
 
 		//	Already checked if a possible true result 
 		//  is not caused by direct check of sliding capture
-		if(get_blocking_pieces(~us) & target)
-			return 
-
-		//  if blockers from opposite site and source square is true
-		// return not aligned(from, to, opp_king_sq) || movetype == CASTLING
+		if (get_blocking_pieces(~us) & source) return
+			!are_squares_aligned(source, target, opp_king_square)
+			|| m.move_type() == MT_CASTLING;
 
 		// On move types
 		// In case of NORMAL move (a check cannot be given)
@@ -691,5 +707,14 @@ namespace ChessEngine
 		//		(may fall into the discovered checks category)
 		//		could be a discovered check with a captutured pawn
 		// In case of CASLTLE
+
+		switch (m.move_type())
+		{
+		case MT_NORMAL:
+		case MT_PROMOTION:
+		case MT_EN_PASSANT:
+		case MT_CASTLING:
+
+		}
 	}
 }

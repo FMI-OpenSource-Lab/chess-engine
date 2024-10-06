@@ -68,24 +68,6 @@ namespace ChessEngine {
 			// generate pseudo attacks for queen
 			pseudo_attacks[QUEEN][s] =
 				pseudo_attacks[BISHOP][s] | pseudo_attacks[ROOK][s];
-
-			
-			for (Square pa_square = A8; pa_square <= H1; ++pa_square)
-			{
-				if (pseudo_attacks[BISHOP][s] & pa_square)
-				{
-					between_points_bb[s][pa_square] =
-						(attacks_bb_by<BISHOP>(s, square_to_BB(pa_square)) &
-							attacks_bb_by<BISHOP>(pa_square, square_to_BB(s)));
-				}
-
-				if (pseudo_attacks[ROOK][s] & pa_square)
-				{
-					between_points_bb[s][pa_square] =
-						(attacks_bb_by<ROOK>(s, square_to_BB(pa_square)) &
-							attacks_bb_by<ROOK>(pa_square, square_to_BB(s)));
-				}
-			}
 		}
 	}
 
@@ -131,7 +113,7 @@ namespace ChessEngine {
 				// subset = ((subset | ~mask) + 1) & mask
 				// replace OR with + and make one's complement to two's complement minus one
 
-				// replacing OR with + works because all unsued bits are always 0
+				// replacing OR with + works because all unused bits are always 0
 				// subset = (subset + (-mask - 1) + 1) & mask
 
 				// simplify and we should get this expression

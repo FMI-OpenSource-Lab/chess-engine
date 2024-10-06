@@ -77,8 +77,8 @@ namespace ChessEngine
 		// not copied
 		Info* next;
 		Info* previous;
-		BITBOARD blocking_pieces[BOTH];
-		BITBOARD pinning_pieces[BOTH];
+		BITBOARD blockers_for_king_checks[BOTH];
+		BITBOARD pinner_pieces[BOTH];
 		Piece captured_piece;
 		int repetition;
 	};
@@ -129,8 +129,9 @@ namespace ChessEngine
 		BITBOARD	get_attackers_to(Square s, BITBOARD occ) const;
 		template<PieceType pt>
 		BITBOARD	get_attacks_by(Color c) const;
-		BITBOARD	get_blocking_pieces(Color c) const { return inf->blocking_pieces[c]; }
-		BITBOARD	get_pinned_pieces(Color c) const { return inf->pinning_pieces[c]; }
+		BITBOARD	get_blocking_pieces(Color c) const { return inf->blockers_for_king_checks[c]; };
+		BITBOARD	get_pinned_pieces(Color c) const { return inf->pinner_pieces[c]; };
+		BITBOARD	get_checked_squares(PieceType pt) const;
 
 		// Booleans
 		// bool is_square_attacked(Square square, Color side_to_move) const;
@@ -190,8 +191,8 @@ namespace ChessEngine
 		template<bool>
 		void caslte(Color us, Square source, Square& target, Square& r_source, Square& r_target);
 
-		void set_info();
-		void set_check_info();
+		void set_info() const;
+		void set_check_info() const;
 
 		void move_piece(Square source, Square target);
 

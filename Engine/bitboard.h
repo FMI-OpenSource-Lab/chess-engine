@@ -208,35 +208,30 @@ namespace ChessEngine
 		// check if pseudo legal move exists in this diagonal
 		// and generate an attack thats going to serve as 
 		// an inbetween squares excluding source and target
-		if (pseudo_attacks[BISHOP][source] & target) return
+		if (pseudo_attacks[BISHOP][source] & target) return (
 			attacks_bb_by(BISHOP, source, square_to_BB(target)) &
-			attacks_bb_by(BISHOP, target, square_to_BB(source));
+			attacks_bb_by(BISHOP, target, square_to_BB(source))) | target;
 
 		// check if pseudo legal move exists in this line
 		// generate an attack thats going to serve as an inbetween squares
 		// excluding source and target
-		else if (pseudo_attacks[ROOK][source] & target) return
+		else if (pseudo_attacks[ROOK][source] & target) return (
 			attacks_bb_by(ROOK, source, square_to_BB(target)) &
-			attacks_bb_by(ROOK, target, square_to_BB(source));
+			attacks_bb_by(ROOK, target, square_to_BB(source))) | target;
 
 		// no inbetween squares
 		return 0ULL;
 	}
 
-	inline U64 aligned_squares_bb(Square source, Square target, Square king_sq)
+	// Returns true if all 3 squares are aligned
+	inline bool are_squares_aligned(Square source, Square target, Square with)
 	{
-		U64 diagonal = (
-			(attacks_bb_by<BISHOP>(source, 0)) &
-			(attacks_bb_by<BISHOP>(source, 0)) | source | target
-			);
+		U64 bb{};
 
-		// Get the rook attacks from the source square to the target square and intersect with the king square
-		U64 horizontal = (
-			(attacks_bb_by<ROOK>(source, 0)) &
-			(attacks_bb_by<ROOK>(source, 0)) | source | target
-			);
-
-		return diagonal | horizontal | king_sq;
+		for (auto& pt : { ROOK, BISHOP })
+			bb |= (attacks_bb_by(pt, source, 0) & (attacks_bb_by(pt, target, 0)));
+		
+		return (bb | source | target) & with;
 	}
 
 	inline void print_bitboard(U64 bitboard)
