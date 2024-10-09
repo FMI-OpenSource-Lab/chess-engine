@@ -21,6 +21,7 @@ namespace ChessEngine
 #endif // _WIN64
 	}
 
+	/*
 	inline void perft_driver(int depth)
 	{
 		if (depth == 0)
@@ -37,7 +38,7 @@ namespace ChessEngine
 		for (int move_count = 0; move_count < move_list->count; ++move_count)
 		{
 			// preserve 
-			copy_board();
+			//copy_board();
 
 			if (!make_move(move_list->moves[move_count], MT_NORMAL))
 				// skip to the next move
@@ -46,7 +47,7 @@ namespace ChessEngine
 			// call perft driver
 			perft_driver(depth - 1);
 
-			restore_board();
+			//restore_board();
 		}
 	}
 
@@ -67,7 +68,7 @@ namespace ChessEngine
 		for (int move_count = 0; move_count < move_list->count; move_count++)
 		{
 			// preserve board state
-			copy_board();
+			//copy_board();
 
 			// make move
 			if (!make_move(move_list->moves[move_count], MT_NORMAL))
@@ -84,16 +85,16 @@ namespace ChessEngine
 			long old_nodes = nodes - cummulative_nodes;
 
 			// take back
-			restore_board();
+			//restore_board();
 
-			// print move
-			printf("%s%s%c :%ld\n",
-				squareToCoordinates[get_move_source(move_list->moves[move_count])],
-				squareToCoordinates[get_move_target(move_list->moves[move_count])],
-				get_move_promoted(move_list->moves[move_count])
-				? tolower(ascii_pieces[get_move_promoted(move_list->moves[move_count])])
-				: ' ',
-				old_nodes);
+			//// print move
+			//printf("%s%s%c :%ld\n",
+			//	squareToCoordinates[get_move_source(move_list->moves[move_count])],
+			//	squareToCoordinates[get_move_target(move_list->moves[move_count])],
+			//	get_move_promoted(move_list->moves[move_count])
+			//	? tolower(ascii_pieces[get_move_promoted(move_list->moves[move_count])])
+			//	: ' ',
+			//	old_nodes);
 		}
 
 		// print results
@@ -124,4 +125,5 @@ namespace ChessEngine
 			std::cout << i << std::setw(24) << nodes << std::setw(10) << get_time_ms() - start_time << " ms\n";
 		}
 	}
+	*/
 }

@@ -210,10 +210,34 @@ constexpr Color get_piece_color(Piece p) { return Color(p / 6); }
 constexpr int TOTAL_MAX_DEPTH = 512;
 
 typedef unsigned short PLY_TYPE; // 16 bit 
-typedef unsigned int Value; // 32 bit
 
 constexpr int MAX_MOVES = 256;
 constexpr int MAX_PLY = 246;
+
+typedef int Value; // 32 bit
+
+constexpr Value VALUE_ZERO		= 0;
+constexpr Value VALUE_DRAW		= 0;
+constexpr Value VALUE_NONE		= 32002;
+constexpr Value VALUE_INFINITE	= 32001;
+
+constexpr Value VALUE_MATE				= 32001;
+constexpr Value VALUE_MATE_IN_MAX_PLY	= VALUE_MATE - MAX_PLY;
+
+// Piece values estimated by AlphaZero
+constexpr Value PAWN_VALUE		= 100;
+constexpr Value KNIGHT_VALUE	= 305;
+constexpr Value BISHOP_VALUE	= 333;
+constexpr Value ROOK_VALUE		= 563;
+constexpr Value QUEEN_VALUE		= 950;
+
+constexpr Value PieceValue[NO_PIECE] // All pieces 
+{
+	// WHITE
+	PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE, ROOK_VALUE, QUEEN_VALUE, VALUE_ZERO,
+	// BLACK
+	PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE, ROOK_VALUE, QUEEN_VALUE, VALUE_ZERO,
+};
 
 // Allow to use ++File, --File, ++Rank, --Rank and etc.
 #define ENABLE_INCR_OPERATORS_ON(T) \

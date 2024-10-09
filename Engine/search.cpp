@@ -12,6 +12,7 @@
 
 namespace ChessEngine
 {
+	/*
 	int ply = 0;
 	int best_move = 0;
 
@@ -49,7 +50,7 @@ namespace ChessEngine
 			ply++;
 
 			// only legal moves
-			if (make_move(move_list->moves[mc], MT_CAPTURE) == 0)
+			if (make_move(move_list->moves[mc], GT_CAPTURE) == 0)
 			{
 				ply--;
 				continue; // skip to next move
@@ -294,4 +295,5 @@ namespace ChessEngine
 			return minEval;
 		}
 	}
+	*/
 }

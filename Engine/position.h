@@ -22,12 +22,6 @@ namespace ChessEngine
 	static const char* TEST_FEN = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ";
 	static const char* TEST_ATTACKS_FEN = "8/8/8/3PN3/8/8/3p4/8 w - - ";
 
-	// side to move
-	extern Color side;
-
-	// en passant square
-	extern Square enpassant;
-
 	/*
 		binary representation of castling rights
 
@@ -48,16 +42,9 @@ namespace ChessEngine
 				black king => queen side
 	*/
 
-	// castling bit
-	extern CastlingRights castle;
-
 	extern char ascii_pieces[13];
 
 	// char unicode_pieces[12] = { '♙','♘','♗','♖','♕','♔','♟','♞','♝','♜','♛','♚' };
-
-	// piece bitboards
-	extern U64 bitboards[12];
-	extern U64 occupancies[3];
 
 	using BITBOARD = U64;
 
@@ -66,17 +53,16 @@ namespace ChessEngine
 	struct Info
 	{
 		// copied when making a move
-		BITBOARD _bitboards[NO_PIECE];
-		BITBOARD _occupancies[BOTH + 1]; // +1 becase we include the 2 sides
-		CastlingRights _castling;
-		Color _side;
-		Square _enpassant;
-		PLY_TYPE _rule_fifty;
-		PLY_TYPE _ply;
-
+		CastlingRights castling;
+		Square enpassant;
+		PLY_TYPE rule_fifty;
+		PLY_TYPE ply;
+		
 		// not copied
 		Info* next;
 		Info* previous;
+		BITBOARD bitboards[NO_PIECE];
+		BITBOARD occupancies[BOTH + 1]; // +1 becase we include the 2 sides
 		BITBOARD blockers_for_king_checks[BOTH];
 		BITBOARD pinner_pieces[BOTH];
 		Piece captured_piece;
@@ -102,7 +88,7 @@ namespace ChessEngine
 		_Position& _set(const char* fen, Info* info);
 
 		// Squares
-		Square ep_square() const { return inf->_enpassant; }
+		Square ep_square() const { return inf->enpassant; }
 		template<PieceType pt>
 		Square square(Color c) const { return getLS1B_square(get_pieces_bb(pt, c)); }
 
@@ -146,10 +132,6 @@ namespace ChessEngine
 		bool has_repeated() const;
 		bool gives_check(Move m) const;
 
-		bool is_pos_ok() const;
-
-		bool static_evaluation(Move m, int threshold = 0) const; // Static exchange evaluation
-
 		// Pieces
 		Piece moved_piece(Move m) const { return get_piece_on(m.source_square()); };
 		Piece captured_piece() const;
@@ -157,11 +139,12 @@ namespace ChessEngine
 
 		// PLY
 		PLY_TYPE game_ply() const { return gamePly; };
-		PLY_TYPE rule_fifty_count() const { return inf->_rule_fifty; };
+		PLY_TYPE rule_fifty_count() const { return inf->rule_fifty; };
 
 		// Value
 		Value non_pawn_material(Color c) const;
 		Value non_pawn_material() const;
+		Value see(Move m) const;
 
 		// Doing and undoing moves
 		void do_move(Move m, Info& newInfo);
@@ -176,7 +159,7 @@ namespace ChessEngine
 		// Caslte & side
 		CastlingRights	castling_rights(Color c) const
 		{
-			return c & CastlingRights(inf->_castling);
+			return c & CastlingRights(inf->castling);
 		}
 
 		Color	 side_to_move() const { return side; }
@@ -188,13 +171,15 @@ namespace ChessEngine
 		friend std::ostream& operator<<(std::ostream& os, const _Position& position);
 
 	private:
-		template<bool>
-		void caslte(Color us, Square source, Square& target, Square& r_source, Square& r_target);
+		template<bool Do>
+		void do_castle(Color us, Square source, Square& target, Square& r_source, Square& r_target);
 
 		void set_info() const;
 		void set_check_info() const;
 
 		void move_piece(Square source, Square target);
+
+		BITBOARD get_least_valuable_piece(BITBOARD attacks, Color by_side, PieceType& pt) const;
 
 		// Data
 		BITBOARD bitboards[NO_PIECE];
@@ -216,7 +201,7 @@ namespace ChessEngine
 
 	inline bool _Position::can_castle(CastlingRights cr) const
 	{
-		return inf->_castling & cr;
+		return inf->castling & cr;
 	}
 
 	inline BITBOARD _Position::get_attackers_to(Square s) const
@@ -280,10 +265,10 @@ namespace ChessEngine
 	extern bool is_square_attacked(const Square& square, const Color color);
 	extern void print_attacked_squares(Color c);
 
-	namespace Position
-	{
-		void init(const char* fen);
-	}
+	//namespace Position
+	//{
+	//	void init(const char* fen);
+	//}
 
 	// fen string input output
 	extern void set(const char* fen);

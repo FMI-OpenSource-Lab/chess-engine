@@ -11,6 +11,7 @@
 
 namespace ChessEngine
 {
+	/*
 	int evaluate()
 	{
 		Value score = 0;
@@ -123,4 +124,5 @@ namespace ChessEngine
 			printf(" score: %d\n", score_move(move_list->moves[count]));
 		}
 	}
+	*/
 }

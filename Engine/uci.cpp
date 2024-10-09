@@ -9,6 +9,7 @@
 
 namespace ChessEngine
 {
+	/*
 	int parse_move(const char* move_string)
 	{
 		moves move_list[1];
@@ -121,77 +122,79 @@ namespace ChessEngine
 
 		search_position(depth);
 	}
+	*/
 
 	/*
 		GUI -> isready
 		Engine -> readyok
 		GUI -> ucinewgame
 	*/
-
-	void uci_loop()
-	{
-		constexpr auto INPUT_BUFFER = 10000;;
-
-		// rest stdin & stdout buffers
-		std::setvbuf(stdin, NULL, _IONBF, 0);
-		std::setvbuf(stdout, NULL, _IONBF, 0);
-
-		// def user/GUI inout buffer
-		char input_buffer[INPUT_BUFFER];
-
-		std::cout << "id name ChessEngine\n";
-		std::cout << "id author Iulian Dashev\n";
-		std::cout << "uciok\n";
-
-		// main loop 
-		while (true)
+	/*
+		void uci_loop()
 		{
-			// rest user/GUI input
-			memset(input_buffer, 0, sizeof(input_buffer));
+			constexpr auto INPUT_BUFFER = 10000;;
 
-			// making sure output reacehes GUI
-			fflush(stdout);
+			// rest stdin & stdout buffers
+			std::setvbuf(stdin, NULL, _IONBF, 0);
+			std::setvbuf(stdout, NULL, _IONBF, 0);
 
-			// get user/GUI input
-			if (!fgets(input_buffer, INPUT_BUFFER, stdin))
-				continue;
+			// def user/GUI inout buffer
+			char input_buffer[INPUT_BUFFER];
 
-			// available input
-			if (input_buffer[0] == '\n')
-				continue;
+			std::cout << "id name ChessEngine\n";
+			std::cout << "id author Iulian Dashev\n";
+			std::cout << "uciok\n";
 
-			// parse UCI "isready" command
-			if (strncmp(input_buffer, "isready", 7) == 0)
+			// main loop
+			while (true)
 			{
-				std::cout << "readyok\n";
-				continue;
+				// rest user/GUI input
+				memset(input_buffer, 0, sizeof(input_buffer));
+
+				// making sure output reacehes GUI
+				fflush(stdout);
+
+				// get user/GUI input
+				if (!fgets(input_buffer, INPUT_BUFFER, stdin))
+					continue;
+
+				// available input
+				if (input_buffer[0] == '\n')
+					continue;
+
+				// parse UCI "isready" command
+				if (strncmp(input_buffer, "isready", 7) == 0)
+				{
+					std::cout << "readyok\n";
+					continue;
+				}
+
+				// parse UCI "position" command
+				else if (strncmp(input_buffer, "position", 8) == 0)
+					parse_position(input_buffer);
+
+				// parse UCI "ucinewgame" command
+				else if (strncmp(input_buffer, "ucinewgame", 10) == 0)
+					parse_position("position startpos");
+
+				// parse UCI "go" command
+				else if (strncmp(input_buffer, "go", 2) == 0)
+					parse_go(input_buffer);
+
+				// parse UCI "quit" command
+				else if (strncmp(input_buffer, "quit", 4) == 0)
+					break; // exit loop
+
+				// parse UCI "uci" command
+				else if (strncmp(input_buffer, "uci", 3) == 0)
+				{
+					std::cout << "\nid name ChessEngine\n";
+					std::cout << "id author Iulian Dashev\n";
+					std::cout << "uciok\n";
+				}
+
+				else if (!strncmp(input_buffer, "d", 1)) print_board();
 			}
-
-			// parse UCI "position" command
-			else if (strncmp(input_buffer, "position", 8) == 0)
-				parse_position(input_buffer);
-
-			// parse UCI "ucinewgame" command
-			else if (strncmp(input_buffer, "ucinewgame", 10) == 0)
-				parse_position("position startpos");
-
-			// parse UCI "go" command
-			else if (strncmp(input_buffer, "go", 2) == 0)
-				parse_go(input_buffer);
-
-			// parse UCI "quit" command
-			else if (strncmp(input_buffer, "quit", 4) == 0)
-				break; // exit loop
-
-			// parse UCI "uci" command
-			else if (strncmp(input_buffer, "uci", 3) == 0)
-			{
-				std::cout << "\nid name ChessEngine\n";
-				std::cout << "id author Iulian Dashev\n";
-				std::cout << "uciok\n";
-			}
-
-			else if (!strncmp(input_buffer, "d", 1)) print_board();
 		}
-	}
+		*/
 }

@@ -12,11 +12,11 @@ namespace ChessEngine
 {
 	enum GenerationTypes
 	{
-		CAPTURE,
-		QUIET,
-		LEGAL,
-		EVASION,
-		NON_EVATION
+		GT_CAPTURE,
+		GT_QUIET,
+		GT_LEGAL,
+		GT_EVASION,
+		GT_NON_EVATION
 	};
 
 	typedef struct
