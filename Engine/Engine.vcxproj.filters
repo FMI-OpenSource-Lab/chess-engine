@@ -27,9 +27,6 @@
     <ClCompile Include="movegen.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="perft.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="uci.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

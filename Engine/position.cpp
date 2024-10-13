@@ -17,138 +17,7 @@ namespace ChessEngine
 		BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN, BLACK_KING
 	};
 
-	// Set
-	/*
-	void set(const char* fen)
-	{
-		/*
-		FEN describes a Chess position, It is one line ASCII string.
-
-		A FEN containts 6 fields separated by space
-
-		1. Piece placement (from white's perspective).
-		Each rank is separated by every / (slash). Each rank has letters and/or numbers. Letters  or  represent the pieces,
-		small caps are the Black's pieces (pnbrkq) and upper case letters (PNBRKQ) are the White's pieces.
-		The numbers (from 1 to 8) show how many empty spaces need to be empty
-
-		2. Active colour or side to move. Represented as 'w' or 'b'
-
-		3. Castling ability. If neither side can castle it is '-'.
-		Otherwise FEN string indicates the castling rights using the letter 'KQ' and their representive
-		lowercase kq. Uppercase letters mean castling rights for White and Lowercase letters
-		mean castling rights for Black. 'K' stands for kingside and 'Q' stands for queenside
-
-
-		4. En passant target square. If there's no en passant target square then the notation for this
-		is simplpy '-'. Otherwise the notation is the name of the square.
-		If a pawn just made a 2 square move, this is the position "behind" the pawn.
-
-		5. Halfmove clock. This is the number of halfmoves since the last pawn advance or capture.
-		This is used to determine if a draw can be claimed under the 50-move rule.
-
-		6. Fullmove number. The number of the full move.
-		It starts at 1 and is incremented after Black's move.
-
-		// convert the string into char *
-		// const char* fenPtr = fenStr.c_str();
-
-		// init a pointer to the fen string
-		// allocate memroy
-	char* fen_ptr = (char*)fen;
-
-	std::istringstream ss(fen_ptr);
-	Rank rank = RANK_1;
-	File file = FILE_A;
-
-	// reset boards and state variables
-	memset(bitboards, 0ULL, sizeof(bitboards));
-	memset(occupancies, 0ULL, sizeof(occupancies));
-
-	side = WHITE;
-	enpassant = NONE;
-	castle = CASTLE_NB;
-
-	// 1. Piece placement
-	// loop over char elements
-	for (char c = *fen_ptr; c != ' '; c = *++fen_ptr)
-	{
-		if (c == '/') // new line
-		{
-			// resent file
-			// go to the next rank
-			file = FILE_A;
-			++rank;
-		}
-		else
-		{
-			if (isdigit(c))
-			{
-				// leve this many empty spaces
-				// c derefrences the pointer and subtracts '0' to convert it into int
-				file += c - '0';
-			}
-			else // its a piece
-			{
-				Square sq = convert_to_square(rank, file);
-				Piece piece = get_piece(c);
-
-				set_bit(bitboards[piece], sq);
-
-				++file;
-			}
-		}
-	}
-
-	// 2. Side to move
-	// inc pointer to castling rights and check the side to move
-	(*++fen_ptr == 'w') ? (side = WHITE) : (side = BLACK);
-
-	// go to castling rights
-	fen_ptr += 2;
-
-	// 3. Castling rights
-	while (*fen_ptr != ' ')
-	{
-		switch (*fen_ptr++)
-		{
-		case 'K': castle = castle | WK; break;
-		case 'Q': castle = castle | WQ; break;
-		case 'k': castle = castle | BK; break;
-		case 'q': castle = castle | BQ; break;
-		case '-': break;
-		}
-	}
-
-	// 3. Enpassant square
-	if (*++fen_ptr != '-')
-	{
-		// parse file and rank
-		int file = fen_ptr[0] - 'a';
-		int rank = 8 - (fen_ptr[1] - '0');
-
-		// init enpassant suqare
-		enpassant = convert_to_square(rank, file);
-	}
-	else
-		enpassant = NONE;
-
-	// populate occupancy bitboard
-	for (Piece piece = WHITE_PAWN; piece <= WHITE_KING; ++piece)
-	{
-		// All the white pieces start from 0 to 6
-		occupancies[WHITE] |= bitboards[piece];
-
-		// All the black pieces start from 7 to 12
-		occupancies[BLACK] |= bitboards[piece + 6]; // + 6 pieces
-	}
-
-	// occupanices for both sides
-	occupancies[BOTH] |= occupancies[WHITE] | occupancies[BLACK];
-	// occupancies[BOTH] |= occupancies[BLACK];
-}
-*/
-
-	std::ostream& operator<<(std::ostream& os, const _Position& position)
+	std::ostream& operator<<(std::ostream& os, const Position& position)
 	{
 		os << "\n";
 
@@ -160,25 +29,24 @@ namespace ChessEngine
 			{
 				Piece p = position.get_piece_on(make_square(file, rank));
 
-				if (p == NO_PIECE)
-					os << " .";
-				else
+				if (p != NO_PIECE)
 					os << " " << ascii_pieces[p];
+				else os << " .";
 			}
 
 			os << "  " << (8 - rank) << " \n";
 		}
 
 		// print files
-		os << "\n     a b c d e f g h \n\n";
+		os << "\n a b c d e f g h \n\n";
 
-		os << "	Side:		";
+		os << "Side:		";
 
 		(!position.side)
 			? os << "white\n"
 			: os << "black";
 
-		os << "	Enpassant:	";
+		os << "Enpassant:	";
 		Square enpassant = position.inf->enpassant;
 
 		(enpassant != NONE)
@@ -187,18 +55,20 @@ namespace ChessEngine
 
 		CastlingRights castle = position.inf->castling;
 
-		os << " 	Castling:	"
-			<< (castle & WK) ? 'K' : '-'
-			<< (castle & WQ) ? 'Q' : '-'
-			<< (castle & BK) ? 'k' : '-'
-			<< (castle & BQ) ? 'q' : '-';
+		std::string castling;
+		(castle & WK) ? castling += 'K' : castling += '-';
+		(castle & WQ) ? castling += 'Q' : castling += '-';
+		(castle & BK) ? castling += 'k' : castling += '-';
+		(castle & BQ) ? castling += 'q' : castling += '-';
 
-		os << "\n";
+		os << "Castling:	" << castling << "\n";
+
+		os << "FEN: " << position.get_fen() << "\n";
 
 		return os;
 	}
 
-	_Position& _Position::_set(const char* fen, Info* info)
+	Position& Position::_set(const char* fen, Info* info)
 	{
 		/*
 		FEN describes a Chess position, It is one line ASCII string.
@@ -240,13 +110,17 @@ namespace ChessEngine
 		File file = FILE_A;
 
 		// reset boards and state variables
-		memset(this, 0, sizeof(_Position));
+		memset(this, 0, sizeof(Position));
 		memset(info, 0, sizeof(Info));
+		std::fill_n(piece_board, SQUARE_TOTAL, NO_PIECE);
+
 		inf = info;
 
 		side = WHITE;
 		inf->enpassant = NONE;
 		inf->castling = CASTLE_NB;
+
+		size_t idx;
 
 		// 1. Piece placement
 		// loop over char elements
@@ -259,23 +133,20 @@ namespace ChessEngine
 				file = FILE_A;
 				++rank;
 			}
-			else
+			else if (isdigit(c))
 			{
-				if (isdigit(c))
-				{
-					// leve this many empty spaces
-					// c derefrences the pointer and subtracts '0' to convert it into int
-					file += c - '0';
-				}
-				else // its a piece
-				{
-					Square sq = convert_to_square(rank, file);
-					Piece piece = get_piece(c);
+				// leve this many empty spaces
+				// c derefrences the pointer and subtracts '0' to convert it into int
+				file += c - '0';
+			}
+			else // its a piece
+			{
+				Square sq = make_square(file, rank);
+				idx = std::string(ascii_pieces).find(c);
 
-					place_piece(piece, sq);
+				place_piece(Piece(idx), sq);
 
-					++file;
-				}
+				++file;
 			}
 		}
 
@@ -322,73 +193,59 @@ namespace ChessEngine
 		return *this;
 	}
 
-	/*
-	void print_board()
+	// Get FEN function. Exists for debugging purposes only
+	std::string Position::get_fen() const
 	{
-		std::cout << "\n";
+		int empty_sq_count;
+		std::ostringstream ss;
 
-		// loop on ranks
 		for (Rank rank = RANK_1; rank <= RANK_8; ++rank)
 		{
-			// loop on files
 			for (File file = FILE_A; file <= FILE_H; ++file)
 			{
-				int squareIndex = rank * 8 + file;
+				for (empty_sq_count = 0;
+					file <= FILE_H && is_empty(make_square(file, rank));
+					++file) ++empty_sq_count;
 
-				if (!file) printf("  %d ", 8 - rank);
+				// means print empty square count
+				if (empty_sq_count) ss << empty_sq_count;
 
-				int pieceIndex = -1;
-
-				// loop over all the pieces bitboards
-				for (Piece piece_bb = WHITE_PAWN; piece_bb <= BLACK_KING; ++piece_bb)
-				{
-					if (get_bit(bitboards[piece_bb], squareIndex))
-						pieceIndex = piece_bb;
-				}
-
-				printf(" %c", (pieceIndex == -1) ? '.' : ascii_pieces[pieceIndex]);
+				// print piece on the square
+				if (file <= FILE_H) ss << ascii_pieces[
+					get_piece_on(make_square(file, rank))
+				];
 			}
 
-			std::cout << "\n";
+			if (rank < RANK_8) ss << '/';
 		}
 
-		// print files
-		std::cout << "\n     a b c d e f g h \n\n";
+		// Side to move
+		ss << (side == WHITE ? " w " : " b ");
 
-		printf("	Side:		%s\n", (!side) ? "white" : "black");
-		printf("	Enpassant:	%s\n", (enpassant != NONE) ? squareToCoordinates[enpassant] : "no");
-		printf("	Castling:	%c%c%c%c\n",
-			(castle & WK) ? 'K' : '-',
-			(castle & WQ) ? 'Q' : '-',
-			(castle & BK) ? 'k' : '-',
-			(castle & BQ) ? 'q' : '-');
-	}
-	*/
+		// Castling rights
+		if (can_castle(WK)) ss << 'K';
+		if (can_castle(WQ)) ss << 'Q';
+		if (can_castle(BK)) ss << 'k';
+		if (can_castle(BQ)) ss << 'q';
 
-	Piece get_piece(const char& symbol)
-	{
-		switch (symbol)
+		if (!can_castle(ANY)) ss << '-';
+
+		// En passant square
+		// char('a' + file_of(s)), char('1' + rank_of(s))
+		std::string str_square =
 		{
-		case 'p': return BLACK_PAWN;
-		case 'n': return BLACK_KNIGHT;
-		case 'b': return BLACK_BISHOP;
-		case 'r': return BLACK_ROOK;
-		case 'q': return BLACK_QUEEN;
-		case 'k': return BLACK_KING;
+			char('a' + file_of(ep_square())),
+			char('1' + rank_of(ep_square()))
+		};
 
-		case 'P': return WHITE_PAWN;
-		case 'N': return WHITE_KNIGHT;
-		case 'B': return WHITE_BISHOP;
-		case 'R': return WHITE_ROOK;
-		case 'Q': return WHITE_QUEEN;
-		case 'K': return WHITE_KING;
-		}
+		ss << (ep_square() == NONE ? " - " : " " + str_square + " ")
+			<< inf->rule_fifty << " " << 1 + (gamePly - (side == BLACK)) / 2;
 
-		return NO_PIECE;
+		return ss.str();
 	}
 
 	template<PieceType pt>
-	inline BITBOARD _Position::get_attacks_by(Color c) const
+	inline BITBOARD Position::get_attacks_by(Color c) const
 	{
 		if (pt == PAWN)
 			return c == WHITE
@@ -459,7 +316,7 @@ namespace ChessEngine
 			is_queen_attacks;
 	}
 
-	inline BITBOARD _Position::get_attackers_to(Square s, BITBOARD occ) const
+	inline BITBOARD Position::get_attackers_to(Square s, BITBOARD occ) const
 	{
 		BITBOARD pawn_att =
 			(pawn_attacks_bb<WHITE>(s) & get_pieces_bb(PAWN, BLACK))
@@ -502,14 +359,14 @@ namespace ChessEngine
 		printf("\n    a b c d e f g h\n\n");
 	}
 
-	void _Position::set_check_info() const
+	void Position::set_check_info() const
 	{
 		// init blockers and pinners for each side
 		update_blocks_and_pins(WHITE);
 		update_blocks_and_pins(BLACK);
 	}
 
-	void _Position::update_blocks_and_pins(Color c) const
+	void Position::update_blocks_and_pins(Color c) const
 	{
 		// Get the king square of the given color
 		Square king_square = square<KING>(c);
@@ -564,7 +421,7 @@ namespace ChessEngine
 		}
 	}
 
-	BITBOARD _Position::get_checked_squares(PieceType pt) const
+	BITBOARD Position::get_checked_squares(PieceType pt) const
 	{
 		Square ksq = square<KING>(~side);
 
@@ -581,7 +438,7 @@ namespace ChessEngine
 		}
 	}
 
-	bool _Position::is_legal(Move m) const
+	bool Position::is_legal(Move m) const
 	{
 		// Base cases for legal move
 		if (!m.is_move_ok() ||
@@ -662,13 +519,15 @@ namespace ChessEngine
 
 	// This function helps the move generation to determine 
 	// if move in the current position gives a check
-	bool _Position::gives_check(Move m) const
+	bool Position::gives_check(Move m) const
 	{
 		assert(get_piece_color(moved_piece(m)) == side);
 
 		Color us = side;
+
 		Square source = m.source_square();
 		Square target = m.target_square();
+
 		Square king_square = square<KING>(us);
 		Square opp_king_square = square<KING>(~us);
 
@@ -744,7 +603,7 @@ namespace ChessEngine
 
 	// Makes a move and saves the information in the Info
 	// Move is assumed to be legal or pseudo-legal
-	void _Position::do_move(Move m, Info& new_info, bool gives_check)
+	void Position::do_move(Move m, Info& new_info, bool gives_check)
 	{
 		memcpy(&new_info, inf, sizeof(Info));
 		new_info.previous = inf;
@@ -868,7 +727,7 @@ namespace ChessEngine
 		// Later will handle repetition logic
 	}
 
-	void _Position::undo_move(Move m)
+	void Position::undo_move(Move m)
 	{
 		// switch sides
 		side = ~side;
@@ -942,7 +801,7 @@ namespace ChessEngine
 
 	// Helper for do/undo castling move
 	template<bool Do>
-	void _Position::do_castle(Color us, Square source, Square& target, Square& r_source, Square& r_target)
+	void Position::do_castle(Color us, Square source, Square& target, Square& r_source, Square& r_target)
 	{
 		bool king_side = target > source;
 		r_source = target;
@@ -961,7 +820,7 @@ namespace ChessEngine
 		place_piece(get_piece(us, ROOK), Do ? r_target : r_source);
 	}
 
-	BITBOARD _Position::get_least_valuable_piece(BITBOARD attacks, Color by_side, PieceType& pt) const
+	BITBOARD Position::get_least_valuable_piece(BITBOARD attacks, Color by_side, PieceType& pt) const
 	{
 		for (pt = PAWN; pt <= KING; ++pt)
 		{
@@ -981,7 +840,7 @@ namespace ChessEngine
 		return 0;
 	}
 
-	Value _Position::see(Move m) const
+	Value Position::see(Move m) const
 	{
 		Color stm = side; // Side to move
 
@@ -1031,7 +890,7 @@ namespace ChessEngine
 
 	// Tests if the position is drawn by 50 rule move
 	// or repetition. Not detecting stalemate
-	bool _Position::is_draw(PLY_TYPE ply) const
+	bool Position::is_draw(PLY_TYPE ply) const
 	{
 		BITBOARD checkers =
 			get_attackers_to(square<KING>(side)) & get_pieces_bb(~side);

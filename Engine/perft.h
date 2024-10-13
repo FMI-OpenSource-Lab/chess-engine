@@ -2,17 +2,27 @@
 #define PERFT_H
 
 #include "defs.h"
+#include "position.h"
+
+#include <iomanip>
 
 namespace ChessEngine
 {
 	// leaf nodes
 	// number of positions reached during the test of the move generator at given depth
 
-	extern long nodes;
-
 	extern int get_time_ms();
-	extern inline void perft_driver(int depth);
-	extern void perft_test(int depth);
-	extern void print_perft_table();
+
+	template<bool isRoot>
+	uint64_t perft(Position& pos, int depth)
+	{
+		Info inf;
+
+		uint64_t count, nodes = 0;
+		const bool leaf = (depth == 2);
+
+
+		return nodes;
+	}
 }
 #endif // !PERFT_H

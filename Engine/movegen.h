@@ -10,13 +10,15 @@
 
 namespace ChessEngine
 {
+	class Position;
+
 	enum GenerationTypes
 	{
 		GT_CAPTURE,
 		GT_QUIET,
-		GT_LEGAL,
 		GT_EVASION,
-		GT_NON_EVATION
+		GT_NON_EVATION,
+		GT_LEGAL
 	};
 
 	typedef struct
@@ -27,6 +29,24 @@ namespace ChessEngine
 		// move count
 		int count;
 	} moves;
+
+
+	template<GenerationTypes>
+	Move* generate_moves(const Position& pos, Move* move_list);
+
+	template<GenerationTypes T>
+	struct MoveList {
+		explicit MoveList(const Position& pos) :
+			last(generate_moves<T>(pos, move_list)) {}
+
+		const Move* begin() const { return move_list; }
+		const Move* end() const { return last; }
+		size_t		size() const { return last - move_list; }
+		bool		contains(Move m) const { return std::find(begin(), end(), m) != end(); }
+
+	private:
+		Move move_list[MAX_MOVES], * last;
+	};
 
 	// Generate moves functions
 	extern void generate_moves(moves* move_list);

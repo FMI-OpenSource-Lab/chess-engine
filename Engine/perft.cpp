@@ -1,26 +1,7 @@
 #include "perft.h"
-#include "movegen.h"
-#include "move.h"
-#include "position.h"
-
-#include<iostream>
-#include <iomanip>
 
 namespace ChessEngine
-{
-	long nodes = 0;
-
-	int get_time_ms()
-	{
-#ifdef _WIN64
-		return GetTickCount();
-#else
-		struct timeval time_value;
-		gettimeofday(&time_value, NULL);
-		return time_value.tv_sec * 1000 + time_value.tv_usec / 1000;
-#endif // _WIN64
-	}
-
+{	
 	/*
 	inline void perft_driver(int depth)
 	{

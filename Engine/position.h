@@ -57,7 +57,7 @@ namespace ChessEngine
 		Square enpassant;
 		PLY_TYPE rule_fifty;
 		PLY_TYPE ply;
-		
+
 		// not copied
 		Info* next;
 		Info* previous;
@@ -75,17 +75,18 @@ namespace ChessEngine
 
 	// This class stores information to the board reperesentation as pieces,
 	// side to move, castling info, etc.
-	class _Position
+	class Position
 	{
 	public:
 		//static void init();
 
-		_Position() = default;
-		_Position(const _Position&) = delete;
-		_Position& operator=(const _Position&) = delete;
+		Position() = default;
+		Position(const Position&) = delete;
+		Position& operator=(const Position&) = delete;
 
 		// FEN i/o
-		_Position& _set(const char* fen, Info* info);
+		Position& _set(const char* fen, Info* info);
+		std::string get_fen() const;
 
 		// Squares
 		Square ep_square() const { return inf->enpassant; }
@@ -168,13 +169,12 @@ namespace ChessEngine
 		Info* info() const;
 
 		// Overrides
-		friend std::ostream& operator<<(std::ostream& os, const _Position& position);
+		friend std::ostream& operator<<(std::ostream& os, const Position& position);
 
 	private:
 		template<bool Do>
 		void do_castle(Color us, Square source, Square& target, Square& r_source, Square& r_target);
 
-		void set_info() const;
 		void set_check_info() const;
 
 		void move_piece(Square source, Square target);
@@ -197,26 +197,26 @@ namespace ChessEngine
 		Info* inf;
 	};
 
-	inline BITBOARD _Position::get_pieces_bb(PieceType pt) const { return type[pt]; }
+	inline BITBOARD Position::get_pieces_bb(PieceType pt) const { return type[pt]; }
 
-	inline bool _Position::can_castle(CastlingRights cr) const
+	inline bool Position::can_castle(CastlingRights cr) const
 	{
 		return inf->castling & cr;
 	}
 
-	inline BITBOARD _Position::get_attackers_to(Square s) const
+	inline BITBOARD Position::get_attackers_to(Square s) const
 	{
 		return get_attackers_to(s, get_all_pieces_bb());
 	}
 
-	inline bool _Position::is_capture(Move m) const
+	inline bool Position::is_capture(Move m) const
 	{
 		return (!is_empty(m.target_square()) && m.move_type() != MT_CASTLING) || m.move_type() == MT_EN_PASSANT;
 	}
 
-	inline Piece _Position::captured_piece() const { return inf->captured_piece; }
+	inline Piece Position::captured_piece() const { return inf->captured_piece; }
 
-	inline void _Position::place_piece(Piece p, Square s)
+	inline void Position::place_piece(Piece p, Square s)
 	{
 		piece_board[s] = p;
 
@@ -226,22 +226,22 @@ namespace ChessEngine
 		occupancies[BOTH] |= occupancies[WHITE] | occupancies[BLACK];
 		type[ALL_PIECES] |= type[type_of_piece(p)] |= s;
 
-		occupancies[get_piece_color(p)] |= s;
+		set_bit(occupancies[get_piece_color(p)], s);
 	}
 
-	inline void _Position::remove_piece(Square s)
+	inline void Position::remove_piece(Square s)
 	{
 		Piece p = piece_board[s];
 
-		type[ALL_PIECES] ^= s;
+		rm_bit(type[ALL_PIECES], s);
+		rm_bit(type[type_of_piece(p)], s);
+		rm_bit(occupancies[get_piece_color(p)], s);
+		rm_bit(occupancies[BOTH], s);
 
-		type[type_of_piece(p)] ^= s;
-		occupancies[get_piece_color(p)] ^= s;
-		occupancies[BOTH] ^= s;
 		piece_board[s] = NO_PIECE;
 	}
 
-	inline void _Position::move_piece(Square source, Square target)
+	inline void Position::move_piece(Square source, Square target)
 	{
 		Piece s_p = piece_board[source];
 		BITBOARD dest = square_to_BB(source) | square_to_BB(target);
@@ -254,29 +254,15 @@ namespace ChessEngine
 		piece_board[target] = s_p;
 	}
 
-	inline void _Position::do_move(Move m, Info& newInfo)
+	inline void Position::do_move(Move m, Info& newInfo)
 	{
 		do_move(m, newInfo, gives_check(m));
 	}
 
-	inline Info* _Position::info() const { return inf; }
+	inline Info* Position::info() const { return inf; }
 
 	// check if square is attacked
 	extern bool is_square_attacked(const Square& square, const Color color);
 	extern void print_attacked_squares(Color c);
-
-	//namespace Position
-	//{
-	//	void init(const char* fen);
-	//}
-
-	// fen string input output
-	extern void set(const char* fen);
-
-	// Board representation
-	extern void print_board();
-
-	// Helper methods
-	extern Piece get_piece(const char& symbol);
 }
 #endif // !POSITION_H
