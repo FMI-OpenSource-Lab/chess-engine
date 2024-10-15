@@ -333,7 +333,7 @@ namespace ChessEngine
 		return bitboard & (bitboard - 1);
 	}
 
-	constexpr Square pop_ls1b(U64 bitboard)
+	constexpr Square pop_ls1b(U64& bitboard)
 	{
 		assert(bitboard);
 

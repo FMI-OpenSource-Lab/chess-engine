@@ -133,13 +133,12 @@ namespace ChessEngine
 		bool is_draw(PLY_TYPE ply) const;
 		bool has_repeated() const;
 		bool gives_check(Move m) const;
-		template<Color c>
 		bool is_castling_prevented(CastlingRights cr) const;
 
 		// Pieces
+		Piece get_piece_on(Square s) const;
 		Piece moved_piece(Move m) const { return get_piece_on(m.source_square()); };
 		Piece captured_piece() const;
-		Piece get_piece_on(Square s) const { return piece_board[s]; }
 
 		// PLY
 		PLY_TYPE game_ply() const { return gamePly; };
@@ -202,6 +201,12 @@ namespace ChessEngine
 		// State info 
 		Info* inf;
 	};
+
+	inline Piece Position::get_piece_on(Square s) const
+	{
+		assert(is_square_ok(s));
+		return piece_board[s];
+	}
 
 	inline BITBOARD Position::get_pieces_bb(PieceType pt) const { return type[pt]; }
 

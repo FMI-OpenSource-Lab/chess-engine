@@ -1,110 +1,79 @@
 #include "perft.h"
 
 namespace ChessEngine
-{	
-	/*
-	inline void perft_driver(int depth)
+{
+	inline std::string move(Move m)
 	{
-		if (depth == 0)
-		{
-			// inc nodes count
-			nodes++;
-			return;
-		}
+		if (m == Move::invalid_move())
+			return "(none)";
 
-		moves move_list[1];
+		if (m == Move::null_move())
+			return "0000";
 
-		generate_moves(move_list);
+		Square source = m.source_square();
+		Square target = m.target_square();
 
-		for (int move_count = 0; move_count < move_list->count; ++move_count)
-		{
-			// preserve 
-			//copy_board();
+		if (m.move_type() == MT_CASTLING)
+			target = make_square(target > source ? FILE_G : FILE_C, rank_of(source));
 
-			if (!make_move(move_list->moves[move_count], MT_NORMAL))
-				// skip to the next move
-				continue;
+		std::string soure_to_string = {
+			char('a' + file_of(source)) , char('1' + rank_of(source))
+		};
+		std::string target_to_string = {
+			char('a' + file_of(target)) , char('1' + rank_of(target))
+		};
 
-			// call perft driver
-			perft_driver(depth - 1);
+		std::string move = soure_to_string + target_to_string;
 
-			//restore_board();
-		}
+		if (m.move_type() == MT_PROMOTION)
+			move += tolower(ascii_pieces[m.promoted()]);
+
+		return move;
 	}
 
-	void perft_test(int depth)
+	void perft_test(Position& pos, int depth)
 	{
-		printf("\n     Performance test\n\n");
+		uint64_t nodes = 0;
+		Info inf{};
 
-		// create move list instance
-		moves move_list[1];
-
-		// generate moves
-		generate_moves(move_list);
-
-		// init start time
 		long start = get_time_ms();
 
-		// loop over generated moves
-		for (int move_count = 0; move_count < move_list->count; move_count++)
+		for (const auto& m : MoveList<GT_LEGAL>(pos))
 		{
-			// preserve board state
-			//copy_board();
+			if (depth < 1)
+			{
+				nodes++;
+				return;
+			}
+			else
+			{
+				pos.do_move(m, inf);
 
-			// make move
-			if (!make_move(move_list->moves[move_count], MT_NORMAL))
-				// skip to the next move
-				continue;
+				uint64_t comulative_nodes = nodes;
 
-			// cummulative nodes
-			long cummulative_nodes = nodes;
+				perft_test(pos, depth - 1);
 
-			// call perft driver recursively
-			perft_driver(depth - 1);
+				uint64_t old_nodes = nodes - comulative_nodes;
 
-			// old nodes
-			long old_nodes = nodes - cummulative_nodes;
+				pos.undo_move(m);
 
-			// take back
-			//restore_board();
-
-			//// print move
-			//printf("%s%s%c :%ld\n",
-			//	squareToCoordinates[get_move_source(move_list->moves[move_count])],
-			//	squareToCoordinates[get_move_target(move_list->moves[move_count])],
-			//	get_move_promoted(move_list->moves[move_count])
-			//	? tolower(ascii_pieces[get_move_promoted(move_list->moves[move_count])])
-			//	: ' ',
-			//	old_nodes);
+				std::cout << move(m) << ": " << old_nodes << std::endl;
+				std::cout << "\nDepth: " << depth
+					<< "\nNodes: " << nodes
+					<< "\nTime: " << get_time_ms() - start
+					<< std::endl;
+			}
 		}
-
-		// print results
-		printf("\n    Depth: %d\n", depth);
-		printf("    Nodes: %ld\n", nodes);
-		printf("     Time: %ld\n\n", get_time_ms() - start);
 	}
 
-	void print_perft_table()
+	void perft_driver(const char* fen_ptr, int depth)
 	{
+		// double ended queue
+		InfoListPtr infos = InfoListPtr(new std::deque<Info>(1));
+		Position p{};
 
-		int depth;
-		std::cout << "Depth: ";
-		std::cin >> depth;
+		p.set(fen_ptr, &infos->back());
 
-		std::cout << "\n\nDepth";
-		std::cout << std::setw(20) << "Nodes";
-		std::cout << std::setw(10) << "Time\n";
-		std::cout << "--------------------------------------\n";
-
-		for (int i = 0; i <= depth; i++)
-		{
-			ULONGLONG start_time = get_time_ms();
-			nodes = 0;
-
-			perft_driver(i);
-
-			std::cout << i << std::setw(24) << nodes << std::setw(10) << get_time_ms() - start_time << " ms\n";
-		}
+		perft_test(p, depth);
 	}
-	*/
 }

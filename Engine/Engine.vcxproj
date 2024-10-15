@@ -130,6 +130,7 @@
     <ClCompile Include="bitboard.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="movegen.cpp" />
+    <ClCompile Include="perft.cpp" />
     <ClCompile Include="position.cpp" />
     <ClCompile Include="score.cpp" />
     <ClCompile Include="search.cpp" />

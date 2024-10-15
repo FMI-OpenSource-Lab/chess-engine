@@ -195,12 +195,12 @@ constexpr Square make_square(File f, Rank r) { return Square((r << 3) + f); }
 constexpr Square sq_relative_to_side(Square s, Color c) { return Square(int(s) ^ (c * 56)); }
 
 // Piece, PieceType and Color helper methods
-constexpr Piece get_piece(Color c, PieceType pt) { return Piece(pt + (c * 6)); }
+constexpr Piece get_piece(Color c, PieceType pt) { return Piece(pt + (c * 6) - 1); }
 
 constexpr PieceType type_of_piece(Piece p, Color c) { return PieceType(p - (c * 6)); }
 constexpr PieceType type_of_piece(Piece p) { return PieceType((p % 6) + 1); }
 
-constexpr Color get_piece_color(Piece p) { return Color(p / 6); }
+constexpr Color get_piece_color(Piece p) { return Color(int(p / 6)); }
 
 // bit macros
 #define get_bit(bitboard, square) (bitboard & (1ULL << square)) // checks for available bit

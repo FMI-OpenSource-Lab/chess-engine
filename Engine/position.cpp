@@ -939,7 +939,6 @@ namespace ChessEngine
 
 	// Helper function to set the castling rights to the info struct and to the
 	// castling path array
-	template<Color c>
 	bool Position::is_castling_prevented(CastlingRights cr) const {
 		assert(cr == WK || cr == WQ || cr == BK || cr == BQ);
 

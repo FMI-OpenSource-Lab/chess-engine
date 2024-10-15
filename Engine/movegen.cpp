@@ -29,9 +29,9 @@ namespace ChessEngine
 	template<GenerationTypes type, Color us>
 	Move* generate_pawn_moves(Move* move_list, const Position& pos, BITBOARD target)
 	{
-		Direction push_dir = pawn_push_direction(us);
-		Direction u_r = us == WHITE ? UP_RIGHT : DOWN_RIGHT;
-		Direction u_l = us == WHITE ? UP_LEFT : DOWN_LEFT;
+		constexpr Direction push_dir = pawn_push_direction(us);
+		constexpr Direction u_r = us == WHITE ? UP_RIGHT : DOWN_RIGHT;
+		constexpr Direction u_l = us == WHITE ? UP_LEFT : DOWN_LEFT;
 
 		BITBOARD empty_squares = pos.get_all_empty_squares_bb();
 		BITBOARD pawns = pos.get_pieces_bb(PAWN, us);
@@ -194,7 +194,7 @@ namespace ChessEngine
 		if ((type == GT_QUIET || type == GT_NON_EVATION) && pos.can_castle(us & ANY))
 			for (auto cr : { us & KINGSIDE, us & QUEENSIDE })
 			{
-				if (!pos.is_castling_prevented<us>(cr) && pos.can_castle(cr))
+				if (!pos.is_castling_prevented(cr) && pos.can_castle(cr))
 				{
 					*move_list++ = Move::make<MT_CASTLING>(king_square, pos.castling_rook_square(cr));
 				}
