@@ -11,8 +11,8 @@
 
 namespace ChessEngine
 {
-#define BISHOP_ATTACKS_SIZE 512
-#define ROOK_ATTACKS_SIZE 4096
+	constexpr auto BISHOP_ATTACKS_SIZE = 512;
+	constexpr auto ROOK_ATTACKS_SIZE = 4096;
 
 	// Declare prototypes
 	constexpr inline U64 set_occupancy(int index, int bitsInMask, U64 attackMask);
@@ -230,7 +230,7 @@ namespace ChessEngine
 
 		for (auto& pt : { ROOK, BISHOP })
 			bb |= (attacks_bb_by(pt, source, 0) & (attacks_bb_by(pt, target, 0)));
-		
+
 		return (bb | source | target) & with;
 	}
 
@@ -308,18 +308,17 @@ namespace ChessEngine
 	constexpr int getLS1B(U64 bitboard)
 	{
 		// check if bb is not 0
-		if (bitboard)
-		{
-			// count trailing bits before LS1B
-			U64 twosComplement = ~bitboard + 1; // -bitboard is equivelent
-			return u64_log2(bitboard & twosComplement);
-		}
-		else
-			return -1;
+		assert(bitboard);
+
+		// count trailing bits before LS1B
+		U64 twosComplement = ~bitboard + 1; // -bitboard is equivelent
+		return u64_log2(bitboard & twosComplement);
 	}
 
 	constexpr Square getLS1B_square(U64 bitboard)
 	{
+		assert(bitboard);
+
 		int lsb = getLS1B(bitboard);
 		return lsb == -1 ? NONE : Square(lsb);
 	}
@@ -327,6 +326,21 @@ namespace ChessEngine
 	constexpr void resetLSB(U64& bitboard)
 	{
 		bitboard &= bitboard - 1;
+	}
+
+	constexpr bool has_bit_after_pop(U64 bitboard)
+	{
+		return bitboard & (bitboard - 1);
+	}
+
+	constexpr Square pop_ls1b(U64 bitboard)
+	{
+		assert(bitboard);
+
+		Square s = getLS1B_square(bitboard);
+		resetLSB(bitboard);
+
+		return s;
 	}
 
 	// Counting algorithm that works better where most bits in bitboard are 0

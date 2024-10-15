@@ -6,6 +6,7 @@
 #include <cstring>
 
 #include "position.h"
+#include "defs.h"
 
 namespace ChessEngine
 {
@@ -68,7 +69,7 @@ namespace ChessEngine
 		return os;
 	}
 
-	Position& Position::_set(const char* fen, Info* info)
+	Position& Position::set(const char* fen, Info* info)
 	{
 		/*
 		FEN describes a Chess position, It is one line ASCII string.
@@ -160,14 +161,29 @@ namespace ChessEngine
 		// 3. Castling rights
 		while (*fen_ptr != ' ')
 		{
+			Square r_sq;
+			Color c = islower(*fen_ptr) ? BLACK : WHITE;
+			Piece rook = get_piece(c, ROOK);
+
 			switch (*fen_ptr++)
 			{
-			case 'K': inf->castling = inf->castling | WK; break;
-			case 'Q': inf->castling = inf->castling | WQ; break;
-			case 'k': inf->castling = inf->castling | BK; break;
-			case 'q': inf->castling = inf->castling | BQ; break;
-			case '-': break;
+			case 'K': inf->castling = inf->castling | WK;
+				for (r_sq = H1; get_piece_on(r_sq) != rook; --r_sq);
+				break; // break from switch
+			case 'Q': inf->castling = inf->castling | WQ;
+				for (r_sq = A1; get_piece_on(r_sq) != rook; ++r_sq);
+				break;// break from switch
+			case 'k': inf->castling = inf->castling | BK;
+				for (r_sq = H8; get_piece_on(r_sq) != rook; --r_sq);
+				break; // break from switch
+			case 'q': inf->castling = inf->castling | BQ;
+				for (r_sq = A8; get_piece_on(r_sq) != rook; --r_sq);
+				break; // break from switch
+			case '-': 
+				break;
 			}
+
+			set_castling_rights(c, r_sq);
 		}
 
 		// 3. Enpassant square
@@ -401,13 +417,10 @@ namespace ChessEngine
 			// Then intersect with the rest of board pieces
 			BITBOARD between = in_between_bb(king_square, ssq) & occ;
 
-			// get the bitboard of between attack with ls1b removed
-			BITBOARD more_than_one = between & (between - 1);
-
 			// Make sure that exists a check blocker and its the only blocker
 			// If there are more than one blocker the piece is still pinned, but not
 			// absolutely pinned
-			if (between && !more_than_one)
+			if (between && !has_bit_after_pop(between))
 			{
 				// append it into the blocking pieces array
 				inf->blockers_for_king_checks[c] |= between;
@@ -901,5 +914,36 @@ namespace ChessEngine
 		// Return draw if a position repeats once earlier but
 		// strictly after the root, or repeats twice before or at the root
 		return inf->repetition && inf->repetition < ply;
+	}
+
+	void Position::set_castling_rights(Color c, Square r_source)
+	{
+		Square k_source = square<KING>(c);
+
+		CastlingRights cr = c & (k_source < r_source ? KINGSIDE : QUEENSIDE);
+
+		castling_rights_mask[k_source] |= cr;
+		castling_rights_mask[r_source] |= cr;
+		rook_source_sq[cr] = r_source;
+
+		Square r_target = sq_relative_to_side(cr & KINGSIDE ? G1 : C1, c);
+		Square k_target = sq_relative_to_side(cr & QUEENSIDE ? F1 : D1, c);
+
+		Square k_and_r = k_source | int(r_source);
+
+		castling_path[cr] = (
+			in_between_bb(r_source, r_target) |
+			in_between_bb(k_source, k_target)
+			) & ~k_and_r;
+	}
+
+	// Helper function to set the castling rights to the info struct and to the
+	// castling path array
+	template<Color c>
+	bool Position::is_castling_prevented(CastlingRights cr) const {
+		assert(cr == WK || cr == WQ || cr == BK || cr == BQ);
+
+		// Return intersection with pieces to see if its prevented
+		return get_all_pieces_bb() & castling_path[cr];
 	}
 }

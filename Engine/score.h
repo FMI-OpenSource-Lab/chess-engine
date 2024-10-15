@@ -147,11 +147,11 @@ namespace ChessEngine
 		100, 200, 300, 400, 500, 600,  100, 200, 300, 400, 500, 600
 	};
 
-	extern int evaluate();
-	extern int score_move(int move);
-	extern int sort_move(moves* move_list);
+	//extern int evaluate();
+	//extern int score_move(int move);
+	//extern int sort_move(moves* move_list);
 
-	extern void print_move_scores(moves* move_list);
+	//extern void print_move_scores(moves* move_list);
 }
 
 #endif // !SCORE_H

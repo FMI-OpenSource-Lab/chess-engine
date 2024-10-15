@@ -1,14 +1,14 @@
 ﻿#ifndef POSITION_H
 #define POSITION_H
 
-#include "defs.h"
-#include "move.h"
-#include "movegen.h"
-
 #include <vector>
 #include <memory>
 #include <deque>
 #include <string>
+
+#include "defs.h"
+#include "move.h"
+#include "movegen.h"
 
 namespace ChessEngine
 {
@@ -85,13 +85,14 @@ namespace ChessEngine
 		Position& operator=(const Position&) = delete;
 
 		// FEN i/o
-		Position& _set(const char* fen, Info* info);
+		Position& set(const char* fen, Info* info);
 		std::string get_fen() const;
 
 		// Squares
 		Square ep_square() const { return inf->enpassant; }
 		template<PieceType pt>
 		Square square(Color c) const { return getLS1B_square(get_pieces_bb(pt, c)); }
+		Square castling_rook_square(CastlingRights cr) const { return rook_source_sq[cr]; }
 
 		// Bitboards
 		inline BITBOARD get_pieces_bb(PieceType pt = ALL_PIECES) const;
@@ -132,6 +133,8 @@ namespace ChessEngine
 		bool is_draw(PLY_TYPE ply) const;
 		bool has_repeated() const;
 		bool gives_check(Move m) const;
+		template<Color c>
+		bool is_castling_prevented(CastlingRights cr) const;
 
 		// Pieces
 		Piece moved_piece(Move m) const { return get_piece_on(m.source_square()); };
@@ -172,6 +175,7 @@ namespace ChessEngine
 		friend std::ostream& operator<<(std::ostream& os, const Position& position);
 
 	private:
+		void set_castling_rights(Color c, Square r_source);
 		template<bool Do>
 		void do_castle(Color us, Square source, Square& target, Square& r_source, Square& r_target);
 
@@ -185,11 +189,13 @@ namespace ChessEngine
 		BITBOARD bitboards[NO_PIECE];
 		BITBOARD occupancies[BOTH + 1];
 		BITBOARD type[PIECE_TYPE_NB];
+		BITBOARD castling_path[CASTLING_RIGHT_NB];
 
 		Piece	 piece_board[SQUARE_TOTAL];
 
 		uint8_t	 castling_rights_mask[NONE];
 
+		Square rook_source_sq[CASTLING_RIGHT_NB];
 		PLY_TYPE gamePly;
 		Color	 side;
 
