@@ -155,7 +155,7 @@ namespace ChessEngine
 
 	// Generate all moves
 	template<Color us, GenerationTypes type>
-	Move* generate_all(const Position& pos, Move* move_list)
+	Move* generate_all(Move* move_list, const Position& pos)
 	{
 		// unsupported type
 		assert(type != GT_LEGAL);
@@ -212,8 +212,8 @@ namespace ChessEngine
 		Color us = pos.side_to_move();
 
 		return us == WHITE
-			? generate_all<WHITE, type>(pos, move_list)
-			: generate_all<BLACK, type>(pos, move_list);
+			? generate_all<WHITE, type>(move_list, pos)
+			: generate_all<BLACK, type>(move_list, pos);
 	}
 
 	template Move* generate<GT_CAPTURE>(Move* move_list, const Position& pos);
@@ -222,31 +222,31 @@ namespace ChessEngine
 	template Move* generate<GT_NON_EVATION>(Move* move_list, const Position& pos);
 
 	template<>
-	Move* generate<GT_LEGAL>(Move* move_list, const Position& pos)
+	Move* generate<GT_LEGAL>(Move* moveList, const Position& pos)
 	{
 		Color us = pos.side_to_move();
 		BITBOARD pinned = pos.get_blocking_pieces(us) & pos.get_our_pieces_bb();
 		Square king_square = pos.square<KING>(us);
-		Move* current = move_list;
+		Move* current = moveList;
 
 		BITBOARD checking_pieces =
-			pos.get_attackers_to(pos.square<KING>(us)) & pos.get_pieces_bb(~us);
+			pos.get_attackers_to(pos.square<KING>(us)) & pos.get_opponent_pieces_bb();
 
-		move_list = checking_pieces
-			? generate<GT_EVASION>(move_list, pos)
-			: generate<GT_NON_EVATION>(move_list, pos);
+		moveList = checking_pieces
+			? generate<GT_EVASION>(moveList, pos)
+			: generate<GT_NON_EVATION>(moveList, pos);
 
-		while (current != move_list)
+		while (current != moveList)
 		{
-			if (((pinned & current->source_square()) || current->target_square() == king_square || current->move_type() == MT_EN_PASSANT)
+			if (((pinned & current->source_square()) || current->source_square() == king_square || current->move_type() == MT_EN_PASSANT)
 				&& !pos.is_legal(*current))
 			{
-				*current = *(--move_list);
+				*current = *(--moveList);
 			}
 			else
 				++current;
 		}
 
-		return move_list;
+		return moveList;
 	}
 }

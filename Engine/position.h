@@ -122,8 +122,6 @@ namespace ChessEngine
 		BITBOARD	get_checked_squares(PieceType pt) const;
 
 		// Booleans
-		// bool is_square_attacked(Square square, Color side_to_move) const;
-
 		bool can_castle(CastlingRights cr) const;
 
 		bool is_legal(Move m) const;
@@ -158,14 +156,13 @@ namespace ChessEngine
 		void place_piece(Piece p, Square s);
 
 		void update_blocks_and_pins(Color c) const;
-
+		
 		// Caslte & side
-		CastlingRights	castling_rights(Color c) const
-		{
+		CastlingRights castling_rights(Color c) const {
 			return c & CastlingRights(inf->castling);
 		}
 
-		Color	 side_to_move() const { return side; }
+		Color side_to_move() const { return side; }
 
 		// State info
 		Info* info() const;
@@ -271,9 +268,5 @@ namespace ChessEngine
 	}
 
 	inline Info* Position::info() const { return inf; }
-
-	// check if square is attacked
-	extern bool is_square_attacked(const Square& square, const Color color);
-	extern void print_attacked_squares(Color c);
 }
 #endif // !POSITION_H

@@ -41,18 +41,14 @@ namespace ChessEngine
 		// print files
 		os << "\n a b c d e f g h \n\n";
 
-		os << "Side:		";
+		os << "Side:		" << (position.side_to_move() == WHITE 
+			? "white\n" 
+			: "black");
 
-		(!position.side)
-			? os << "white\n"
-			: os << "black";
-
-		os << "Enpassant:	";
 		Square enpassant = position.inf->enpassant;
-
-		(enpassant != NONE)
-			? os << squareToCoordinates[enpassant] << "\n"
-			: os << "no\n";
+		os << "\nEnpassant:	" << (enpassant != NONE 
+			? squareToCoordinates[enpassant] 
+			: "no") << "\n";
 
 		CastlingRights castle = position.inf->castling;
 
@@ -247,15 +243,12 @@ namespace ChessEngine
 		if (!can_castle(ANY)) ss << '-';
 
 		// En passant square
-		// char('a' + file_of(s)), char('1' + rank_of(s))
-		std::string str_square =
-		{
-			char('a' + file_of(ep_square())),
-			char('1' + rank_of(ep_square()))
-		};
-
-		ss << (ep_square() == NONE ? " - " : " " + str_square + " ")
-			<< inf->rule_fifty << " " << 1 + (gamePly - (side == BLACK)) / 2;
+		
+		ss << " " << (ep_square() == NONE 
+			? "- " 
+			: squareToCoordinates[ep_square()]) 
+			<< " " << inf->rule_fifty << " "
+			<< 1 + (gamePly - (side == BLACK)) / 2;
 
 		return ss.str();
 	}
@@ -280,58 +273,6 @@ namespace ChessEngine
 		return attacks;
 	}
 
-	// check if square is attacked
-	bool is_square_attacked(const Square& square, const Color color)
-	{
-		// !color -> white
-		// Temporary
-		BITBOARD bitboards[12]{};
-		BITBOARD occupancies[3]{};
-
-		// This gets the pawn attacks at the white side and square
-		// then applies bitwise AND to the opposide piece
-		bool is_pawn_attacks = !color
-			? pawn_attacks[BLACK][square] & bitboards[WHITE_PAWN]
-			: pawn_attacks[WHITE][square] & bitboards[BLACK_PAWN];
-
-		bool is_knight_attacks = attacks_bb_by<KNIGHT>(square)
-			& bitboards[
-				!color
-					? WHITE_KNIGHT
-					: BLACK_KNIGHT];
-
-		bool is_king_attacks = attacks_bb_by<KING>(square)
-			& bitboards[
-				!color
-					? WHITE_KING
-					: BLACK_KING];
-
-		bool is_bishop_attacks = attacks_bb_by<BISHOP>(square, occupancies[BOTH])
-			& bitboards[
-				!color
-					? WHITE_BISHOP
-					: BLACK_BISHOP];
-
-		bool is_rook_attacks = attacks_bb_by<ROOK>(square, occupancies[BOTH])
-			& bitboards[
-				!color
-					? WHITE_ROOK
-					: BLACK_ROOK];
-
-		bool is_queen_attacks = attacks_bb_by<QUEEN>(square, occupancies[BOTH])
-			& bitboards[
-				!color
-					? WHITE_QUEEN
-					: BLACK_QUEEN];
-
-		return is_pawn_attacks ||
-			is_knight_attacks ||
-			is_king_attacks ||
-			is_bishop_attacks ||
-			is_rook_attacks ||
-			is_queen_attacks;
-	}
-
 	inline BITBOARD Position::get_attackers_to(Square s, BITBOARD occ) const
 	{
 		BITBOARD pawn_att =
@@ -351,28 +292,6 @@ namespace ChessEngine
 			| (attacks_bb_by<ROOK>(s, occ) & (get_pieces_bb(ROOK) | get_pieces_bb(QUEEN)))
 			| (attacks_bb_by<BISHOP>(s, occ) & (get_pieces_bb(BISHOP) | get_pieces_bb(QUEEN)))
 			| (attacks_bb_by<KING>(s) & get_pieces_bb(KING));
-	}
-
-	void print_attacked_squares(Color color)
-	{
-		std::cout << std::endl;
-
-		for (Rank rank = RANK_1; rank <= RANK_8; ++rank)
-		{
-			for (File file = FILE_A; file <= FILE_H; ++file)
-			{
-				Square square = convert_to_square(rank, file);
-
-				if (!file)
-					printf(" %d ", 8 - rank);
-
-				printf(" %d", is_square_attacked(square, color) ? 1 : 0);
-			}
-
-			std::cout << std::endl;
-		}
-
-		printf("\n    a b c d e f g h\n\n");
 	}
 
 	void Position::set_check_info() const
@@ -503,7 +422,7 @@ namespace ChessEngine
 
 			// Check for attackers on the castling squares
 			for (Square s = target; s != source; s += castle_dir)
-				if (is_square_attacked(s, ~us)) return false;
+				if (get_attackers_to(s) & get_opponent_pieces_bb()) return false;
 
 			// Check if the king squares on the rank are blocked
 			Square l_rook_square = sq_relative_to_side(target > source ? G1 : B1, us);
@@ -705,12 +624,11 @@ namespace ChessEngine
 		// If the moving piece is a pawn
 		if (type_of_piece(piece_on_source) == PAWN)
 		{
-			// Set en passant if the moving pawn can be captured
-			if ((abs(target - source)) == 16 // 8 if signe push, 16 for double
-				&& (pawn_attacks_bb(us, target + pawn_push_direction(us))
-					& get_pieces_bb(PAWN, opp)))
+			// Set en passant if the pawn is double pushed
+			if ((int(target) ^ int(source)) == 16) 
+				// 8 if signe push, 16 for double
 			{
-				inf->enpassant = target + pawn_push_direction(us);
+				inf->enpassant = Square(source + pawn_push_direction(us));
 			}
 			else if (m.move_type() == MT_PROMOTION)
 			{
@@ -750,7 +668,7 @@ namespace ChessEngine
 		Square target = m.target_square();
 		Piece piece_on = get_piece_on(target);
 
-		assert(source == NONE || m.move_type() == MT_CASTLING);
+		assert(is_empty(source) || m.move_type() == MT_CASTLING);
 		assert(type_of_piece(inf->captured_piece) != KING);
 
 		if (m.move_type() == MT_PROMOTION)

@@ -21,7 +21,7 @@ namespace ChessEngine
 	};
 
 	template<GenerationTypes>
-	Move* generate(Move* move_list, const Position& pos);
+	Move* generate(Move* moveList, const Position& pos);
 
 	template<GenerationTypes T>
 	struct MoveList {

@@ -16,14 +16,8 @@ namespace ChessEngine
 		if (m.move_type() == MT_CASTLING)
 			target = make_square(target > source ? FILE_G : FILE_C, rank_of(source));
 
-		std::string soure_to_string = {
-			char('a' + file_of(source)) , char('1' + rank_of(source))
-		};
-		std::string target_to_string = {
-			char('a' + file_of(target)) , char('1' + rank_of(target))
-		};
-
-		std::string move = soure_to_string + target_to_string;
+		std::string move = squareToCoordinates[source];
+		move += squareToCoordinates[target];
 
 		if (m.move_type() == MT_PROMOTION)
 			move += tolower(ascii_pieces[m.promoted()]);

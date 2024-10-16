@@ -27,8 +27,21 @@ int main()
 		Position pos;
 		InfoListPtr infos = InfoListPtr(new std::deque<Info>(1));
 		pos.set(TEST_FEN, &infos->back());
+		std::cout << pos;
 
-		perft_test(pos, 1);
+		Info inf;
+
+		pos.do_move(Move(G2, G4), inf);
+	
+		std::cout << pos;
+
+		pos.do_move(Move(C7, C5), inf);
+		std::cout << pos;
+
+		pos.undo_move(Move(C7, C5));
+		std::cout << pos;
+
+		//perft_test(pos, 1);
 		//search_position(2);
 	}
 	else
