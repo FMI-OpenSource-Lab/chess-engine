@@ -61,8 +61,6 @@ namespace ChessEngine
 		// not copied
 		Info* next;
 		Info* previous;
-		BITBOARD bitboards[NO_PIECE];
-		BITBOARD occupancies[BOTH + 1]; // +1 becase we include the 2 sides
 		BITBOARD blockers_for_king_checks[BOTH];
 		BITBOARD pinner_pieces[BOTH];
 		Piece captured_piece;
@@ -81,7 +79,9 @@ namespace ChessEngine
 		//static void init();
 
 		Position() = default;
+		// Delete the copy constructor
 		Position(const Position&) = delete;
+		// Delete the copy assignment operator
 		Position& operator=(const Position&) = delete;
 
 		// FEN i/o
@@ -156,7 +156,7 @@ namespace ChessEngine
 		void place_piece(Piece p, Square s);
 
 		void update_blocks_and_pins(Color c) const;
-		
+
 		// Caslte & side
 		CastlingRights castling_rights(Color c) const {
 			return c & CastlingRights(inf->castling);

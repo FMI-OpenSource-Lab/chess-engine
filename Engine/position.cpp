@@ -45,7 +45,7 @@ namespace ChessEngine
 			? "white\n" 
 			: "black");
 
-		Square enpassant = position.inf->enpassant;
+		Square enpassant = position.ep_square();
 		os << "\nEnpassant:	" << (enpassant != NONE 
 			? squareToCoordinates[enpassant] 
 			: "no") << "\n";
@@ -537,8 +537,13 @@ namespace ChessEngine
 	// Move is assumed to be legal or pseudo-legal
 	void Position::do_move(Move m, Info& new_info, bool gives_check)
 	{
+		// for debuging purposes
+		assert(m.is_move_ok());
+		assert(&new_info != inf);
+
 		memcpy(&new_info, inf, sizeof(Info));
 		new_info.previous = inf;
+
 		inf->next = &new_info;
 		inf = &new_info;
 

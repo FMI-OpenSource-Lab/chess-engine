@@ -31,14 +31,14 @@ int main()
 
 		Info inf;
 
-		pos.do_move(Move(G2, G4), inf);
+		pos.do_move(Move(E2, D1), inf);
 	
 		std::cout << pos;
 
 		pos.do_move(Move(C7, C5), inf);
 		std::cout << pos;
 
-		pos.undo_move(Move(C7, C5));
+		pos.do_move(Move(E1, E2), inf);
 		std::cout << pos;
 
 		//perft_test(pos, 1);
