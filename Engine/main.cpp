@@ -3,6 +3,7 @@
 #include "position.h"
 #include "bitboard.h"
 #include "perft.h"
+#include "deque.h"
 
 using namespace ChessEngine;
 
@@ -24,22 +25,34 @@ int main()
 	{
 		std::cout << "Debugging\n" << std::endl;
 
-		Position pos;
-		InfoListPtr infos = InfoListPtr(new std::deque<Info>(1));
-		pos.set(TEST_FEN, &infos->back());
-		std::cout << pos;
+		Deque<size_t, 10> de{};
 
-		Info inf;
+		for (size_t i = 0; i < 10; i++)
+		{
+			de.push_back(i * 2);
+		}
 
-		pos.do_move(Move(E2, D1), inf);
-	
-		std::cout << pos;
+		de[3] = de[4] = de[8];
 
-		pos.do_move(Move(C7, C5), inf);
-		std::cout << pos;
+		std::cout << de[4];
+		std::cout << de;
 
-		pos.do_move(Move(E1, E2), inf);
-		std::cout << pos;
+		//Position pos;
+		//InfoListPtr infos = InfoListPtr(new std::deque<Info>(1));
+		//pos.set(TEST_FEN, &infos->back());
+		//std::cout << pos;
+
+		//Info inf;
+
+		//pos.do_move(Move(E2, D1), inf);
+
+		//std::cout << pos;
+
+		//pos.do_move(Move(C7, C5), inf);
+		//std::cout << pos;
+
+		//pos.do_move(Move(E1, E2), inf);
+		//std::cout << pos;
 
 		//perft_test(pos, 1);
 		//search_position(2);

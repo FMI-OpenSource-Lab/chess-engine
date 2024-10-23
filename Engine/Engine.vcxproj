@@ -140,6 +140,7 @@
     <ClInclude Include="bitboard.h" />
     <ClInclude Include="consts.h" />
     <ClInclude Include="defs.h" />
+    <ClInclude Include="deque.h" />
     <ClInclude Include="eval.h" />
     <ClInclude Include="move.h" />
     <ClInclude Include="movegen.h" />

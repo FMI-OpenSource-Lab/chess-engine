@@ -48,6 +48,20 @@ namespace ChessEngine
 
 	using BITBOARD = U64;
 
+	enum class Movegen: uint16_t
+	{
+		ALL,
+		QSEARCH,
+		QUIET,
+		CAPTURE
+	};
+
+	struct ScoredMove
+	{
+		Move move = NO_MOVE;
+		int score = 0;
+	};
+
 	// Info structure stores information needed to restore a position
 	// to its previous state when a move is taken back
 	struct Info
@@ -157,6 +171,9 @@ namespace ChessEngine
 
 		void update_blocks_and_pins(Color c) const;
 
+		template<Movegen movegen>
+		void get_pawn_moves();
+
 		// Caslte & side
 		CastlingRights castling_rights(Color c) const {
 			return c & CastlingRights(inf->castling);
@@ -176,6 +193,7 @@ namespace ChessEngine
 		void do_castle(Color us, Square source, Square& target, Square& r_source, Square& r_target);
 
 		void set_check_info() const;
+		void set_state(Info& info, PLY_TYPE fifty_move) const;
 
 		void move_piece(Square source, Square target);
 
