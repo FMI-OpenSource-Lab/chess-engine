@@ -23,7 +23,5 @@ namespace ChessEngine
 	}
 	
 	extern std::string move(Move m);
-	extern void perft_test(Position& pos, int depth);
-	extern void perft_driver(const char* fen, int depth);
 }
 #endif // !PERFT_H

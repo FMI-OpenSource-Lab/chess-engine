@@ -41,13 +41,13 @@ namespace ChessEngine
 		// print files
 		os << "\n a b c d e f g h \n\n";
 
-		os << "Side:		" << (position.side_to_move() == WHITE 
-			? "white\n" 
+		os << "Side:		" << (position.side_to_move() == WHITE
+			? "white\n"
 			: "black");
 
 		Square enpassant = position.ep_square();
-		os << "\nEnpassant:	" << (enpassant != NONE 
-			? squareToCoordinates[enpassant] 
+		os << "\nEnpassant:	" << (enpassant != NONE
+			? squareToCoordinates[enpassant]
 			: "no") << "\n";
 
 		CastlingRights castle = position.inf->castling;
@@ -108,14 +108,11 @@ namespace ChessEngine
 
 		// reset boards and state variables
 		memset(this, 0, sizeof(Position));
-		memset(info, 0, sizeof(Info));
 		std::fill_n(piece_board, SQUARE_TOTAL, NO_PIECE);
 
-		inf = info;
-
 		side = WHITE;
-		inf->enpassant = NONE;
-		inf->castling = CASTLE_NB;
+		enpassant_square = NONE;
+		castle = CASTLE_NB;
 
 		size_t idx;
 
@@ -163,19 +160,19 @@ namespace ChessEngine
 
 			switch (*fen_ptr++)
 			{
-			case 'K': inf->castling = inf->castling | WK;
+			case 'K': castle = castle | WK;
 				for (r_sq = H1; get_piece_on(r_sq) != rook; --r_sq);
 				break; // break from switch
-			case 'Q': inf->castling = inf->castling | WQ;
+			case 'Q': castle = castle | WQ;
 				for (r_sq = A1; get_piece_on(r_sq) != rook; ++r_sq);
 				break;// break from switch
-			case 'k': inf->castling = inf->castling | BK;
+			case 'k': castle = castle | BK;
 				for (r_sq = H8; get_piece_on(r_sq) != rook; --r_sq);
 				break; // break from switch
-			case 'q': inf->castling = inf->castling | BQ;
+			case 'q': castle = castle | BQ;
 				for (r_sq = A8; get_piece_on(r_sq) != rook; --r_sq);
 				break; // break from switch
-			case '-': 
+			case '-':
 				break;
 			}
 
@@ -186,21 +183,21 @@ namespace ChessEngine
 		if (*++fen_ptr != '-')
 		{
 			// init enpassant suqare
-			inf->enpassant =
+			enpassant_square =
 				make_square(
 					File(fen_ptr[0] - 'a'),
 					Rank(8 - (fen_ptr[1] - '0')));
 		}
 		else
-			inf->enpassant = NONE;
+			enpassant_square = NONE;
 
 		std::istringstream ss(fen_ptr);
 		// Halfmove clock and fullmove number
-		ss >> std::skipws >> inf->rule_fifty >> gamePly;
+		ss >> std::skipws >> rule_fifty >> fullmove_number;
 
 		// Convert from fullmove starting from one to gamePly starting from 0
 		// handles also incorrect FEN's with fullmove = 0
-		gamePly = std::max(2 * (gamePly - 1), 0) + (side == BLACK);
+		fullmove_number = std::max(2 * (fullmove_number - 1), 0) + (side == BLACK);
 
 		return *this;
 	}
@@ -243,12 +240,12 @@ namespace ChessEngine
 		if (!can_castle(ANY)) ss << '-';
 
 		// En passant square
-		
-		ss << " " << (ep_square() == NONE 
-			? "- " 
-			: squareToCoordinates[ep_square()]) 
-			<< " " << inf->rule_fifty << " "
-			<< 1 + (gamePly - (side == BLACK)) / 2;
+
+		ss << " " << (ep_square() == NONE
+			? "- "
+			: squareToCoordinates[ep_square()])
+			<< " " << rule_fifty << " "
+			<< 1 + (fullmove_number - (side == BLACK)) / 2;
 
 		return ss.str();
 	}
@@ -292,65 +289,6 @@ namespace ChessEngine
 			| (attacks_bb_by<ROOK>(s, occ) & (get_pieces_bb(ROOK) | get_pieces_bb(QUEEN)))
 			| (attacks_bb_by<BISHOP>(s, occ) & (get_pieces_bb(BISHOP) | get_pieces_bb(QUEEN)))
 			| (attacks_bb_by<KING>(s) & get_pieces_bb(KING));
-	}
-
-	void Position::set_check_info() const
-	{
-		// init blockers and pinners for each side
-		update_blocks_and_pins(WHITE);
-		update_blocks_and_pins(BLACK);
-	}
-
-	void Position::update_blocks_and_pins(Color c) const
-	{
-		// Get the king square of the given color
-		Square king_square = square<KING>(c);
-
-		// Reset current color blockers
-		inf->blockers_for_king_checks[c] = 0;
-		// Reset opposite color pinner pieces
-		inf->pinner_pieces[~c] = 0;
-
-		// Snipes are all sliders that attack a square 
-		// when a piece and/or other pieces are removed
-
-		// We get the rook attacks from the king square as well as bishops
-		BITBOARD snipes =
-			(
-				(attacks_bb_by<ROOK>(king_square)
-					& (get_pieces_bb(QUEEN) | get_pieces_bb(ROOK)))
-				| (attacks_bb_by<BISHOP>(king_square)
-					& (get_pieces_bb(QUEEN) | get_pieces_bb(BISHOP)))
-				) & get_pieces_bb(~c);
-
-		// All other pieces on the board except the sliders attacking
-		BITBOARD occ = get_all_pieces_bb() ^ snipes;
-
-		// Iterate through every sniper
-		while (snipes)
-		{
-			// get the sniper square then reduce the number of snipers
-			Square ssq = getLS1B_square(snipes); resetLSB(snipes);
-
-			// Check whether a line or ray between king square and sniper square exists
-			// Then intersect with the rest of board pieces
-			BITBOARD between = in_between_bb(king_square, ssq) & occ;
-
-			// Make sure that exists a check blocker and its the only blocker
-			// If there are more than one blocker the piece is still pinned, but not
-			// absolutely pinned
-			if (between && !has_bit_after_pop(between))
-			{
-				// append it into the blocking pieces array
-				inf->blockers_for_king_checks[c] |= between;
-
-				// intersect between attack with pieces of the same color
-				if (between & get_pieces_bb(c))
-					// if such attack exists then the piece is pinned
-					// and we set our piece as a pinner
-					inf->pinner_pieces[~c] |= ssq;
-			}
-		}
 	}
 
 	BITBOARD Position::get_checked_squares(PieceType pt) const
@@ -535,21 +473,10 @@ namespace ChessEngine
 
 	// Makes a move and saves the information in the Info
 	// Move is assumed to be legal or pseudo-legal
-	void Position::do_move(Move m, Info& new_info, bool gives_check)
+	void Position::do_move(Move m, MoveInfo& new_info, bool gives_check)
 	{
 		// for debuging purposes
 		assert(m.is_move_ok());
-		assert(&new_info != inf);
-
-		memcpy(&new_info, inf, sizeof(Info));
-		new_info.previous = inf;
-
-		inf->next = &new_info;
-		inf = &new_info;
-
-		++gamePly;
-		++inf->rule_fifty;
-		++inf->ply;
 
 		Color us = side;
 		Color opp = ~us;
@@ -562,6 +489,9 @@ namespace ChessEngine
 			m.move_type() == MT_EN_PASSANT
 			? get_piece(opp, PAWN)
 			: get_piece_on(target);
+
+		if (side == BLACK)
+			fullmove_number++;
 
 		if (m.move_type() == MT_CASTLING)
 		{
@@ -589,7 +519,7 @@ namespace ChessEngine
 					// Check if the en passanted piece is a pawn
 					assert(captured_piece == get_piece(us, PAWN));
 					// Check if the target square is an en passant square
-					assert(target == inf->enpassant);
+					assert(target == enpassant_square);
 					// Check if the captured pawn is on 6th or 4th rank
 					assert(rank_of(target) == us == WHITE ? RANK_4 : RANK_6);
 					// Check whether theres a piece on the capture square
@@ -603,19 +533,19 @@ namespace ChessEngine
 			}
 
 			// Reset rule 50 counter
-			inf->rule_fifty = 0;
+			rule_fifty = 0;
 		}
 
 		// Update en passant
-		if (inf->enpassant != NONE)
-			inf->enpassant = NONE;
+		if (enpassant_square != NONE)
+			enpassant_square = NONE;
 
 		// Update castling rights
-		if (inf->castling &&
+		if (castle &&
 			(CASTLING_RIGHTS_TABLE[source] |
 				CASTLING_RIGHTS_TABLE[target]))
 		{
-			inf->castling = inf->castling &
+			castle = castle &
 				(CASTLING_RIGHTS_TABLE[source] |
 					CASTLING_RIGHTS_TABLE[target]);
 		}
@@ -630,10 +560,10 @@ namespace ChessEngine
 		if (type_of_piece(piece_on_source) == PAWN)
 		{
 			// Set en passant if the pawn is double pushed
-			if ((int(target) ^ int(source)) == 16) 
+			if ((int(target) ^ int(source)) == 16)
 				// 8 if signe push, 16 for double
 			{
-				inf->enpassant = Square(source + pawn_push_direction(us));
+				enpassant_square = Square(source + pawn_push_direction(us));
 			}
 			else if (m.move_type() == MT_PROMOTION)
 			{
@@ -649,24 +579,30 @@ namespace ChessEngine
 				place_piece(promoted, target);
 			}
 
-			inf->rule_fifty = 0;
+			rule_fifty = 0;
 		}
-
-		inf->captured_piece = captured_piece;
 
 		side = ~side;
 
-		set_check_info();
+		new_info.captured_piece = captured_piece;
+		new_info.en_passant = enpassant_square;
+		new_info.halfmove_clock = rule_fifty;
+		new_info.castling_rights = castle;
 
-		inf->repetition = 0;
+		repetition = 0;
 
 		// Later will handle repetition logic
 	}
 
-	void Position::undo_move(Move m)
+	void Position::undo_move(Move m, MoveInfo& new_info)
 	{
 		// switch sides
 		side = ~side;
+
+		captured = new_info.captured_piece;
+		enpassant_square = new_info.en_passant;
+		rule_fifty = new_info.halfmove_clock;
+		castle = new_info.castling_rights;
 
 		Color us = side;
 		Square source = m.source_square();
@@ -674,7 +610,10 @@ namespace ChessEngine
 		Piece piece_on = get_piece_on(target);
 
 		assert(is_empty(source) || m.move_type() == MT_CASTLING);
-		assert(type_of_piece(inf->captured_piece) != KING);
+		assert(type_of_piece(captured) != KING);
+
+		if (side == BLACK)
+			fullmove_number--;
 
 		if (m.move_type() == MT_PROMOTION)
 		{
@@ -704,7 +643,7 @@ namespace ChessEngine
 			// this time move the piece from the target square to the source
 			move_piece(target, source);
 
-			if (inf->captured_piece != NO_PIECE)
+			if (captured != NO_PIECE)
 			{
 				Square csq = target;
 
@@ -716,7 +655,7 @@ namespace ChessEngine
 					// Check if we are capturing a pawn
 					assert(type_of_piece(piece_on) == PAWN);
 					// Check if the en passanted piece is a pawn
-					assert(inf->captured_piece == get_piece(~us, PAWN));
+					assert(captured == get_piece(~us, PAWN));
 					// Check if the target square is an en passant square
 					assert(target == inf->previous->enpassant);
 					// Check if the captured pawn is on 6th or 4th rank
@@ -732,7 +671,7 @@ namespace ChessEngine
 
 		// Point our info pointer to its previous state
 		inf = inf->previous;
-		--gamePly;
+		--fullmove_number;
 	}
 
 	// Helper for do/undo castling move

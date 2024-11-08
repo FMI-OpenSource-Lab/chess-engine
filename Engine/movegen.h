@@ -20,21 +20,5 @@ namespace ChessEngine
 		GT_LEGAL
 	};
 
-	template<GenerationTypes>
-	Move* generate(Move* moveList, const Position& pos);
-
-	template<GenerationTypes T>
-	struct MoveList {
-		explicit MoveList(const Position& pos) :
-			last(generate<T>(move_list, pos)) {}
-
-		const Move* begin() const { return move_list; }
-		const Move* end() const { return last; }
-		size_t		size() const { return last - move_list; }
-		bool		contains(Move m) const { return std::find(begin(), end(), m) != end(); }
-
-	private:
-		Move move_list[MAX_MOVES], * last;
-	};
 }
 #endif // !MOVEGEN_H

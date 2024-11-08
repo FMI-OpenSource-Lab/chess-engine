@@ -64,26 +64,17 @@ namespace ChessEngine
 
 	// Info structure stores information needed to restore a position
 	// to its previous state when a move is taken back
-	struct Info
+	struct MoveInfo
 	{
-		// copied when making a move
-		CastlingRights castling;
-		Square enpassant;
-		PLY_TYPE rule_fifty;
-		PLY_TYPE ply;
-
-		// not copied
-		Info* next;
-		Info* previous;
-		BITBOARD blockers_for_king_checks[BOTH];
-		BITBOARD pinner_pieces[BOTH];
+		CastlingRights castling_rights;
+		Square en_passant;
+		PLY_TYPE halfmove_clock;
 		Piece captured_piece;
-		int repetition;
 	};
 
 	// List to keep track of position states along the setup
 	// std::deque is used because pointers to elements are not invalidated when list resizing
-	using InfoListPtr = std::unique_ptr<std::deque<Info>>;
+	using InfoListPtr = std::unique_ptr<std::deque<MoveInfo>>;
 
 	// This class stores information to the board reperesentation as pieces,
 	// side to move, castling info, etc.
@@ -99,11 +90,11 @@ namespace ChessEngine
 		Position& operator=(const Position&) = delete;
 
 		// FEN i/o
-		Position& set(const char* fen, Info* info);
+		Position& set(const char* fen);
 		std::string get_fen() const;
 
 		// Squares
-		Square ep_square() const { return inf->enpassant; }
+		Square ep_square() const { return enpassant_square; }
 		template<PieceType pt>
 		Square square(Color c) const { return getLS1B_square(get_pieces_bb(pt, c)); }
 		Square castling_rook_square(CastlingRights cr) const { return rook_source_sq[cr]; }
@@ -131,8 +122,6 @@ namespace ChessEngine
 		BITBOARD	get_attackers_to(Square s, BITBOARD occ) const;
 		template<PieceType pt>
 		BITBOARD	get_attacks_by(Color c) const;
-		BITBOARD	get_blocking_pieces(Color c) const { return inf->blockers_for_king_checks[c]; };
-		BITBOARD	get_pinned_pieces(Color c) const { return inf->pinner_pieces[c]; };
 		BITBOARD	get_checked_squares(PieceType pt) const;
 
 		// Booleans
@@ -153,36 +142,29 @@ namespace ChessEngine
 		Piece captured_piece() const;
 
 		// PLY
-		PLY_TYPE game_ply() const { return gamePly; };
-		PLY_TYPE rule_fifty_count() const { return inf->rule_fifty; };
+		PLY_TYPE game_ply() const { return fullmove_number; };
+		PLY_TYPE rule_fifty_count() const { return rule_fifty; };
 
 		// Value
-		Value non_pawn_material(Color c) const;
-		Value non_pawn_material() const;
 		Value see(Move m) const;
 
 		// Doing and undoing moves
-		void do_move(Move m, Info& newInfo);
-		void do_move(Move m, Info& newInfo, bool gives_check);
-		void undo_move(Move m);
+		void do_move(Move m, MoveInfo& new_info);
+		void do_move(Move m, MoveInfo& new_info, bool gives_check);
+		void undo_move(Move m, MoveInfo& new_info);
 
 		void remove_piece(Square s);
 		void place_piece(Piece p, Square s);
-
-		void update_blocks_and_pins(Color c) const;
 
 		template<Movegen movegen>
 		void get_pawn_moves();
 
 		// Caslte & side
 		CastlingRights castling_rights(Color c) const {
-			return c & CastlingRights(inf->castling);
+			return c & CastlingRights(castle);
 		}
 
 		Color side_to_move() const { return side; }
-
-		// State info
-		Info* info() const;
 
 		// Overrides
 		friend std::ostream& operator<<(std::ostream& os, const Position& position);
@@ -191,9 +173,6 @@ namespace ChessEngine
 		void set_castling_rights(Color c, Square r_source);
 		template<bool Do>
 		void do_castle(Color us, Square source, Square& target, Square& r_source, Square& r_target);
-
-		void set_check_info() const;
-		void set_state(Info& info, PLY_TYPE fifty_move) const;
 
 		void move_piece(Square source, Square target);
 
@@ -206,15 +185,23 @@ namespace ChessEngine
 		BITBOARD castling_path[CASTLING_RIGHT_NB];
 
 		Piece	 piece_board[SQUARE_TOTAL];
+		Piece	 captured;
 
 		uint8_t	 castling_rights_mask[NONE];
 
 		Square rook_source_sq[CASTLING_RIGHT_NB];
-		PLY_TYPE gamePly;
+		Square enpassant_square;
+		
+		CastlingRights castle;
+		
 		Color	 side;
 
+		PLY_TYPE fullmove_number;
+		PLY_TYPE rule_fifty;
+		PLY_TYPE repetition;
+
 		// State info 
-		Info* inf;
+		MoveInfo* move_info;
 	};
 
 	inline Piece Position::get_piece_on(Square s) const
@@ -227,7 +214,7 @@ namespace ChessEngine
 
 	inline bool Position::can_castle(CastlingRights cr) const
 	{
-		return inf->castling & cr;
+		return castle & cr;
 	}
 
 	inline BITBOARD Position::get_attackers_to(Square s) const
@@ -240,7 +227,7 @@ namespace ChessEngine
 		return (!is_empty(m.target_square()) && m.move_type() != MT_CASTLING) || m.move_type() == MT_EN_PASSANT;
 	}
 
-	inline Piece Position::captured_piece() const { return inf->captured_piece; }
+	inline Piece Position::captured_piece() const { return captured; }
 
 	inline void Position::place_piece(Piece p, Square s)
 	{
@@ -280,11 +267,9 @@ namespace ChessEngine
 		piece_board[target] = s_p;
 	}
 
-	inline void Position::do_move(Move m, Info& newInfo)
+	inline void Position::do_move(Move m)
 	{
-		do_move(m, newInfo, gives_check(m));
+		do_move(m, gives_check(m));
 	}
-
-	inline Info* Position::info() const { return inf; }
 }
 #endif // !POSITION_H
