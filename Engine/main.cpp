@@ -25,22 +25,14 @@ int main()
 	{
 		std::cout << "Debugging\n" << std::endl;
 
-		Deque<size_t, 10> de{};
+		Position pos;
+		InfoListPtr infos = InfoListPtr(new std::deque<MoveInfo>(1));
+		
+		const char* pin_pos = "7B/2B5/3ppn2/3rk3/3b1q2/2Q2P2/7B/K2R4 w - - 0 1";
 
-		for (size_t i = 0; i < 10; i++)
-		{
-			de.push_back(i * 2);
-		}
-
-		de[3] = de[4] = de[8];
-
-		std::cout << de[4];
-		std::cout << de;
-
-		//Position pos;
-		//InfoListPtr infos = InfoListPtr(new std::deque<Info>(1));
-		//pos.set(TEST_FEN, &infos->back());
-		//std::cout << pos;
+		pos.set(pin_pos, &infos->back());
+		std::cout << pos;
+		print_bitboard(pos.get_pinned_pieces(WHITE));
 
 		//Info inf;
 

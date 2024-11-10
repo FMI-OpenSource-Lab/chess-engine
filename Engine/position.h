@@ -66,6 +66,7 @@ namespace ChessEngine
 	// to its previous state when a move is taken back
 	struct MoveInfo
 	{
+		// Copied when making a move
 		CastlingRights castling_rights;
 		Square en_passant;
 		PLY_TYPE halfmove_clock;
@@ -90,7 +91,7 @@ namespace ChessEngine
 		Position& operator=(const Position&) = delete;
 
 		// FEN i/o
-		Position& set(const char* fen);
+		Position& set(const char* fen, MoveInfo* mi);
 		std::string get_fen() const;
 
 		// Squares
@@ -123,18 +124,13 @@ namespace ChessEngine
 		template<PieceType pt>
 		BITBOARD	get_attacks_by(Color c) const;
 		BITBOARD	get_checked_squares(PieceType pt) const;
+		BITBOARD	get_pinned_pieces(Color s) const;
+		BITBOARD	get_blocking_pieces(Color s) const;
 
 		// Booleans
-		bool can_castle(CastlingRights cr) const;
-
-		bool is_legal(Move m) const;
-		bool is_capture(Move m) const;
-
 		bool is_empty(Square s) const { return get_piece_on(s) == NO_PIECE; }
-		bool is_draw(PLY_TYPE ply) const;
-		bool has_repeated() const;
 		bool gives_check(Move m) const;
-		bool is_castling_prevented(CastlingRights cr) const;
+		bool can_castle(CastlingRights cr) const { return castle & cr;}
 
 		// Pieces
 		Piece get_piece_on(Square s) const;
@@ -156,8 +152,6 @@ namespace ChessEngine
 		void remove_piece(Square s);
 		void place_piece(Piece p, Square s);
 
-		template<Movegen movegen>
-		void get_pawn_moves();
 
 		// Caslte & side
 		CastlingRights castling_rights(Color c) const {
@@ -183,7 +177,7 @@ namespace ChessEngine
 		BITBOARD occupancies[BOTH + 1];
 		BITBOARD type[PIECE_TYPE_NB];
 		BITBOARD castling_path[CASTLING_RIGHT_NB];
-
+		
 		Piece	 piece_board[SQUARE_TOTAL];
 		Piece	 captured;
 
@@ -212,19 +206,9 @@ namespace ChessEngine
 
 	inline BITBOARD Position::get_pieces_bb(PieceType pt) const { return type[pt]; }
 
-	inline bool Position::can_castle(CastlingRights cr) const
-	{
-		return castle & cr;
-	}
-
 	inline BITBOARD Position::get_attackers_to(Square s) const
 	{
 		return get_attackers_to(s, get_all_pieces_bb());
-	}
-
-	inline bool Position::is_capture(Move m) const
-	{
-		return (!is_empty(m.target_square()) && m.move_type() != MT_CASTLING) || m.move_type() == MT_EN_PASSANT;
 	}
 
 	inline Piece Position::captured_piece() const { return captured; }
@@ -267,9 +251,9 @@ namespace ChessEngine
 		piece_board[target] = s_p;
 	}
 
-	inline void Position::do_move(Move m)
+	inline void Position::do_move(Move m, MoveInfo& new_info)
 	{
-		do_move(m, gives_check(m));
+		do_move(m, new_info, gives_check(m));
 	}
 }
 #endif // !POSITION_H

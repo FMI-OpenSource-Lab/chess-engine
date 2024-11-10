@@ -7,6 +7,7 @@
 
 namespace ChessEngine
 {
+	// Custom deque class used for storing positions
 	template<typename T, size_t size>
 	class Deque
 	{
