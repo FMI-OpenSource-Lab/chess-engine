@@ -67,10 +67,12 @@ namespace ChessEngine
 	struct MoveInfo
 	{
 		// Copied when making a move
-		CastlingRights castling_rights;
-		Square en_passant;
-		PLY_TYPE halfmove_clock;
-		Piece captured_piece;
+		CastlingRights castling_rights = CASTLE_NB;
+		Square en_passant = NONE;
+		PLY_TYPE fifty_move = 0;
+		Piece captured_piece = NO_PIECE;
+		BITBOARD threats = 0ULL;
+		BITBOARD pinned_pieces = 0ULL;
 	};
 
 	// List to keep track of position states along the setup
@@ -91,41 +93,33 @@ namespace ChessEngine
 		Position& operator=(const Position&) = delete;
 
 		// FEN i/o
-		Position& set(const char* fen, MoveInfo* mi);
+		Position& set(const char* fen);
 		std::string get_fen() const;
 
 		// Squares
 		Square ep_square() const { return enpassant_square; }
 		template<PieceType pt>
-		Square square(Color c) const { return getLS1B_square(get_pieces_bb(pt, c)); }
+		Square square(Color c) const { return getLS1B(get_pieces_bb(pt, c)); }
 		Square castling_rook_square(CastlingRights cr) const { return rook_source_sq[cr]; }
 
 		// Bitboards
 		inline BITBOARD get_pieces_bb(PieceType pt = ALL_PIECES) const;
 		inline BITBOARD get_pieces_bb(Piece p) const { return bitboards[p]; }
 		inline BITBOARD get_pieces_bb(PieceType pt, Color c) const { return bitboards[get_piece(c, pt)]; }
-		inline BITBOARD get_pieces_bb(Color c) const
-		{
-			return get_pieces_bb(PAWN, c) |
-				get_pieces_bb(KNIGHT, c) |
-				get_pieces_bb(BISHOP, c) |
-				get_pieces_bb(ROOK, c) |
-				get_pieces_bb(QUEEN, c) |
-				get_pieces_bb(KING, c);
-		}
+		inline BITBOARD get_pieces_bb(Color c) const { return occupancies[c]; }
 
-		inline BITBOARD get_our_pieces_bb() const { return get_pieces_bb(side); }
-		inline BITBOARD get_opponent_pieces_bb() const { return get_pieces_bb(~side); }
+		inline BITBOARD get_our_pieces_bb() const { return occupancies[side]; }
+		inline BITBOARD get_opponent_pieces_bb() const { return occupancies[~side]; }
 		inline BITBOARD get_all_pieces_bb() const { return occupancies[BOTH]; }
 		inline BITBOARD get_all_empty_squares_bb() const { return ~occupancies[BOTH]; }
 
 		BITBOARD	get_attackers_to(Square s) const;
 		BITBOARD	get_attackers_to(Square s, BITBOARD occ) const;
+
 		template<PieceType pt>
 		BITBOARD	get_attacks_by(Color c) const;
 		BITBOARD	get_checked_squares(PieceType pt) const;
-		BITBOARD	get_pinned_pieces(Color s) const;
-		BITBOARD	get_blocking_pieces(Color s) const;
+		BITBOARD	get_threats() const { return threats; }
 
 		// Booleans
 		bool is_empty(Square s) const { return get_piece_on(s) == NO_PIECE; }
@@ -151,7 +145,9 @@ namespace ChessEngine
 
 		void remove_piece(Square s);
 		void place_piece(Piece p, Square s);
-
+		void calculate_threats();
+		void clear_mi_stack(); // clear the move info stack
+		void set_mi_stack(MoveInfo& mi, PLY_TYPE fifty_move); // set the move info stack
 
 		// Caslte & side
 		CastlingRights castling_rights(Color c) const {
@@ -173,29 +169,33 @@ namespace ChessEngine
 		BITBOARD get_least_valuable_piece(BITBOARD attacks, Color by_side, PieceType& pt) const;
 
 		// Data
-		BITBOARD bitboards[NO_PIECE];
-		BITBOARD occupancies[BOTH + 1];
-		BITBOARD type[PIECE_TYPE_NB];
-		BITBOARD castling_path[CASTLING_RIGHT_NB];
-		
-		Piece	 piece_board[SQUARE_TOTAL];
-		Piece	 captured;
+		BITBOARD bitboards[NO_PIECE]{};
+		BITBOARD occupancies[BOTH + 1]{};
+		BITBOARD type[PIECE_TYPE_NB]{};
+		BITBOARD castling_path[CASTLING_RIGHT_NB]{};
+		BITBOARD threats{};
+		BITBOARD pinned_pieces{};
+		BITBOARD blocking_pieces{};
 
-		uint8_t	 castling_rights_mask[NONE];
+		Piece	 piece_board[SQUARE_TOTAL]{};
+		Piece	 captured{};
 
-		Square rook_source_sq[CASTLING_RIGHT_NB];
-		Square enpassant_square;
-		
-		CastlingRights castle;
-		
-		Color	 side;
+		uint8_t	 castling_rights_mask[NONE]{};
 
-		PLY_TYPE fullmove_number;
-		PLY_TYPE rule_fifty;
-		PLY_TYPE repetition;
+		Square rook_source_sq[CASTLING_RIGHT_NB]{};
+		Square enpassant_square{};
+		
+		CastlingRights castle{};
+		
+		Color	 side{};
+
+		PLY_TYPE fullmove_number{};
+		PLY_TYPE rule_fifty{};
+		PLY_TYPE repetition{};
 
 		// State info 
-		MoveInfo* move_info;
+		//std::array<MoveInfo, TOTAL_MAX_DEPTH> move_info;
+		MoveInfo move_info[TOTAL_MAX_DEPTH];
 	};
 
 	inline Piece Position::get_piece_on(Square s) const

@@ -56,7 +56,7 @@ namespace ChessEngine {
 			pawn_attacks[BLACK][s] = pawn_attacks_bb<BLACK>(square_to_BB(s));
 
 			// generate pseudo attacks for king
-			pseudo_attacks[KNIGHT][s] |= king_attacks_mask(s);
+			pseudo_attacks[KING][s] |= king_attacks_mask(s);
 
 			// generate pseudo attacks for knight
 			pseudo_attacks[KNIGHT][s] |= knight_attacks_mask(s);

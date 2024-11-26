@@ -17,12 +17,6 @@ namespace ChessEngine
 	// Declare prototypes
 	constexpr inline U64 set_occupancy(int index, int bitsInMask, U64 attackMask);
 
-	extern constexpr Square getLS1B_square(U64 bitboard);
-
-	extern constexpr int getLS1B(U64 bitboard);
-	extern constexpr void resetLSB(U64& bitboard);
-	extern constexpr int countBits(U64 bitboard);
-
 	// extern void init_sliders_attacks(PieceType py);
 	extern void init_pseudo_attacks();
 
@@ -152,6 +146,13 @@ namespace ChessEngine
 			: pawn_attacks_bb<BLACK>(bb);
 	}
 
+	constexpr U64 pawn_attacks_bb(Color c, Square bb)
+	{
+		return c == WHITE
+			? pawn_attacks_bb<WHITE>(square_to_BB(bb))
+			: pawn_attacks_bb<BLACK>(square_to_BB(bb));
+	}
+
 	template<PieceType pt>
 	inline U64 attacks_bb_by(Square s, U64 occ)
 	{
@@ -164,7 +165,7 @@ namespace ChessEngine
 		case ROOK:
 			return rookAttacks(occ, s);
 		case QUEEN:
-			return attacks_bb_by<BISHOP>(s, occ) | attacks_bb_by<ROOK>(s, occ);
+			return bishopAttacks(occ, s) | rookAttacks(occ, s);
 		default: // king and knight
 			return pseudo_attacks[pt][s];
 		}
@@ -192,6 +193,40 @@ namespace ChessEngine
 		assert(is_square_ok(s) && (pt != PAWN));
 
 		return pseudo_attacks[pt][s];
+	}
+
+	/*
+		Base-2 integer logarithm
+
+		Calculates the floor of the base-2 logarithm
+		which is equivalent to the index of the most significant bit
+	*/
+	constexpr int u64_log2(U64 n)
+	{
+		// Function written in set notation:
+		// {2^(2^k) | 0 <= k <= 5}
+		// eg: {2^32, 2^16, 2^8, 2^4, 2^2, 2^1}
+		// And sums the exponents k of the subtracted values.
+#define S(k) if (n >= (UINT64_C(1) << k)) { i += k; n >>= k; }
+
+		// returns -1 if input is 0, hence the bitboard is empty
+		int i = -(n == 0); S(32); S(16); S(8); S(4); S(2); S(1); return i;
+
+		// does log2 faster than cmaths log2 function
+#undef S
+	}
+
+	constexpr Square getLS1B(U64 bitboard)
+	{
+		// count trailing bits before LS1B
+		int lsb = u64_log2(bitboard & -bitboard);
+
+		return lsb == -1 ? NONE : Square(lsb);
+	}
+
+	constexpr void resetLSB(U64& bitboard)
+	{
+		bitboard &= bitboard - 1;
 	}
 
 	// calculate the line that is formed between two points
@@ -236,7 +271,7 @@ namespace ChessEngine
 
 	inline void print_bitboard(U64 bitboard)
 	{
-		std::cout << std::endl;
+		std::cout << "\nBitboard representation:\n";
 
 		for (Rank rank = RANK_1; rank <= RANK_8; ++rank)
 		{
@@ -245,20 +280,17 @@ namespace ChessEngine
 				Square sq = make_square(file, rank);
 				std::string s = get_bit(bitboard, sq) ? " 1" : " 0";
 
-				if (file == FILE_A)
-					std::cout << "  " << (8 - rank) << " ";
-
 				std::cout << s;
 			}
 
-			std::cout << "\n";
+			std::cout << "  " << (8 - rank) << " \n";
 		}
 
 		// print files
-		std::cout << "\n     a b c d e f g h \n\n";
+		std::cout << "\n a b c d e f g h \n\n";
 
 		// print as udec value
-		std::cout << "     Bitboard: " << bitboard << "\n\n";
+		std::cout << "\n Bitboard: " << bitboard << "\n\n";
 	}
 
 	constexpr inline U64 set_occupancy(int index, int bitsInMask, U64 attackMask)
@@ -270,7 +302,7 @@ namespace ChessEngine
 		for (int count = 0; count < bitsInMask; count++)
 		{
 			// get the lsb square
-			Square square = getLS1B_square(attackMask);
+			Square square = getLS1B(attackMask);
 
 			// remove LSB
 			rm_bit(attackMask, square);
@@ -284,50 +316,6 @@ namespace ChessEngine
 		return occupancy;
 	}
 
-	/*
-		Base-2 integer logarithm
-
-		Calculates the floor of the base-2 logarithm
-		which is equivalent to the index of the most significant bit
-	*/
-	constexpr int u64_log2(U64 n)
-	{
-		// Function written in set notation:
-		// {2^(2^k) | 0 <= k <= 5}
-		// eg: {2^32, 2^16, 2^8, 2^4, 2^2, 2^1}
-		// And sums the exponents k of the subtracted values.
-#define S(k) if (n >= (UINT64_C(1) << k)) { i += k; n >>= k; }
-
-		// returns -1 if input is 0, hence the bitboard is empty
-		int i = -(n == 0); S(32); S(16); S(8); S(4); S(2); S(1); return i;
-
-		// does log2 faster than cmaths log2 function
-#undef S
-	}
-
-	constexpr int getLS1B(U64 bitboard)
-	{
-		// check if bb is not 0
-		assert(bitboard);
-
-		// count trailing bits before LS1B
-		U64 twosComplement = ~bitboard + 1; // -bitboard is equivelent
-		return u64_log2(bitboard & twosComplement);
-	}
-
-	constexpr Square getLS1B_square(U64 bitboard)
-	{
-		assert(bitboard);
-
-		int lsb = getLS1B(bitboard);
-		return lsb == -1 ? NONE : Square(lsb);
-	}
-
-	constexpr void resetLSB(U64& bitboard)
-	{
-		bitboard &= bitboard - 1;
-	}
-
 	constexpr bool has_bit_after_pop(U64 bitboard)
 	{
 		return bitboard & (bitboard - 1);
@@ -337,7 +325,7 @@ namespace ChessEngine
 	{
 		assert(bitboard);
 
-		Square s = getLS1B_square(bitboard);
+		Square s = getLS1B(bitboard);
 		resetLSB(bitboard);
 
 		return s;

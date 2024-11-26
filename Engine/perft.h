@@ -11,10 +11,10 @@
 
 namespace ChessEngine
 {
-	static int get_time_ms()
+	static U64 get_time_ms()
 	{
 #ifdef _WIN64
-		return GetTickCount();
+		return GetTickCount64();
 #else
 		struct timeval time_value;
 		gettimeofday(&time_value, NULL);

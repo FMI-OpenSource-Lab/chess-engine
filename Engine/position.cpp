@@ -65,7 +65,30 @@ namespace ChessEngine
 		return os;
 	}
 
-	Position& Position::set(const char* fen, MoveInfo* mi)
+	void Position::clear_mi_stack()
+	{
+		for (auto& mi : move_info)
+		{
+			mi.castling_rights = CASTLE_NB;
+			mi.en_passant = NONE;
+			mi.captured_piece = NO_PIECE;
+			mi.threats = 0ULL;
+			mi.pinned_pieces = 0ULL;
+			mi.fifty_move = 0;
+		}
+	}
+
+	void Position::set_mi_stack(MoveInfo& mi, PLY_TYPE fifty_move)
+	{
+		mi.en_passant = enpassant_square;
+		mi.castling_rights = castle;
+		mi.fifty_move = fifty_move;
+		mi.threats = threats;
+		mi.pinned_pieces = pinned_pieces;
+		mi.captured_piece = captured;
+	}
+
+	Position& Position::set(const char* fen)
 	{
 		/*
 		FEN describes a Chess position, It is one line ASCII string.
@@ -108,9 +131,8 @@ namespace ChessEngine
 
 		// reset boards and state variables
 		memset(this, 0, sizeof(Position));
-		memset(mi, 0, sizeof(MoveInfo));
+		memset(move_info, 0, sizeof(MoveInfo));
 		std::fill_n(piece_board, SQUARE_TOTAL, NO_PIECE);
-		move_info = mi;
 
 		side = WHITE;
 		enpassant_square = NONE;
@@ -203,7 +225,9 @@ namespace ChessEngine
 
 		move_info->castling_rights = castle;
 		move_info->en_passant = enpassant_square;
-		move_info->halfmove_clock = rule_fifty;
+		move_info->fifty_move = rule_fifty;
+
+		calculate_threats();
 
 		return *this;
 	}
@@ -259,19 +283,16 @@ namespace ChessEngine
 	template<PieceType pt>
 	inline BITBOARD Position::get_attacks_by(Color c) const
 	{
-		if (pt == PAWN)
-			return c == WHITE
+		if (pt == PAWN) return c == WHITE
 			? pawn_attacks_bb<WHITE>(get_pieces_bb(PAWN, WHITE))
 			: pawn_attacks_bb<BLACK>(get_pieces_bb(PAWN, BLACK));
 
-		BITBOARD attacks = 0;
+		BITBOARD attacks = 0ULL;
 		BITBOARD bb = get_pieces_bb(pt, c);
+		BITBOARD all = get_all_pieces_bb();
 
 		while (bb)
-		{
-			attacks |= attacks_bb_by<pt>(getLS1B_square(bb), get_all_pieces_bb());
-			resetLSB(bb);
-		}
+			attacks |= attacks_bb_by(QUEEN, pop_ls1b(bb), all);
 
 		return attacks;
 	}
@@ -279,38 +300,33 @@ namespace ChessEngine
 	inline BITBOARD Position::get_attackers_to(Square s, BITBOARD occ) const
 	{
 		BITBOARD pawn_att =
-			(pawn_attacks_bb<WHITE>(s) & get_pieces_bb(PAWN, BLACK))
-			| (pawn_attacks_bb<BLACK>(s) & get_pieces_bb(PAWN, WHITE));
-
+			(pawn_attacks_bb<WHITE>(square_to_BB(s)) & get_pieces_bb(PAWN, BLACK))
+			| (pawn_attacks_bb<BLACK>(square_to_BB(s)) & get_pieces_bb(PAWN, WHITE));
 		BITBOARD knight_att = attacks_bb_by<KNIGHT>(s) & get_pieces_bb(KNIGHT);
-		BITBOARD rook_att = attacks_bb_by<ROOK>(s, occ) & get_pieces_bb(ROOK);
-		BITBOARD bishop_att = attacks_bb_by<BISHOP>(s, occ) & get_pieces_bb(BISHOP);
-		BITBOARD queen_att = attacks_bb_by<QUEEN>(s, occ) & get_pieces_bb(QUEEN);
+		BITBOARD horizontal = attacks_bb_by<ROOK>(s, occ) & (get_pieces_bb(ROOK) | get_pieces_bb(QUEEN));
+		BITBOARD diagonal = attacks_bb_by<BISHOP>(s, occ) & (get_pieces_bb(BISHOP) | get_pieces_bb(QUEEN));
 		BITBOARD king_att = attacks_bb_by<KING>(s) & get_pieces_bb(KING);
 
 		return
-			(pawn_attacks_bb<BLACK>(s) & get_pieces_bb(PAWN, WHITE))
-			| (pawn_attacks_bb<WHITE>(s) & get_pieces_bb(PAWN, BLACK))
-			| (attacks_bb_by<KNIGHT>(s) & get_pieces_bb(KNIGHT))
-			| (attacks_bb_by<ROOK>(s, occ) & (get_pieces_bb(ROOK) | get_pieces_bb(QUEEN)))
-			| (attacks_bb_by<BISHOP>(s, occ) & (get_pieces_bb(BISHOP) | get_pieces_bb(QUEEN)))
-			| (attacks_bb_by<KING>(s) & get_pieces_bb(KING));
+			pawn_att | knight_att | horizontal | diagonal | king_att;
 	}
 
+	// Shows a bitboard of the possible pieces that can give check to the opposite king in a given position
 	BITBOARD Position::get_checked_squares(PieceType pt) const
 	{
 		Square ksq = square<KING>(~side);
+		BITBOARD all = get_all_pieces_bb();
 
 		switch (pt)
 		{
 		case PAWN: return pawn_attacks_bb(~side, ksq);
 		case KNIGHT: return attacks_bb_by<KNIGHT>(ksq);
-		case BISHOP: return attacks_bb_by<BISHOP>(ksq, get_all_pieces_bb());
-		case ROOK: return attacks_bb_by<ROOK>(ksq, get_all_pieces_bb());
-		case QUEEN: return attacks_bb_by<QUEEN>(ksq, get_all_pieces_bb());
+		case BISHOP: return attacks_bb_by<BISHOP>(ksq, all);
+		case ROOK: return attacks_bb_by<ROOK>(ksq, all);
+		case QUEEN: return attacks_bb_by<QUEEN>(ksq, all);
 
 		default: // KING
-			return 0;
+			return 0ULL;
 		}
 	}
 
@@ -334,7 +350,7 @@ namespace ChessEngine
 		// Direct check
 		// Get the attacks from the piece that is on the source square 
 		// then intersect with the target
-		// if its king result will be greater than 0, hence a check
+		// if its king, result will be greater than 0, hence a check
 		// else result will be 0, hence not a check
 		if (get_checked_squares(type_of_piece(get_piece_on(source))) & target)
 			return true;
@@ -345,7 +361,7 @@ namespace ChessEngine
 
 		//	Already checked if a possible true result 
 		//  is not caused by direct check of sliding capture
-		if (get_blocking_pieces(~us) & source) return
+		if (blocking_pieces & source) return // PLACEHOLDER
 			!are_squares_aligned(source, target, opp_king_square)
 			|| m.move_type() == MT_CASTLING;
 
@@ -458,7 +474,7 @@ namespace ChessEngine
 		Square source = m.source_square();
 		Square target = m.target_square();
 
-		Value gain[32], depth = 0;
+		Value gain[32]{}, depth = 0;
 		BITBOARD may_Xray =
 			get_pieces_bb(PAWN) |
 			get_pieces_bb(BISHOP) |
@@ -487,7 +503,7 @@ namespace ChessEngine
 			// reset bit in temporary occupancy (for X-Rays)
 			occ ^= source_set;
 			if (source_set & may_Xray)
-				attacks |= get_pinned_pieces(~stm);
+				attacks |= pinned_pieces; // PLACEHOLDER
 			source_set =
 				get_least_valuable_piece(attacks, Color(depth & 1), attacked_type);
 
@@ -519,23 +535,16 @@ namespace ChessEngine
 			in_between_bb(k_source, k_target)
 			) & ~k_and_r;
 	}
-	BITBOARD Position::get_pinned_pieces(Color s) const
+
+	void Position::calculate_threats()
 	{
-		BITBOARD pins = 0ULL;
+		threats = 0ULL;
 
-		// get the opp king position 
-		Square ksq = square<KING>(s);
-
-		// TODO
-		// and check if he can be attacked directly from his position
-
-		return pins;
-	}
-
-	BITBOARD Position::get_blocking_pieces(Color s) const
-	{
-		BITBOARD blocks = 0ULL;
-
-		return blocks;
+		threats |= get_attacks_by<PAWN>(~side);
+		threats |= get_attacks_by<KNIGHT>(~side);
+		threats |= get_attacks_by<BISHOP>(~side);
+		threats |= get_attacks_by<ROOK>(~side);
+		threats |= get_attacks_by<QUEEN>(~side);
+		threats |= get_attacks_by<KING>(~side);
 	}
 }
