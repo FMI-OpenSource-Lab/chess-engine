@@ -120,6 +120,8 @@ namespace ChessEngine
 		BITBOARD	get_attacks_by(Color c) const;
 		BITBOARD	get_checked_squares(PieceType pt) const;
 		BITBOARD	get_threats() const { return threats; }
+		BITBOARD	get_king_blockers(Color c) const { return blocking_pieces[c]; }
+		BITBOARD	get_pinners(Color c) const { return pinning_pieces[c]; }
 
 		// Booleans
 		bool is_empty(Square s) const { return get_piece_on(s) == NO_PIECE; }
@@ -143,6 +145,7 @@ namespace ChessEngine
 		void do_move(Move m, MoveInfo& new_info, bool gives_check);
 		void undo_move(Move m, MoveInfo& new_info);
 
+		void update_blocks_and_pins(Color c);
 		void remove_piece(Square s);
 		void place_piece(Piece p, Square s);
 		void calculate_threats();
@@ -174,8 +177,8 @@ namespace ChessEngine
 		BITBOARD type[PIECE_TYPE_NB]{};
 		BITBOARD castling_path[CASTLING_RIGHT_NB]{};
 		BITBOARD threats{};
-		BITBOARD pinned_pieces{};
-		BITBOARD blocking_pieces{};
+		BITBOARD pinning_pieces[BOTH]{};
+		BITBOARD blocking_pieces[BOTH]{};
 
 		Piece	 piece_board[SQUARE_TOTAL]{};
 		Piece	 captured{};

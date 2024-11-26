@@ -271,7 +271,7 @@ namespace ChessEngine
 
 	inline void print_bitboard(U64 bitboard)
 	{
-		std::cout << "\nBitboard representation:\n";
+		std::cout << "\nBitboard representation:\n\n";
 
 		for (Rank rank = RANK_1; rank <= RANK_8; ++rank)
 		{

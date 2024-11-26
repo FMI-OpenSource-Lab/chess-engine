@@ -73,7 +73,6 @@ namespace ChessEngine
 			mi.en_passant = NONE;
 			mi.captured_piece = NO_PIECE;
 			mi.threats = 0ULL;
-			mi.pinned_pieces = 0ULL;
 			mi.fifty_move = 0;
 		}
 	}
@@ -84,7 +83,6 @@ namespace ChessEngine
 		mi.castling_rights = castle;
 		mi.fifty_move = fifty_move;
 		mi.threats = threats;
-		mi.pinned_pieces = pinned_pieces;
 		mi.captured_piece = captured;
 	}
 
@@ -361,7 +359,7 @@ namespace ChessEngine
 
 		//	Already checked if a possible true result 
 		//  is not caused by direct check of sliding capture
-		if (blocking_pieces & source) return // PLACEHOLDER
+		if (blocking_pieces[~side] & source) return
 			!are_squares_aligned(source, target, opp_king_square)
 			|| m.move_type() == MT_CASTLING;
 
@@ -503,7 +501,7 @@ namespace ChessEngine
 			// reset bit in temporary occupancy (for X-Rays)
 			occ ^= source_set;
 			if (source_set & may_Xray)
-				attacks |= pinned_pieces; // PLACEHOLDER
+				attacks |= pinning_pieces[side]; // PLACEHOLDER
 			source_set =
 				get_least_valuable_piece(attacks, Color(depth & 1), attacked_type);
 
@@ -540,11 +538,58 @@ namespace ChessEngine
 	{
 		threats = 0ULL;
 
+		update_blocks_and_pins(WHITE);
+		update_blocks_and_pins(BLACK);
+
 		threats |= get_attacks_by<PAWN>(~side);
 		threats |= get_attacks_by<KNIGHT>(~side);
 		threats |= get_attacks_by<BISHOP>(~side);
 		threats |= get_attacks_by<ROOK>(~side);
 		threats |= get_attacks_by<QUEEN>(~side);
 		threats |= get_attacks_by<KING>(~side);
+	}
+
+	void Position::update_blocks_and_pins(Color c)
+	{
+		blocking_pieces[c] = 0ULL;
+		pinning_pieces[~c] = 0ULL;
+
+		Square ksq = square<KING>(c);
+
+		BITBOARD rooks = get_pieces_bb(ROOK);
+		BITBOARD bishops = get_pieces_bb(BISHOP);
+		BITBOARD queens = get_pieces_bb(QUEEN);
+		BITBOARD color_pieces = get_pieces_bb(c);
+
+		// snipers are calculated such that there are no pieces on the board
+		// to get the line between the king and the slider
+		BITBOARD snipers =(
+			(attacks_bb_by<ROOK>(ksq) & (rooks | queens)) |
+			(attacks_bb_by<BISHOP>(ksq) & (bishops | queens))
+			) & get_pieces_bb(~c);
+
+		// All pieces without the snipers
+		BITBOARD occ = get_all_pieces_bb() ^ snipers;
+		
+		// looping through all the snipers
+		while (snipers)
+		{
+			// getting the sniper's square and popping its bit
+			Square sniper_sq = pop_ls1b(snipers);
+			BITBOARD btw = in_between_bb(ksq, sniper_sq) & occ;
+
+			// if there is space between the king square and the slider
+			// and is still left space after removing a bit
+			// then there is greater than or equal to one blocker between them
+			if (btw && !has_bit_after_pop(btw))
+			{
+				blocking_pieces[c] |= btw;
+
+				// If the blocking piece is of the opposite colour
+				// the blocker is pinned by the pinner (the sniper)
+				if (btw & color_pieces)
+					pinning_pieces[~c] |= sniper_sq;
+			}
+		}
 	}
 }

@@ -28,12 +28,12 @@ int main()
 		Position pos{};
 		InfoListPtr infos = InfoListPtr(new std::deque<MoveInfo>(1));
 
-		const char* pin_pos = "7B/2B5/3ppn2/3rk3/3b1q2/2Q2P2/7B/K2R4 w - - 0 1";
+		// pin position: "7B/2B5/3ppn2/3rk3/3b1q2/2Q2P2/7B/K2R4 w - - 0 1";
 
-		pos.set("r3k2r/p1ppqpb1/bnB1pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R w KQkq - 0 1");
+		pos.set("r3k2r/pPp1qpb1/bn2pnp1/4N3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
 		std::cout << pos << std::endl;
-
-		Move check_move = Move::make<MT_NORMAL>(C6, B7, BISHOP);
+		
+		Move check_move = Move::make<MT_PROMOTION>(B7, A8);
 		Piece p = pos.get_piece_on(check_move.source_square());
 
 		// Test if get piece on works
