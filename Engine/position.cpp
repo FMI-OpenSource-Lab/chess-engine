@@ -592,4 +592,7 @@ namespace ChessEngine
 			}
 		}
 	}
+
+
+
 }

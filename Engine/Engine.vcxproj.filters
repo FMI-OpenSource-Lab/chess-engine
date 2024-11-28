@@ -77,7 +77,7 @@
     <ClInclude Include="score.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="deque.h">
+    <ClInclude Include="fixed_list.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -113,15 +113,15 @@ namespace ChessEngine
 		inline BITBOARD get_all_pieces_bb() const { return occupancies[BOTH]; }
 		inline BITBOARD get_all_empty_squares_bb() const { return ~occupancies[BOTH]; }
 
-		BITBOARD	get_attackers_to(Square s) const;
-		BITBOARD	get_attackers_to(Square s, BITBOARD occ) const;
+		inline BITBOARD	get_attackers_to(Square s) const;
+		inline BITBOARD	get_attackers_to(Square s, BITBOARD occ) const;
 
 		template<PieceType pt>
-		BITBOARD	get_attacks_by(Color c) const;
-		BITBOARD	get_checked_squares(PieceType pt) const;
-		BITBOARD	get_threats() const { return threats; }
-		BITBOARD	get_king_blockers(Color c) const { return blocking_pieces[c]; }
-		BITBOARD	get_pinners(Color c) const { return pinning_pieces[c]; }
+		inline BITBOARD	get_attacks_by(Color c) const;
+		inline BITBOARD	get_checked_squares(PieceType pt) const;
+		inline BITBOARD	get_threats() const { return threats; }
+		inline BITBOARD	get_king_blockers(Color c) const { return blocking_pieces[c]; }
+		inline BITBOARD	get_pinners(Color c) const { return pinning_pieces[c]; }
 
 		// Booleans
 		bool is_empty(Square s) const { return get_piece_on(s) == NO_PIECE; }
@@ -151,6 +151,9 @@ namespace ChessEngine
 		void calculate_threats();
 		void clear_mi_stack(); // clear the move info stack
 		void set_mi_stack(MoveInfo& mi, PLY_TYPE fifty_move); // set the move info stack
+
+		template<Movegen movegen>
+		inline void pawn_moves();
 
 		// Caslte & side
 		CastlingRights castling_rights(Color c) const {

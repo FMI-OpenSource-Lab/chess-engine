@@ -3,7 +3,7 @@
 #include "position.h"
 #include "bitboard.h"
 #include "perft.h"
-#include "deque.h"
+#include "fixed_list.h"
 
 using namespace ChessEngine;
 
