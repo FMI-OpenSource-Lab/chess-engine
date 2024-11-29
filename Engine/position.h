@@ -9,6 +9,7 @@
 #include "defs.h"
 #include "move.h"
 #include "movegen.h"
+#include "fixed_list.h"
 
 namespace ChessEngine
 {
@@ -152,8 +153,23 @@ namespace ChessEngine
 		void clear_mi_stack(); // clear the move info stack
 		void set_mi_stack(MoveInfo& mi, PLY_TYPE fifty_move); // set the move info stack
 
-		template<Movegen movegen>
-		inline void pawn_moves();
+		//template<Movegen movegen>
+		void pawn_moves() const;
+		
+		//template<Movegen movegen>
+		void knight_moves() const;
+		
+		//template<Movegen movegen>
+		void bishop_moves() const;
+		
+		//template<Movegen movegen>
+		void rook_moves() const;
+		
+		//template<Movegen movegen>
+		void king_moves() const;
+		
+		//template<Movegen movegen>
+		void queen_moves() const;
 
 		// Caslte & side
 		CastlingRights castling_rights(Color c) const {

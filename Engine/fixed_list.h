@@ -26,7 +26,21 @@ namespace ChessEngine
 		inline T& operator[] (size_t index) { return fixed_list[index]; }
 		inline const T& operator[] (size_t index) const { return fixed_list[index]; }
 
-		inline void clear() { current_size = 0; }
+		inline void clear() { current_size = 0; } // the memory will be released after the array goes out of scope
+
+		inline void push(T element) { fixed_list[current_size++] = element; }
+		inline void pop_at(size_t index)
+		{
+			if (index == --current_size) return;
+
+			// Starting from the next element in the array 
+			// we just have to left shift it by one
+			// since we will pop at 'index'
+			for (size_t i = index + 1; i <= current_size; i++)
+				fixed_list[i - 1] = fixed_list[i];
+		}
+
+		inline T pop() { return fixed_list[--current_size]; }
 	};
 }
 

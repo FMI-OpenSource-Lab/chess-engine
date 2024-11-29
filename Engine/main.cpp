@@ -30,24 +30,10 @@ int main()
 
 		// pin position: "7B/2B5/3ppn2/3rk3/3b1q2/2Q2P2/7B/K2R4 w - - 0 1";
 
-		pos.set("r3k2r/pPp1qpb1/bn2pnp1/4N3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
+		pos.set(TEST_FEN);
 		std::cout << pos << std::endl;
 		
-		Move check_move = Move::make<MT_PROMOTION>(B7, A8);
-		Piece p = pos.get_piece_on(check_move.source_square());
-
-		// Test if get piece on works
-		std::cout << p << "\n";
-
-		// Test if gives check works
-		std::cout << "Is giving check?\n" 
-			<< (pos.gives_check(check_move) ? "True" : "False") << "\n";
-
-		// Test if place and remove piece works
-		pos.place_piece(p, check_move.target_square());
-		pos.remove_piece(check_move.source_square());
-
-		std::cout << pos;
+		pos.pawn_moves();
 	}
 	else
 		//uci_loop();

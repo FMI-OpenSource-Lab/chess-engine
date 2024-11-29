@@ -563,14 +563,14 @@ namespace ChessEngine
 
 		// snipers are calculated such that there are no pieces on the board
 		// to get the line between the king and the slider
-		BITBOARD snipers =(
+		BITBOARD snipers = (
 			(attacks_bb_by<ROOK>(ksq) & (rooks | queens)) |
 			(attacks_bb_by<BISHOP>(ksq) & (bishops | queens))
 			) & get_pieces_bb(~c);
 
 		// All pieces without the snipers
 		BITBOARD occ = get_all_pieces_bb() ^ snipers;
-		
+
 		// looping through all the snipers
 		while (snipers)
 		{
@@ -593,6 +593,71 @@ namespace ChessEngine
 		}
 	}
 
+	// TODO:
+	// When generating pawn moves an alternative approach will be to generate the
+	// promotions on different function, then everything else
+	// as well as adding more classifications for the moves such as
+	// CAPTURE, QSEARCH, QUIETS and etc.
 
+
+	void Position::pawn_moves() const
+	{
+		Square target = NONE, source = NONE;
+
+		BITBOARD pawns = get_pieces_bb(PAWN, side);
+		BITBOARD empty = get_all_empty_squares_bb();
+
+		BITBOARD pawn_forward_squares = (
+			side == WHITE
+			? move_to<UP>(pawns)
+			: move_to<DOWN>(pawns)
+			) & empty;
+
+		BITBOARD attacks = 0Ull;
+
+		BITBOARD promotion_rank = side == WHITE ? Rank8_Bits : Rank1_Bits;
+
+		while (pawn_forward_squares)
+		{
+			target = pop_ls1b(pawn_forward_squares);
+			source = target + pawn_push_direction(~side);
+
+			if (get_bit(promotion_rank, target))
+			{
+				for (PieceType pt = QUEEN; pt >= KNIGHT; --pt)
+				{
+					printf("promotion: %s%s%s\n",
+						ascii_pieces[get_piece(side, pt)],
+						squareToCoordinates[source],
+						squareToCoordinates[target]);
+				}
+			}
+			else
+			{
+				// for sngle push
+				printf("pawn push: %s%s\n",
+					squareToCoordinates[source],
+					squareToCoordinates[target]);
+
+				// for double push
+				BITBOARD double_push = side == WHITE
+					? move_to<UP>(square_to_BB(target))
+					: move_to<DOWN>(square_to_BB(target));
+
+				if (double_push & empty)
+				{
+					target = getLS1B(double_push);
+
+					printf("double pawn push: %s%s\n",
+						squareToCoordinates[source],
+						squareToCoordinates[target]);
+				}
+			}
+		}
+
+		attacks = pawn_attacks_bb(side, pawns) & get_opponent_pieces_bb();
+
+		// get the pawn source square and calculate each attack + promotion attack
+	}
 
 }
