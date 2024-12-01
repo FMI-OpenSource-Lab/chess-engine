@@ -1,5 +1,5 @@
-#ifndef FIXED_LIST_H
-#define FIXED_LIST_H
+#ifndef VECTOR_ARRAY_H
+#define VECTOR_ARRAY_H
 
 #include <iostream>
 #include <cassert>
@@ -44,4 +44,4 @@ namespace ChessEngine
 	};
 }
 
-#endif // !DEQUE_H
+#endif // !VECTOR_ARRAY_H

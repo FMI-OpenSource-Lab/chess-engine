@@ -412,11 +412,150 @@ namespace ChessEngine
 		}
 	}
 
+	// int types have 4 bytes
+	// then array size times 4 gives the size of the array (piece_board)
+	
+	// BITBOARD types have 8 bytes
+	// then array size times 8 gives the size of the array (everything else)
+
+	// Using copy-make approach
+	// Heavy on the memory but temporary fix to the solution
+	void Position::copy_board(MoveInfo& mi)
+	{
+		mi.castling_rights = castle;
+		mi.fifty_move = rule_fifty;
+		mi.captured_piece = captured;
+		mi.threats = threats;
+
+		std::memcpy(mi.bitboards, bitboards, 96);
+		std::memcpy(mi.occupancies, occupancies, 24);
+		std::memcpy(mi.type, type, 64);
+		std::memcpy(mi.castling_path, castling_path, 128);
+		std::memcpy(mi.pinning_pieces, pinning_pieces, 16);
+		std::memcpy(mi.blocking_pieces, blocking_pieces, 16);
+		std::memcpy(mi.piece_board, piece_board, 256);
+	}
+
+	void Position::restore_board(MoveInfo& mi)
+	{
+		castle = mi.castling_rights;
+		rule_fifty = mi.fifty_move;
+		captured = mi.captured_piece;
+		threats = mi.threats;
+
+		std::memcpy(bitboards, mi.bitboards, 96);
+		std::memcpy(occupancies, mi.occupancies, 24);
+		std::memcpy(type, mi.type, 64);
+		std::memcpy(castling_path, mi.castling_path, 128);
+		std::memcpy(pinning_pieces, mi.pinning_pieces, 16);
+		std::memcpy(blocking_pieces, mi.blocking_pieces, 16);
+		std::memcpy(piece_board, mi.piece_board, 256);
+	}
+
 	// Makes a move and saves the information in the Info
-	// Move is assumed to be legal or pseudo-legal
+	// Move is assumed to be legal
 	void Position::do_move(Move m, MoveInfo& new_info, bool gives_check)
 	{
-		// TODO
+		assert(&new_info != move_info);
+
+		fullmove_number++;
+		rule_fifty++; // will be reset ot 0 in case of capture or pawn move
+
+		Color us = side;
+		Color them = ~us;
+
+		Square source = m.source_square();
+		Square target = m.target_square();
+
+		MoveType m_type = m.move_type();
+
+		Piece on_source = get_piece_on(source);
+		Piece on_target = get_piece_on(target);
+		Piece captured = m_type == MT_EN_PASSANT ? get_piece(them, PAWN) : on_target;
+
+		assert(get_piece_color(on_source) == us); // moving our piece instead of enemy piece
+		assert(captured == NO_PIECE || get_piece_color(captured) == (m_type != MT_CASTLING ? them : us));
+		assert(type_of_piece(captured) != KING); // make sure king is not captured
+
+		// Castling
+		if (m_type == MT_CASTLING)
+		{
+			assert(on_source == get_piece(us, KING)); // source piece is our king
+			// since castling is encoded as "King captures rook"
+			assert(captured == get_piece(us, ROOK)); // captured piece is rook
+
+			Square r_source, r_target;
+			do_castle<true>(us, source, target, r_source, r_target);
+			captured = NO_PIECE;
+		}
+
+		// Captures
+		if (captured != NO_PIECE)
+		{
+			Square capture_sq = target;
+
+			if (type_of_piece(captured) == PAWN && m_type == MT_EN_PASSANT)
+			{
+				capture_sq -= pawn_push_direction(us);
+
+				assert(on_source == get_piece(us, PAWN));
+				assert(target == enpassant_square);
+				assert(rank_relative_to_side(us, rank_of(target)) == RANK_6);
+				assert(on_target == NO_PIECE);
+				assert(get_piece_on(capture_sq) == get_piece(them, PAWN));
+			}
+
+			remove_piece(capture_sq);
+			rule_fifty = 0;
+		}
+
+		// Reset en passant square
+		if (enpassant_square != NONE)
+		{
+			enpassant_square = NONE;
+		}
+
+		// Update castling rights if needed
+		if (castle && (castling_rights_mask[source] | castling_rights_mask[target]))
+		{
+			castle = castle & ~(castling_rights_mask[source] | castling_rights_mask[target]);
+		}
+
+		if (m_type != MT_CASTLING)
+		{
+			move_piece(source, target);
+		}
+
+		if (type_of_piece(on_source) == PAWN)
+		{
+			// Set an en passant square if the moved pawn can be captured
+			if ((int(target) ^ int(source)) == 16 // double push
+				&& (pawn_attacks_bb(us, target - pawn_push_direction(us)) & get_pieces_bb(PAWN, them)))
+			{
+				enpassant_square = target - pawn_push_direction(us);
+			}
+			else if (m_type == MT_PROMOTION)
+			{
+				Piece promoted = get_piece(us, m.promoted());
+				PieceType promoted_type = type_of_piece(promoted);
+
+				assert(rank_relative_to_side(us, rank_of(target)) == RANK_8); // promoting on the correct rank
+				assert(promoted_type >= KNIGHT && promoted_type <= QUEEN);
+
+				// erase the old piece and put the new one
+				remove_piece(target);
+				place_piece(promoted, target);
+
+				rule_fifty = 0;
+			}
+		}
+		
+		side = ~side;
+
+		calculate_threats();
+
+		// Repetition calculation needs to happen
+		// will do after hashing the moves
 	}
 
 	void Position::undo_move(Move m, MoveInfo& new_info)
@@ -592,72 +731,4 @@ namespace ChessEngine
 			}
 		}
 	}
-
-	// TODO:
-	// When generating pawn moves an alternative approach will be to generate the
-	// promotions on different function, then everything else
-	// as well as adding more classifications for the moves such as
-	// CAPTURE, QSEARCH, QUIETS and etc.
-
-
-	void Position::pawn_moves() const
-	{
-		Square target = NONE, source = NONE;
-
-		BITBOARD pawns = get_pieces_bb(PAWN, side);
-		BITBOARD empty = get_all_empty_squares_bb();
-
-		BITBOARD pawn_forward_squares = (
-			side == WHITE
-			? move_to<UP>(pawns)
-			: move_to<DOWN>(pawns)
-			) & empty;
-
-		BITBOARD attacks = 0Ull;
-
-		BITBOARD promotion_rank = side == WHITE ? Rank8_Bits : Rank1_Bits;
-
-		while (pawn_forward_squares)
-		{
-			target = pop_ls1b(pawn_forward_squares);
-			source = target + pawn_push_direction(~side);
-
-			if (get_bit(promotion_rank, target))
-			{
-				for (PieceType pt = QUEEN; pt >= KNIGHT; --pt)
-				{
-					printf("promotion: %s%s%s\n",
-						ascii_pieces[get_piece(side, pt)],
-						squareToCoordinates[source],
-						squareToCoordinates[target]);
-				}
-			}
-			else
-			{
-				// for sngle push
-				printf("pawn push: %s%s\n",
-					squareToCoordinates[source],
-					squareToCoordinates[target]);
-
-				// for double push
-				BITBOARD double_push = side == WHITE
-					? move_to<UP>(square_to_BB(target))
-					: move_to<DOWN>(square_to_BB(target));
-
-				if (double_push & empty)
-				{
-					target = getLS1B(double_push);
-
-					printf("double pawn push: %s%s\n",
-						squareToCoordinates[source],
-						squareToCoordinates[target]);
-				}
-			}
-		}
-
-		attacks = pawn_attacks_bb(side, pawns) & get_opponent_pieces_bb();
-
-		// get the pawn source square and calculate each attack + promotion attack
-	}
-
 }

@@ -187,6 +187,7 @@ constexpr Piece operator~(Piece p) { return Piece(p ^ 8); }
 // Rank and File operator overloads
 constexpr File file_of(Square s) { return File(s % 8); }
 constexpr Rank rank_of(Square s) { return Rank(s >> 3); }
+constexpr Rank rank_relative_to_side(Color c, Rank r) { return Rank(int(r) ^ (c * 7)); }
 
 // Square helper methods
 constexpr Square convert_to_square(int rank, int file) { return Square(rank * 8 + file); }

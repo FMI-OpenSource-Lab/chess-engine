@@ -20,5 +20,10 @@ namespace ChessEngine
 		GT_LEGAL
 	};
 
+	// TODO:
+	// When generating pawn moves an alternative approach will be to generate the
+	// promotions on different function, then everything else
+	// as well as adding more classifications for the moves such as
+	// CAPTURE, QSEARCH, QUIETS and etc.
 }
 #endif // !MOVEGEN_H

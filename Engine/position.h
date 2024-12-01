@@ -9,7 +9,7 @@
 #include "defs.h"
 #include "move.h"
 #include "movegen.h"
-#include "fixed_list.h"
+#include "vector_array.h"
 
 namespace ChessEngine
 {
@@ -49,7 +49,7 @@ namespace ChessEngine
 
 	using BITBOARD = U64;
 
-	enum class Movegen: uint16_t
+	enum class Movegen : uint16_t
 	{
 		ALL,
 		QSEARCH,
@@ -68,12 +68,19 @@ namespace ChessEngine
 	struct MoveInfo
 	{
 		// Copied when making a move
-		CastlingRights castling_rights = CASTLE_NB;
-		Square en_passant = NONE;
-		PLY_TYPE fifty_move = 0;
-		Piece captured_piece = NO_PIECE;
-		BITBOARD threats = 0ULL;
-		BITBOARD pinned_pieces = 0ULL;
+		CastlingRights	castling_rights = CASTLE_NB;
+		Square			en_passant = NONE;
+		PLY_TYPE		fifty_move = 0;
+		Piece			captured_piece = NO_PIECE;
+
+		BITBOARD		threats = 0ULL;
+		BITBOARD		pinning_pieces[BOTH]{};
+		BITBOARD		blocking_pieces[BOTH]{};
+		BITBOARD		type[PIECE_TYPE_NB]{};
+		BITBOARD		castling_path[CASTLING_RIGHT_NB]{};
+		BITBOARD		bitboards[NO_PIECE]{};
+		BITBOARD		occupancies[BOTH + 1]{};
+		Piece			piece_board[SQUARE_TOTAL]{};
 	};
 
 	// List to keep track of position states along the setup
@@ -127,7 +134,7 @@ namespace ChessEngine
 		// Booleans
 		bool is_empty(Square s) const { return get_piece_on(s) == NO_PIECE; }
 		bool gives_check(Move m) const;
-		bool can_castle(CastlingRights cr) const { return castle & cr;}
+		bool can_castle(CastlingRights cr) const { return castle & cr; }
 
 		// Pieces
 		Piece get_piece_on(Square s) const;
@@ -153,24 +160,6 @@ namespace ChessEngine
 		void clear_mi_stack(); // clear the move info stack
 		void set_mi_stack(MoveInfo& mi, PLY_TYPE fifty_move); // set the move info stack
 
-		//template<Movegen movegen>
-		void pawn_moves() const;
-		
-		//template<Movegen movegen>
-		void knight_moves() const;
-		
-		//template<Movegen movegen>
-		void bishop_moves() const;
-		
-		//template<Movegen movegen>
-		void rook_moves() const;
-		
-		//template<Movegen movegen>
-		void king_moves() const;
-		
-		//template<Movegen movegen>
-		void queen_moves() const;
-
 		// Caslte & side
 		CastlingRights castling_rights(Color c) const {
 			return c & CastlingRights(castle);
@@ -187,6 +176,8 @@ namespace ChessEngine
 		void do_castle(Color us, Square source, Square& target, Square& r_source, Square& r_target);
 
 		void move_piece(Square source, Square target);
+		void copy_board(MoveInfo& mi);
+		void restore_board(MoveInfo& mi);
 
 		BITBOARD get_least_valuable_piece(BITBOARD attacks, Color by_side, PieceType& pt) const;
 
@@ -206,9 +197,9 @@ namespace ChessEngine
 
 		Square rook_source_sq[CASTLING_RIGHT_NB]{};
 		Square enpassant_square{};
-		
+
 		CastlingRights castle{};
-		
+
 		Color	 side{};
 
 		PLY_TYPE fullmove_number{};
