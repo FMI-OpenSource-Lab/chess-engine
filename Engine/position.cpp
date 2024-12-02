@@ -23,7 +23,7 @@ namespace ChessEngine
 		os << "\n";
 
 		// loop on ranks
-		for (Rank rank = RANK_1; rank <= RANK_8; ++rank)
+		for (Rank rank = RANK_8; rank <= RANK_1; ++rank)
 		{
 			// loop on files
 			for (File file = FILE_A; file <= FILE_H; ++file)
@@ -124,7 +124,7 @@ namespace ChessEngine
 		// allocate memroy
 		char* fen_ptr = (char*)fen;
 
-		Rank rank = RANK_1;
+		Rank rank = RANK_8;
 		File file = FILE_A;
 
 		// reset boards and state variables
@@ -236,7 +236,7 @@ namespace ChessEngine
 		int empty_sq_count;
 		std::ostringstream ss;
 
-		for (Rank rank = RANK_1; rank <= RANK_8; ++rank)
+		for (Rank rank = RANK_8; rank <= RANK_1; ++rank)
 		{
 			for (File file = FILE_A; file <= FILE_H; ++file)
 			{
@@ -253,7 +253,7 @@ namespace ChessEngine
 				];
 			}
 
-			if (rank < RANK_8) ss << '/';
+			if (rank < RANK_1) ss << '/';
 		}
 
 		// Side to move

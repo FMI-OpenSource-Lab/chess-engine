@@ -35,8 +35,6 @@ int main()
 		Move m = Move::make<MT_EN_PASSANT>(D5, C6);
 		MoveInfo mi{};
 
-		std::cout << rank_of(C6);
-
 		//pos.do_move(m, mi);
 
 		//std::cout << pos;
