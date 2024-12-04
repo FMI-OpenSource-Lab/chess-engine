@@ -58,20 +58,18 @@ namespace ChessEngine
 	{
 	public:
 		Move() = default;
-		constexpr explicit Move(std::uint32_t m) :
+
+		constexpr explicit Move(std::uint16_t m) :
 			move(m) {}
 
 		constexpr Move(Square source, Square target) :
 			move((target << 6) + source) {}
 
-		constexpr Move(Square source, Square target, int flag) :
-			move(int(source) | target << 6 | flag << 12) {}
+		constexpr Move(Square source, Square target, MoveType mt)
+			: move(mt + (target << 6) + source) {}
 
-		template<MoveType mt>
-		static constexpr Move make(Square source, Square target, PieceType pt = KNIGHT)
-		{
-			return Move(mt + ((pt - KNIGHT) << 12) + (target << 6) + source);
-		}
+		constexpr Move(Square source, Square target, MoveType mt, PromotionType pt) 
+			: move(mt + pt + (target << 6) + source) {}
 
 		constexpr Square source_square() const { return Square(move & 0x3F);}
 
@@ -95,7 +93,7 @@ namespace ChessEngine
 		static constexpr bool same_move(Move a, Move b) { return a.move == b.move; }
 
 		friend std::ostream& operator<<(std::ostream& os, Move const& mv) {
-			return os << squareToCoordinates[mv.source_square()] << " " << squareToCoordinates[mv.target_square()] << std::endl;
+			return os << squareToCoordinates[mv.source_square()] << squareToCoordinates[mv.target_square()] << std::endl;
 		}
 
 		// overloads

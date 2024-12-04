@@ -10,7 +10,7 @@
 
 namespace ChessEngine
 {
-	char ascii_pieces[13] = "PNBRQKpnbrqk";
+	char ascii_pieces[PIECE_NB] = " PNBRQKpnbrqk";
 
 	constexpr Piece Pieces[]
 	{
@@ -41,8 +41,10 @@ namespace ChessEngine
 		// print files
 		os << "\n a b c d e f g h \n\n";
 
-		os << "Side:		" << (position.side_to_move() == WHITE
-			? "white\n"
+		Color side = position.side_to_move();
+
+		os << "\nSide:		" << (side == WHITE
+			? "white"
 			: "black");
 
 		Square enpassant = position.ep_square();
@@ -50,7 +52,7 @@ namespace ChessEngine
 			? squareToCoordinates[enpassant]
 			: "no") << "\n";
 
-		CastlingRights castle = position.move_info->castling_rights;
+		CastlingRights castle = position.get_castling_rights();
 
 		std::string castling;
 		(castle & WK) ? castling += 'K' : castling += '-';
@@ -60,7 +62,7 @@ namespace ChessEngine
 
 		os << "Castling:	" << castling << "\n";
 
-		os << "FEN: " << position.get_fen() << "\n";
+		os << "\nFEN: " << position.get_fen() << "\n";
 
 		return os;
 	}
@@ -72,17 +74,15 @@ namespace ChessEngine
 			mi.castling_rights = CASTLE_NB;
 			mi.en_passant = NONE;
 			mi.captured_piece = NO_PIECE;
-			mi.threats = 0ULL;
 			mi.fifty_move = 0;
 		}
 	}
 
-	void Position::set_mi_stack(MoveInfo& mi, PLY_TYPE fifty_move)
+	void Position::set_mi_stack(MoveInfo& mi)
 	{
 		mi.en_passant = enpassant_square;
 		mi.castling_rights = castle;
-		mi.fifty_move = fifty_move;
-		mi.threats = threats;
+		mi.fifty_move = rule_fifty;
 		mi.captured_piece = captured;
 	}
 
@@ -130,7 +130,7 @@ namespace ChessEngine
 		// reset boards and state variables
 		memset(this, 0, sizeof(Position));
 		memset(move_info, 0, sizeof(MoveInfo));
-		std::fill_n(piece_board, SQUARE_TOTAL, NO_PIECE);
+		// std::fill_n(piece_board, SQUARE_TOTAL, NO_PIECE);
 
 		side = WHITE;
 		enpassant_square = NONE;
@@ -330,8 +330,10 @@ namespace ChessEngine
 
 	// This function helps the move generation to determine 
 	// if move in the current position gives a check
+	// Tests if pseudo-legal move gives check
 	bool Position::gives_check(Move m) const
 	{
+		assert(m.is_move_ok());
 		assert(get_piece_color(moved_piece(m)) == side);
 
 		Color us = side;
@@ -412,53 +414,21 @@ namespace ChessEngine
 		}
 	}
 
-	// int types have 4 bytes
-	// then array size times 4 gives the size of the array (piece_board)
-	
-	// BITBOARD types have 8 bytes
-	// then array size times 8 gives the size of the array (everything else)
-
-	// Using copy-make approach
-	// Heavy on the memory but temporary fix to the solution
-	void Position::copy_board(MoveInfo& mi)
-	{
-		mi.castling_rights = castle;
-		mi.fifty_move = rule_fifty;
-		mi.captured_piece = captured;
-		mi.threats = threats;
-
-		std::memcpy(mi.bitboards, bitboards, 96);
-		std::memcpy(mi.occupancies, occupancies, 24);
-		std::memcpy(mi.type, type, 64);
-		std::memcpy(mi.castling_path, castling_path, 128);
-		std::memcpy(mi.pinning_pieces, pinning_pieces, 16);
-		std::memcpy(mi.blocking_pieces, blocking_pieces, 16);
-		std::memcpy(mi.piece_board, piece_board, 256);
-	}
-
-	void Position::restore_board(MoveInfo& mi)
+	void Position::restore_prev_info(MoveInfo& mi)
 	{
 		castle = mi.castling_rights;
 		rule_fifty = mi.fifty_move;
 		captured = mi.captured_piece;
-		threats = mi.threats;
-
-		std::memcpy(bitboards, mi.bitboards, 96);
-		std::memcpy(occupancies, mi.occupancies, 24);
-		std::memcpy(type, mi.type, 64);
-		std::memcpy(castling_path, mi.castling_path, 128);
-		std::memcpy(pinning_pieces, mi.pinning_pieces, 16);
-		std::memcpy(blocking_pieces, mi.blocking_pieces, 16);
-		std::memcpy(piece_board, mi.piece_board, 256);
+		enpassant_square = mi.en_passant;
 	}
 
 	// Makes a move and saves the information in the Info
 	// Move is assumed to be legal
 	void Position::do_move(Move m, MoveInfo& new_info, bool gives_check)
 	{
-		assert(&new_info != move_info);
+		assert(m.is_move_ok());
 
-		fullmove_number++;
+		fullmove_number++; // increment on every move, displayed correctly on get_fen()
 		rule_fifty++; // will be reset ot 0 in case of capture or pawn move
 
 		Color us = side;
@@ -471,10 +441,14 @@ namespace ChessEngine
 
 		Piece on_source = get_piece_on(source);
 		Piece on_target = get_piece_on(target);
-		Piece captured = m_type == MT_EN_PASSANT ? get_piece(them, PAWN) : on_target;
+		Piece captured =
+			m_type == MT_EN_PASSANT
+			? get_piece(them, PAWN) // captured piece is opponents pawn
+			: on_target; // can be NO_PIECE or every other piece (without KING)
 
 		assert(get_piece_color(on_source) == us); // moving our piece instead of enemy piece
-		assert(captured == NO_PIECE || get_piece_color(captured) == (m_type != MT_CASTLING ? them : us));
+		assert(captured == NO_PIECE ||
+			get_piece_color(captured) == (m_type != MT_CASTLING ? them : us));
 		assert(type_of_piece(captured) != KING); // make sure king is not captured
 
 		// Castling
@@ -490,7 +464,7 @@ namespace ChessEngine
 		}
 
 		// Captures
-		if (captured != NO_PIECE)
+		if (captured)
 		{
 			Square capture_sq = target;
 
@@ -546,13 +520,26 @@ namespace ChessEngine
 				remove_piece(target);
 				place_piece(promoted, target);
 
-				rule_fifty = 0;
 			}
+
+			rule_fifty = 0;
 		}
-		
+
 		side = ~side;
 
+		new_info.checkersBB = gives_check 
+			? get_attackers_to(square<KING>(them)) & get_our_pieces_bb() 
+			: 0ULL;
+
 		calculate_threats();
+
+		new_info.en_passant = enpassant_square;
+		new_info.castling_rights = castle;
+		new_info.fifty_move = rule_fifty;
+		new_info.captured_piece = captured;
+
+		// Print move and position for debuging purposes only
+		std::cout << m << *this;
 
 		// Repetition calculation needs to happen
 		// will do after hashing the moves
@@ -560,7 +547,136 @@ namespace ChessEngine
 
 	void Position::undo_move(Move m, MoveInfo& new_info)
 	{
-		// TODO
+		assert(m.is_move_ok());
+
+		side = ~side; // flip side
+
+		Color us = side;
+
+		Square source = m.source_square();
+		Square target = m.target_square();
+
+		Piece on_target = get_piece_on(target);
+		Piece captured = new_info.captured_piece;
+		PieceType target_piece = type_of_piece(on_target);
+
+		MoveType mt = m.move_type();
+
+		assert(is_empty(source) || mt == MT_CASTLING);
+		assert(type_of_piece(captured) != KING);
+
+		if (mt == MT_PROMOTION)
+		{
+			assert(rank_relative_to_side(us, rank_of(target)) == RANK_8);
+			assert(target_piece == m.promoted());
+			assert(target_piece >= KNIGHT && target <= QUEEN);
+
+			remove_piece(target);
+			on_target = get_piece(us, PAWN);
+			place_piece(on_target, target); // place pawn on the 8th rank, will be moved later
+		}
+
+		if (mt == MT_CASTLING)
+		{
+			Square r_source, r_target;
+			do_castle<false>(us, source, target, r_source, r_target);
+		}
+		else
+		{
+			move_piece(target, source);
+
+			if (captured)
+			{
+				Square cap_sq = target;
+
+				if (mt == MT_EN_PASSANT)
+				{
+					cap_sq -= pawn_push_direction(us);
+
+					assert(target_piece == PAWN);
+					assert(target == enpassant_square);
+					assert(rank_relative_to_side(us, rank_of(target)) == RANK_6);
+					assert(get_piece_on(cap_sq) == NO_PIECE);
+					assert(captured == get_piece(~us, PAWN));
+				}
+
+				assert(get_piece_color(captured) == ~us);
+				place_piece(captured, cap_sq);
+			}
+		}
+
+		fullmove_number--;
+
+		// Print move and position for debuging purposes only
+		std::cout << "Undo: " << m << *this;
+	}
+
+	bool Position::is_legal(Move m) const
+	{
+		assert(m.is_move_ok());
+
+		Color us = side;
+		Square source = m.source_square();
+		Square target = m.target_square();
+
+		MoveType mt = m.move_type();
+
+		assert(get_piece_color(moved_piece(m)) == us);
+		assert(get_piece_on(square<KING>(us)) == get_piece(us, KING));
+
+		// 1. Check for king stepping into check
+		
+		// If the king is moving, check if its stepping into an attacked square
+		if(type_of_piece(get_piece_on(source)) == KING)
+			return !(get_attackers_to(target, get_all_pieces_bb() ^ source) & get_opponent_pieces_bb());
+
+		// 2. Check for moving an absolute pinned piece
+
+		// Move is legal if it is not pinned or is moving towards or away from the king
+		// in the same horiznontal or diagonal 
+		// e.g. pinned bishop, rook or queen
+		if (are_squares_aligned(source, target, square<KING>(us)) || get_king_blockers(us))
+			return false;
+
+		// 3. Check for castling
+		if (mt == MT_CASTLING)
+		{
+			target = sq_relative_to_side(target > source ? G1 : C1, us);
+			Direction step = target > source ? RIGHT : LEFT;
+			BITBOARD opp = get_opponent_pieces_bb();
+
+			// Checking each square up to rook square if its not attacked
+			// Works for both sides
+			// This is done to make shure that the king does not castle into check
+			for (Square start = source; start != target; start += step)
+				if (get_attackers_to(start) & opp) return false;
+		}
+		 
+		// 4. Check for ep captures
+
+		// Though quite rare they aren't impossible
+		// Will be checking if king is attacked after the move is made
+		// this means discovered check after en passant
+		if (mt == MT_EN_PASSANT)
+		{
+			Square ksq = square<KING>(us);
+			Square capture_square = target - pawn_push_direction(us);
+
+			BITBOARD occ = (get_all_pieces_bb() ^ source ^ capture_square) | target;
+
+			assert(target == enpassant_square);
+			assert(moved_piece(m) == get_piece(us, PAWN));
+			assert(get_piece_on(capture_square) == get_piece(~us, PAWN));
+			assert(get_piece_on(target) == NO_PIECE);
+
+			BITBOARD bishops = get_pieces_bb(BISHOP, ~us);
+			BITBOARD rooks = get_pieces_bb(ROOK, ~us);
+			BITBOARD queens = get_pieces_bb(QUEEN, ~us);
+
+			// Dtecting the discovered attacks after the capture is made
+			return !(attacks_bb_by<ROOK>(ksq, occ) & (rooks | queens))
+				&& !(attacks_bb_by<BISHOP>(ksq, occ) & (bishops | queens));
+		}
 	}
 
 	// Helper for do/undo castling move

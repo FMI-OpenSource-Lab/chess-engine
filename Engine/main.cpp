@@ -30,14 +30,12 @@ int main()
 
 		// pin position: "7B/2B5/3ppn2/3rk3/3b1q2/2Q2P2/7B/K2R4 w - - 0 1";
 
-		pos.set("r3k2r/p2pqpb1/bn2pnp1/2pPN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq c6 0 1");
+		pos.set("r3k2r/p2pqpb1/BnP1pnp1/4N3/4P3/5Q1p/PPPpKPPP/R6R w kq - 0 1");
 		std::cout << pos << std::endl;
-		Move m = Move::make<MT_EN_PASSANT>(D5, C6);
+
 		MoveInfo mi{};
 
-		//pos.do_move(m, mi);
-
-		//std::cout << pos;
+		// pos.do_move(Move{ D2, E1}, mi);
 	}
 	else
 		//uci_loop();

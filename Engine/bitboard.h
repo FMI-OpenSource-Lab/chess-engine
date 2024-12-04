@@ -273,7 +273,7 @@ namespace ChessEngine
 	{
 		std::cout << "\nBitboard representation:\n\n";
 
-		for (Rank rank = RANK_1; rank <= RANK_8; ++rank)
+		for (Rank rank = RANK_8; rank <= RANK_1; ++rank)
 		{
 			for (File file = FILE_A; file <= FILE_H; ++file)
 			{

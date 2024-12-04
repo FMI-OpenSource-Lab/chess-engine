@@ -1,5 +1,4 @@
 // system headers
-#pragma once
 #ifndef DEFS_H
 #define DEFS_H
 
@@ -32,6 +31,7 @@ constexpr bool Is64Bit = true;
 constexpr bool Is64Bit = false;
 #endif // IS_64BIT
 
+#include <cassert>
 
 enum Square : int {
 	A8, B8, C8, D8, E8, F8, G8, H8,
@@ -72,19 +72,23 @@ enum PieceType : int {
 };
 
 enum Piece : int {
+	NO_PIECE,
+
 	WHITE_PAWN,
 	WHITE_KNIGHT,
 	WHITE_BISHOP,
 	WHITE_ROOK,
 	WHITE_QUEEN,
 	WHITE_KING,
+
 	BLACK_PAWN,
 	BLACK_KNIGHT,
 	BLACK_BISHOP,
 	BLACK_ROOK,
 	BLACK_QUEEN,
 	BLACK_KING,
-	NO_PIECE
+
+	PIECE_NB = 14
 };
 
 enum Color
@@ -149,8 +153,7 @@ enum CastlingRights : int {
 constexpr bool is_square_ok(Square s) { return s >= A8 && s <= H1; }
 
 // Castling Rights operator overloads
-inline CastlingRights operator&(Color c, CastlingRights cr) {
-	return	CastlingRights((c == WHITE ? WHITE_CASTLE : BLACK_CASTLE) & cr ); }
+inline CastlingRights operator&(Color c, CastlingRights cr) { return CastlingRights((c == WHITE ? WHITE_CASTLE : BLACK_CASTLE) & cr); }
 inline CastlingRights operator|(CastlingRights& c, CastlingRights a) { return CastlingRights(int(c) | int(a)); };
 inline CastlingRights operator&(CastlingRights& c, int d) { return CastlingRights(int(c) & int(d)); }
 
@@ -187,7 +190,7 @@ constexpr Piece operator~(Piece p) { return Piece(p ^ 8); }
 // Rank and File operator overloads
 constexpr File file_of(Square s) { return File(s % 8); }
 constexpr Rank rank_of(Square s) { return Rank(s >> 3); }
-constexpr Rank rank_relative_to_side(Color c, Rank r) { return Rank(int(r) ^ (c * 7)); }
+constexpr Rank rank_relative_to_side(Color c, Rank r) { return Rank(r ^ (c * 7)); }
 
 // Square helper methods
 constexpr Square convert_to_square(int rank, int file) { return Square(rank * 8 + file); }
@@ -196,12 +199,18 @@ constexpr Square make_square(File f, Rank r) { return Square((r << 3) + f); }
 constexpr Square sq_relative_to_side(Square s, Color c) { return Square(int(s) ^ (c * 56)); }
 
 // Piece, PieceType and Color helper methods
-constexpr Piece get_piece(Color c, PieceType pt) { return Piece(pt + (c * 6) - 1); }
+constexpr Piece get_piece(Color c, PieceType pt) { return Piece(pt + (c * 6)); }
 
-constexpr PieceType type_of_piece(Piece p, Color c) { return PieceType(p - (c * 6)); }
-constexpr PieceType type_of_piece(Piece p) { return PieceType((p % 6) + 1); }
+constexpr PieceType type_of_piece(Piece p) { return PieceType((p % 6)); }
 
-constexpr Color get_piece_color(Piece p) { return Color(int(p / 6)); }
+constexpr Color get_piece_color(Piece p)
+{
+	assert(p != NO_PIECE);
+	// if piece is below 7 (white) the number will be betwenn [0:1)
+	// will become 1 or greater if piece is black
+	// due to integer rounding we work with 0 and 1 only
+	return Color(p / 7); 
+}
 
 // bit macros
 #define get_bit(bitboard, square) (bitboard & (1ULL << square)) // checks for available bit
@@ -217,22 +226,22 @@ constexpr int MAX_PLY = 246;
 
 typedef int Value; // 32 bit
 
-constexpr Value VALUE_ZERO		= 0;
-constexpr Value VALUE_DRAW		= 0;
-constexpr Value VALUE_NONE		= 32002;
-constexpr Value VALUE_INFINITE	= 32001;
+constexpr Value VALUE_ZERO = 0;
+constexpr Value VALUE_DRAW = 0;
+constexpr Value VALUE_NONE = 32002;
+constexpr Value VALUE_INFINITE = 32001;
 
-constexpr Value VALUE_MATE				= 32001;
-constexpr Value VALUE_MATE_IN_MAX_PLY	= VALUE_MATE - MAX_PLY;
+constexpr Value VALUE_MATE = 32001;
+constexpr Value VALUE_MATE_IN_MAX_PLY = VALUE_MATE - MAX_PLY;
 
 // Piece values estimated by AlphaZero
-constexpr Value PAWN_VALUE		= 100;
-constexpr Value KNIGHT_VALUE	= 305;
-constexpr Value BISHOP_VALUE	= 333;
-constexpr Value ROOK_VALUE		= 563;
-constexpr Value QUEEN_VALUE		= 950;
+constexpr Value PAWN_VALUE = 100;
+constexpr Value KNIGHT_VALUE = 305;
+constexpr Value BISHOP_VALUE = 333;
+constexpr Value ROOK_VALUE = 563;
+constexpr Value QUEEN_VALUE = 950;
 
-constexpr Value PieceValue[NO_PIECE] // All pieces 
+constexpr Value PieceValue[PIECE_NB] // All pieces 
 {
 	// WHITE
 	PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE, ROOK_VALUE, QUEEN_VALUE, VALUE_ZERO,

@@ -43,7 +43,7 @@ namespace ChessEngine
 				black king => queen side
 	*/
 
-	extern char ascii_pieces[13];
+	extern char ascii_pieces[PIECE_NB];
 
 	// char unicode_pieces[12] = { '♙','♘','♗','♖','♕','♔','♟','♞','♝','♜','♛','♚' };
 
@@ -70,17 +70,11 @@ namespace ChessEngine
 		// Copied when making a move
 		CastlingRights	castling_rights = CASTLE_NB;
 		Square			en_passant = NONE;
-		PLY_TYPE		fifty_move = 0;
+		PLY_TYPE		fifty_move = 0; // halfmove clock
 		Piece			captured_piece = NO_PIECE;
 
-		BITBOARD		threats = 0ULL;
-		BITBOARD		pinning_pieces[BOTH]{};
-		BITBOARD		blocking_pieces[BOTH]{};
-		BITBOARD		type[PIECE_TYPE_NB]{};
-		BITBOARD		castling_path[CASTLING_RIGHT_NB]{};
-		BITBOARD		bitboards[NO_PIECE]{};
-		BITBOARD		occupancies[BOTH + 1]{};
-		Piece			piece_board[SQUARE_TOTAL]{};
+		// Not copied
+		BITBOARD checkersBB = 0ULL;
 	};
 
 	// List to keep track of position states along the setup
@@ -135,6 +129,7 @@ namespace ChessEngine
 		bool is_empty(Square s) const { return get_piece_on(s) == NO_PIECE; }
 		bool gives_check(Move m) const;
 		bool can_castle(CastlingRights cr) const { return castle & cr; }
+		bool is_legal(Move m) const;
 
 		// Pieces
 		Piece get_piece_on(Square s) const;
@@ -157,32 +152,33 @@ namespace ChessEngine
 		void remove_piece(Square s);
 		void place_piece(Piece p, Square s);
 		void calculate_threats();
+
 		void clear_mi_stack(); // clear the move info stack
-		void set_mi_stack(MoveInfo& mi, PLY_TYPE fifty_move); // set the move info stack
+		void set_mi_stack(MoveInfo& mi); // set the move info stack
 
 		// Caslte & side
 		CastlingRights castling_rights(Color c) const {
 			return c & CastlingRights(castle);
 		}
+		CastlingRights get_castling_rights() const { return castle; }
 
 		Color side_to_move() const { return side; }
 
 		// Overrides
 		friend std::ostream& operator<<(std::ostream& os, const Position& position);
 
-	private:
-		void set_castling_rights(Color c, Square r_source);
 		template<bool Do>
 		void do_castle(Color us, Square source, Square& target, Square& r_source, Square& r_target);
+	private:
+		void set_castling_rights(Color c, Square r_source);
 
 		void move_piece(Square source, Square target);
-		void copy_board(MoveInfo& mi);
-		void restore_board(MoveInfo& mi);
+		void restore_prev_info(MoveInfo& mi);
 
 		BITBOARD get_least_valuable_piece(BITBOARD attacks, Color by_side, PieceType& pt) const;
 
 		// Data
-		BITBOARD bitboards[NO_PIECE]{};
+		BITBOARD bitboards[PIECE_NB]{};
 		BITBOARD occupancies[BOTH + 1]{};
 		BITBOARD type[PIECE_TYPE_NB]{};
 		BITBOARD castling_path[CASTLING_RIGHT_NB]{};
