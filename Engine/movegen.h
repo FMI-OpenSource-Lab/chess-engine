@@ -25,5 +25,14 @@ namespace ChessEngine
 	// promotions on different function, then everything else
 	// as well as adding more classifications for the moves such as
 	// CAPTURE, QSEARCH, QUIETS and etc.
+
+	struct ScoredMove : public Move
+	{
+		int score = 0;
+		void operator=(Move m) { move = m.move_value(); }
+	};
+
+	template<GenerationTypes>
+	ScoredMove* generate_moves(const Position& pos, ScoredMove* move_list);
 }
 #endif // !MOVEGEN_H

@@ -57,12 +57,6 @@ namespace ChessEngine
 		CAPTURE
 	};
 
-	struct ScoredMove
-	{
-		Move move = NO_MOVE;
-		int score = 0;
-	};
-
 	// Info structure stores information needed to restore a position
 	// to its previous state when a move is taken back
 	struct MoveInfo
@@ -72,9 +66,6 @@ namespace ChessEngine
 		Square			en_passant = NONE;
 		PLY_TYPE		fifty_move = 0; // halfmove clock
 		Piece			captured_piece = NO_PIECE;
-
-		// Not copied
-		BITBOARD checkersBB = 0ULL;
 	};
 
 	// List to keep track of position states along the setup
@@ -133,7 +124,7 @@ namespace ChessEngine
 
 		// Pieces
 		Piece get_piece_on(Square s) const;
-		Piece moved_piece(Move m) const { return get_piece_on(m.source_square()); };
+		Piece moved_piece(Move m) const;
 		Piece captured_piece() const;
 
 		// PLY
@@ -211,6 +202,12 @@ namespace ChessEngine
 	{
 		assert(is_square_ok(s));
 		return piece_board[s];
+	}
+
+	inline Piece Position::moved_piece(Move m) const 
+	{ 
+		assert(m.is_move_ok());
+		return get_piece_on(m.source_square()); 
 	}
 
 	inline BITBOARD Position::get_pieces_bb(PieceType pt) const { return type[pt]; }

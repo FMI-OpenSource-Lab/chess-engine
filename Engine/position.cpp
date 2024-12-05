@@ -527,10 +527,6 @@ namespace ChessEngine
 
 		side = ~side;
 
-		new_info.checkersBB = gives_check 
-			? get_attackers_to(square<KING>(them)) & get_our_pieces_bb() 
-			: 0ULL;
-
 		calculate_threats();
 
 		new_info.en_passant = enpassant_square;
@@ -618,65 +614,70 @@ namespace ChessEngine
 		Color us = side;
 		Square source = m.source_square();
 		Square target = m.target_square();
+		Square ksq = square<KING>(us);
 
 		MoveType mt = m.move_type();
+
+		BITBOARD opp = get_opponent_pieces_bb();
 
 		assert(get_piece_color(moved_piece(m)) == us);
 		assert(get_piece_on(square<KING>(us)) == get_piece(us, KING));
 
-		// 1. Check for king stepping into check
-		
-		// If the king is moving, check if its stepping into an attacked square
-		if(type_of_piece(get_piece_on(source)) == KING)
-			return !(get_attackers_to(target, get_all_pieces_bb() ^ source) & get_opponent_pieces_bb());
+		switch (mt)
+		{
+			// This case is testet after removing the enemy pawn and moving our pawn
+			// Checking for discovered check
+		case MT_EN_PASSANT:
+		{
+			assert(target == enpassant_square);
+			assert(moved_piece(m) == get_piece(us, PAWN));
 
-		// 2. Check for moving an absolute pinned piece
+			Square cap_sq = target - pawn_push_direction(us);
 
-		// Move is legal if it is not pinned or is moving towards or away from the king
-		// in the same horiznontal or diagonal 
-		// e.g. pinned bishop, rook or queen
-		if (are_squares_aligned(source, target, square<KING>(us)) || get_king_blockers(us))
-			return false;
+			assert(get_piece_on(cap_sq) == get_piece(~us, PAWN));
+			assert(get_piece_on(target) == NO_PIECE);
 
-		// 3. Check for castling
-		if (mt == MT_CASTLING)
+			BITBOARD occ = get_all_pieces_bb() ^ source ^ cap_sq;
+			BITBOARD opp_queen = get_pieces_bb(QUEEN, ~us);
+
+			BITBOARD r_att =
+				attacks_bb_by<ROOK>(ksq, occ) & (get_pieces_bb(ROOK, ~us) | opp_queen);
+			BITBOARD b_att =
+				attacks_bb_by<BISHOP>(ksq, occ) & (get_pieces_bb(BISHOP, ~us) | opp_queen);
+
+			return !r_att && !b_att;
+		}
+		// Not castling into check
+		// Not checking if the castling path is clear
+		case MT_CASTLING:
 		{
 			target = sq_relative_to_side(target > source ? G1 : C1, us);
 			Direction step = target > source ? RIGHT : LEFT;
-			BITBOARD opp = get_opponent_pieces_bb();
 
-			// Checking each square up to rook square if its not attacked
-			// Works for both sides
-			// This is done to make shure that the king does not castle into check
-			for (Square start = source; start != target; start += step)
-				if (get_attackers_to(start) & opp) return false;
+			for (Square s = target; s != source; s += step)
+				if (get_attackers_to(s) & opp) return false;
+
+			return true;
 		}
-		 
-		// 4. Check for ep captures
-
-		// Though quite rare they aren't impossible
-		// Will be checking if king is attacked after the move is made
-		// this means discovered check after en passant
-		if (mt == MT_EN_PASSANT)
+		default:
 		{
-			Square ksq = square<KING>(us);
-			Square capture_square = target - pawn_push_direction(us);
+			if (moved_piece(m) == KING) // moving the king
+				// Check if the target square is attacked by the enemy
+				return !(get_attackers_to(target, get_all_pieces_bb() ^ source) & opp);
 
-			BITBOARD occ = (get_all_pieces_bb() ^ source ^ capture_square) | target;
+			// Since king exposing to checks is handled
+			// Other cases are:
+			
+			// Capture of checking piece. The captured piece is NOT absoliutely pinned
+			bool are_aligned = are_squares_aligned(source, target, ksq);
+			// Moving along the direction, towards or away from the king
+			bool can_block = get_king_blockers(us) & target;
 
-			assert(target == enpassant_square);
-			assert(moved_piece(m) == get_piece(us, PAWN));
-			assert(get_piece_on(capture_square) == get_piece(~us, PAWN));
-			assert(get_piece_on(target) == NO_PIECE);
-
-			BITBOARD bishops = get_pieces_bb(BISHOP, ~us);
-			BITBOARD rooks = get_pieces_bb(ROOK, ~us);
-			BITBOARD queens = get_pieces_bb(QUEEN, ~us);
-
-			// Dtecting the discovered attacks after the capture is made
-			return !(attacks_bb_by<ROOK>(ksq, occ) & (rooks | queens))
-				&& !(attacks_bb_by<BISHOP>(ksq, occ) & (bishops | queens));
+			return !(are_aligned || can_block);
 		}
+		}
+
+		return false;
 	}
 
 	// Helper for do/undo castling move

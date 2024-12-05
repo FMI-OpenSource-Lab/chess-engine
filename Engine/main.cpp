@@ -28,14 +28,12 @@ int main()
 		Position pos{};
 		InfoListPtr infos = InfoListPtr(new std::deque<MoveInfo>(1));
 
-		// pin position: "7B/2B5/3ppn2/3rk3/3b1q2/2Q2P2/7B/K2R4 w - - 0 1";
+		// pin position: "3r4/bk6/8/r1pPK3/8/8/6B1/8 w - - 0 1";
 
-		pos.set("r3k2r/p2pqpb1/BnP1pnp1/4N3/4P3/5Q1p/PPPpKPPP/R6R w kq - 0 1");
+		pos.set("r3k2r/8/8/2b5/b7/3R4/3BPPP1/4K2R b Kkq - 0 1");
 		std::cout << pos << std::endl;
 
 		MoveInfo mi{};
-
-		// pos.do_move(Move{ D2, E1}, mi);
 	}
 	else
 		//uci_loop();
