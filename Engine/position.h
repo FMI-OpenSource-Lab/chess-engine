@@ -120,6 +120,7 @@ namespace ChessEngine
 		bool is_empty(Square s) const { return get_piece_on(s) == NO_PIECE; }
 		bool gives_check(Move m) const;
 		bool can_castle(CastlingRights cr) const { return castle & cr; }
+		bool is_castling_interrupted(CastlingRights cr) const;
 		bool is_legal(Move m) const;
 
 		// Pieces
@@ -260,6 +261,12 @@ namespace ChessEngine
 	inline void Position::do_move(Move m, MoveInfo& new_info)
 	{
 		do_move(m, new_info, gives_check(m));
+	}
+
+	inline bool Position::is_castling_interrupted(CastlingRights cr) const
+	{
+		assert(cr == WK || cr == WQ || cr == BK || cr == BQ);
+		return get_all_pieces_bb() & castling_path[cr];
 	}
 }
 #endif // !POSITION_H

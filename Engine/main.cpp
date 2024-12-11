@@ -30,10 +30,10 @@ int main()
 
 		// pin position: "3r4/bk6/8/r1pPK3/8/8/6B1/8 w - - 0 1";
 
-		pos.set("r3k2r/8/8/2b5/b7/3R4/3BPPP1/4K2R b Kkq - 0 1");
+		pos.set(TEST_FEN);
 		std::cout << pos << std::endl;
 
-		MoveInfo mi{};
+		std::cout << perft<true>(pos, 1);
 	}
 	else
 		//uci_loop();

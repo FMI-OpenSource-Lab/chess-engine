@@ -34,5 +34,19 @@ namespace ChessEngine
 
 	template<GenerationTypes>
 	ScoredMove* generate_moves(const Position& pos, ScoredMove* move_list);
+
+	template<GenerationTypes T>
+	struct MoveList {
+
+		explicit MoveList(const Position& pos) : last(generate_moves<T>(pos, moveList)) {}
+		const ScoredMove* begin() const { return moveList; }
+		const ScoredMove* end() const { return last; }
+
+		size_t size() const { return last - moveList; }
+		bool contains(Move move) const { return std::find(begin(), end(), move) != end(); }
+
+	private:
+		ScoredMove moveList[MAX_MOVES], * last;
+	};
 }
 #endif // !MOVEGEN_H
