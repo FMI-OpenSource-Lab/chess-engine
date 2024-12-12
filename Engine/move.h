@@ -9,7 +9,6 @@
 #include "defs.h"
 #include "bitboard.h"
 
-
 namespace ChessEngine
 {
 	/*
@@ -41,17 +40,17 @@ namespace ChessEngine
 	enum MoveType
 	{
 		MT_NORMAL,
-		MT_PROMOTION	= 1 << 14,
-		MT_EN_PASSANT	= 2 << 14,
-		MT_CASTLING		= 3 << 14
+		MT_PROMOTION = 1 << 14,
+		MT_EN_PASSANT = 2 << 14,
+		MT_CASTLING = 3 << 14
 	};
 
 	enum PromotionType
 	{
 		PROMOTE_KNIGHT,
-		PROMOTE_BISHOP	= 1 << 12,
-		PROMOTE_ROOK	= 2 << 12,
-		PROMOTE_QUEEN	= 3 << 12,
+		PROMOTE_BISHOP = 1 << 12,
+		PROMOTE_ROOK = 2 << 12,
+		PROMOTE_QUEEN = 3 << 12,
 	};
 
 	class Move
@@ -68,10 +67,10 @@ namespace ChessEngine
 		constexpr Move(Square source, Square target, MoveType mt)
 			: move(mt + (target << 6) + source) {}
 
-		constexpr Move(Square source, Square target, MoveType mt, PromotionType pt) 
+		constexpr Move(Square source, Square target, MoveType mt, PromotionType pt)
 			: move(mt + pt + (target << 6) + source) {}
 
-		constexpr Square source_square() const { return Square(move & 0x3F);}
+		constexpr Square source_square() const { return Square(move & 0x3F); }
 
 		constexpr Square target_square() const { return Square((move >> 6) & 0x3F); }
 
@@ -93,7 +92,13 @@ namespace ChessEngine
 		static constexpr bool same_move(Move a, Move b) { return a.move == b.move; }
 
 		friend std::ostream& operator<<(std::ostream& os, Move const& mv) {
-			return os << squareToCoordinates[mv.source_square()] << squareToCoordinates[mv.target_square()] << std::endl;
+			os << squareToCoordinates[mv.source_square()]
+				<< squareToCoordinates[mv.target_square()];
+
+			if (mv.move_type() == MT_PROMOTION)
+				os << " PNBRQKpnbrqk"[get_piece(BLACK, mv.promoted())]; // BLACK because we want the lowercase letter of the promtoed piece
+
+			return os;
 		}
 
 		// overloads
@@ -101,7 +106,7 @@ namespace ChessEngine
 		constexpr bool operator!=(const Move& m) const { return move != m.move; }
 		constexpr explicit operator bool() const { return move != 0; }
 	protected:
-		std::uint16_t move;
+		std::uint16_t move = 0;
 	};
 
 	const Move NO_MOVE = Move();

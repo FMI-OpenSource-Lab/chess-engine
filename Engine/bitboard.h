@@ -122,12 +122,12 @@ namespace ChessEngine
 			: d == UP ? b >> 8
 			: d == DOWN + DOWN ? b << 16
 			: d == UP + UP ? b >> 16
-			: d == LEFT ? (b & not_H) << 1
-			: d == RIGHT ? (b & not_A) >> 1
-			: d == DOWN_LEFT ? (b & not_H) << 9
-			: d == DOWN_RIGHT ? (b & not_A) << 7
-			: d == UP_LEFT ? (b & not_H) >> 7
-			: d == UP_RIGHT ? (b & not_A) >> 9
+			: d == LEFT ? (b & not_A) >> 1
+			: d == RIGHT ? (b & not_H) << 1
+			: d == DOWN_LEFT ? (b & not_A) << 7
+			: d == DOWN_RIGHT ? (b & not_H) << 9
+			: d == UP_LEFT ? (b & not_A) >> 9
+			: d == UP_RIGHT ? (b & not_H) >> 7
 			: 0;
 	}
 

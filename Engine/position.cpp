@@ -14,8 +14,8 @@ namespace ChessEngine
 
 	constexpr Piece Pieces[]
 	{
-		WHITE_PAWN, WHITE_KNIGHT, WHITE_BISHOP, WHITE_ROOK, WHITE_QUEEN, WHITE_KING,
-		BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN, BLACK_KING
+		NO_PIECE, WHITE_PAWN, WHITE_KNIGHT, WHITE_BISHOP, WHITE_ROOK, WHITE_QUEEN, WHITE_KING,
+		NO_PIECE, BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN, BLACK_KING
 	};
 
 	std::ostream& operator<<(std::ostream& os, const Position& position)
@@ -534,9 +534,6 @@ namespace ChessEngine
 		new_info.fifty_move = rule_fifty;
 		new_info.captured_piece = captured;
 
-		// Print move and position for debuging purposes only
-		std::cout << m << *this;
-
 		// Repetition calculation needs to happen
 		// will do after hashing the moves
 	}
@@ -602,9 +599,6 @@ namespace ChessEngine
 		}
 
 		fullmove_number--;
-
-		// Print move and position for debuging purposes only
-		std::cout << "Undo: " << m << *this;
 	}
 
 	bool Position::is_legal(Move m) const
@@ -667,7 +661,7 @@ namespace ChessEngine
 
 			// Since king exposing to checks is handled
 			// Other cases are:
-			
+
 			// Capture of checking piece. The captured piece is NOT absoliutely pinned
 			bool are_aligned = are_squares_aligned(source, target, ksq);
 			// Moving along the direction, towards or away from the king

@@ -28,25 +28,24 @@ namespace ChessEngine
 
 	struct ScoredMove : public Move
 	{
-		int score = 0;
+		int score;
 		void operator=(Move m) { move = m.move_value(); }
 	};
 
-	template<GenerationTypes>
 	ScoredMove* generate_moves(const Position& pos, ScoredMove* move_list);
 
-	template<GenerationTypes T>
-	struct MoveList {
+	struct MoveList
+	{
+		explicit MoveList(const Position& pos) :
+			last(generate_moves(pos, move_list)) {}
 
-		explicit MoveList(const Position& pos) : last(generate_moves<T>(pos, moveList)) {}
-		const ScoredMove* begin() const { return moveList; }
+		const ScoredMove* begin() const { return move_list; }
 		const ScoredMove* end() const { return last; }
+		size_t size() const { return last - move_list; }
 
-		size_t size() const { return last - moveList; }
-		bool contains(Move move) const { return std::find(begin(), end(), move) != end(); }
-
+		bool contains_move(Move m) const { return std::find(begin(), end(), m) != end(); }
 	private:
-		ScoredMove moveList[MAX_MOVES], * last;
+		ScoredMove move_list[MAX_MOVES], * last;
 	};
 }
 #endif // !MOVEGEN_H

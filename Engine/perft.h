@@ -22,17 +22,41 @@ namespace ChessEngine
 #endif // _WIN64
 	}
 
-	extern std::string move(Move m);
+	inline std::string move(Move m)
+	{
+		if (m == Move::invalid_move())
+			return "(none)";
+
+		if (m == Move::null_move())
+			return "0000";
+
+		Square source = m.source_square();
+		Square target = m.target_square();
+
+		if (m.move_type() == MT_CASTLING)
+			target = make_square(target > source ? FILE_G : FILE_C, rank_of(source));
+
+		std::string move = squareToCoordinates[source];
+		move += squareToCoordinates[target];
+
+		if (m.move_type() == MT_PROMOTION)
+			move += tolower(ascii_pieces[get_piece(BLACK, m.promoted())]);
+
+		return move;
+	}
 
 	template<bool Root>
 	U64 perft(Position& pos, int depth)
 	{
-		MoveInfo inf;
+		MoveInfo inf{};
 
 		U64 count, nodes = 0;
 		const bool leaf = (depth == 2);
 
-		for (const auto& m : MoveList<GT_LEGAL>(pos))
+		ScoredMove move_list[MAX_MOVES], * last;
+		last = generate_moves(pos, move_list);
+
+		for (const auto& m : MoveList(pos))
 		{
 			if (Root && depth <= 1)
 			{
@@ -42,16 +66,16 @@ namespace ChessEngine
 			else
 			{
 				pos.do_move(m, inf);
-				
+
 				count = leaf
-					? MoveList<GT_LEGAL>(pos).size()
+					? MoveList(pos).size()
 					: perft<false>(pos, depth - 1);
 				nodes += count;
 
 				pos.undo_move(m, inf);
 			}
-			if (Root)
-				std::cout << m;
+			if(Root)
+				std::cout << move(m) << ": " << count << std::endl;
 		}
 
 		return nodes;

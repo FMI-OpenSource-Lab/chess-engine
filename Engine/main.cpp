@@ -29,8 +29,8 @@ int main()
 		InfoListPtr infos = InfoListPtr(new std::deque<MoveInfo>(1));
 
 		// pin position: "3r4/bk6/8/r1pPK3/8/8/6B1/8 w - - 0 1";
-
-		pos.set(TEST_FEN);
+		
+		pos.set("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/P1N2Q1p/1PPBBPPP/R3K2R w KQkq - 0 1");
 		std::cout << pos << std::endl;
 
 		std::cout << perft<true>(pos, 1);

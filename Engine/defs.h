@@ -100,9 +100,9 @@ enum Color
 
 enum Direction : int {
 	DOWN = 8,
-	LEFT = 1,
+	RIGHT = 1,
 	UP = -DOWN,
-	RIGHT = -LEFT,
+	LEFT = -RIGHT,
 
 	DOWN_LEFT = DOWN + LEFT,
 	UP_LEFT = UP + LEFT,
