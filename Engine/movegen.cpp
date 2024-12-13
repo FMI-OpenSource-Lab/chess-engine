@@ -30,6 +30,7 @@ namespace ChessEngine
 			constexpr Direction up_right = (Us == WHITE ? UP_RIGHT : DOWN_RIGHT);
 			constexpr Direction up_left = (Us == WHITE ? UP_LEFT : DOWN_LEFT);
 			constexpr BITBOARD promotion_rank = (Us == WHITE ? Rank8_Bits : Rank1_Bits);
+			constexpr BITBOARD dpush_rank = (Us == WHITE ? Rank4_Bits : Rank6_Bits);
 
 			BITBOARD empty = pos.get_all_empty_squares_bb();
 			BITBOARD pawns = pos.get_pieces_bb(PAWN, Us);
@@ -41,19 +42,18 @@ namespace ChessEngine
 			while (pushed_pawns)
 			{
 				target = pop_ls1b(pushed_pawns);
-				source = sq_relative_to_side(target - up, Us);
-
+				source = target - up;
+				
 				if (promotion_rank & target) // in case of promotions
-				{
 					move_list = make_promotions<up, false>(move_list, target);
-				}
 				else
 				{
-					*move_list++ = Move{ source, target }; // single push
+					std::cout << "\npush: " << Move{source, target}; // single push
 
-					if (empty & Square(target + up)) // double push
-						*move_list++ = Move{ source, target + up };
+					if ((Square(target + up) & dpush_rank) & empty) // double push
+						 std::cout << "\ndouble push: " << Move{source, target + up};
 				}
+
 			}
 
 			BITBOARD enemy = pos.get_opponent_pieces_bb();

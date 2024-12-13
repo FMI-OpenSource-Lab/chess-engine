@@ -66,6 +66,8 @@ namespace ChessEngine
 			else
 			{
 				pos.do_move(m, inf);
+				
+				std::cout << pos;
 
 				count = leaf
 					? MoveList(pos).size()
