@@ -30,7 +30,7 @@ namespace ChessEngine
 			constexpr Direction up_right = (Us == WHITE ? UP_RIGHT : DOWN_RIGHT);
 			constexpr Direction up_left = (Us == WHITE ? UP_LEFT : DOWN_LEFT);
 			constexpr BITBOARD promotion_rank = (Us == WHITE ? Rank8_Bits : Rank1_Bits);
-			constexpr BITBOARD dpush_rank = (Us == WHITE ? Rank4_Bits : Rank6_Bits);
+			constexpr BITBOARD dpush_rank = (Us == WHITE ? Rank4_Bits : Rank5_Bits);
 
 			BITBOARD empty = pos.get_all_empty_squares_bb();
 			BITBOARD pawns = pos.get_pieces_bb(PAWN, Us);
@@ -43,15 +43,15 @@ namespace ChessEngine
 			{
 				target = pop_ls1b(pushed_pawns);
 				source = target - up;
-				
+
 				if (promotion_rank & target) // in case of promotions
 					move_list = make_promotions<up, false>(move_list, target);
 				else
 				{
-					std::cout << "\npush: " << Move{source, target}; // single push
+					*move_list++ = Move{ source, target }; // single push
 
 					if ((Square(target + up) & dpush_rank) & empty) // double push
-						 std::cout << "\ndouble push: " << Move{source, target + up};
+						*move_list++ = Move{ source, target + up };
 				}
 
 			}
@@ -121,8 +121,27 @@ namespace ChessEngine
 
 			if (pos.can_castle(Us & ANY))
 				for (CastlingRights cr : {Us& KINGSIDE, Us& QUEENSIDE})
+				{
+					std::cout << "interrupted: "
+						<< pos.is_castling_interrupted(cr) << "\n";
+
+					std::cout << "can castle: "
+						<< pos.can_castle(cr) << "\n";
+
+					print_bitboard(pos.get_all_pieces_bb() & pos.get_castling_path(cr));
+
 					if (!pos.is_castling_interrupted(cr) && pos.can_castle(cr))
-						*move_list++ = Move{ ksq, pos.castling_rook_square(cr), MT_CASTLING };
+						std::cout << Move{ ksq, pos.castling_rook_square(cr), MT_CASTLING };
+				}
+
+			if (pos.can_castle(Us & ANY))
+			{
+				for (CastlingRights cr : {Us& KINGSIDE, Us& QUEENSIDE})
+				{
+					BITBOARD rank_bb = rank_bb(rank_relative_to_side(Us, RANK_1));
+
+				}
+			}
 
 			return move_list;
 		}
@@ -130,15 +149,15 @@ namespace ChessEngine
 		template<Color Us>
 		ScoredMove* generate_all(const Position& pos, ScoredMove* move_list)
 		{
-			move_list = generate_pawn_moves<Us>(pos, move_list);
+			//move_list = generate_pawn_moves<Us>(pos, move_list);
 
 			move_list = generate_castling_moves<Us>(pos, move_list);
 
-			move_list = generate_piece_moves<Us, KNIGHT>(pos, move_list);
+			/*move_list = generate_piece_moves<Us, KNIGHT>(pos, move_list);
 			move_list = generate_piece_moves<Us, BISHOP>(pos, move_list);
 			move_list = generate_piece_moves<Us, ROOK>(pos, move_list);
 			move_list = generate_piece_moves<Us, QUEEN>(pos, move_list);
-			move_list = generate_piece_moves<Us, KING>(pos, move_list);
+			move_list = generate_piece_moves<Us, KING>(pos, move_list);*/
 
 			return move_list;
 		}

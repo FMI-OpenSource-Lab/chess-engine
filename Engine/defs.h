@@ -205,7 +205,6 @@ constexpr PieceType type_of_piece(Piece p) { return PieceType((p % 6)); }
 
 constexpr Color get_piece_color(Piece p)
 {
-	assert(p != NO_PIECE);
 	// if piece is below 7 (white) the number will be betwenn [0:1)
 	// will become 1 or greater if piece is black
 	// due to integer rounding we work with 0 and 1 only

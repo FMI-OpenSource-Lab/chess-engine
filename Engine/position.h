@@ -93,7 +93,7 @@ namespace ChessEngine
 		Square ep_square() const { return enpassant_square; }
 		template<PieceType pt>
 		Square square(Color c) const { return getLS1B(get_pieces_bb(pt, c)); }
-		Square castling_rook_square(CastlingRights cr) const { return rook_source_sq[cr]; }
+		Square castling_rook_square(CastlingRights cr) const;
 
 		// Bitboards
 		inline BITBOARD get_pieces_bb(PieceType pt = ALL_PIECES) const;
@@ -161,6 +161,11 @@ namespace ChessEngine
 
 		template<bool Do>
 		void do_castle(Color us, Square source, Square& target, Square& r_source, Square& r_target);
+
+		uint8_t get_castling_path(CastlingRights cr) const
+		{
+			return castling_path[cr];
+		}
 	private:
 		void set_castling_rights(Color c, Square r_source);
 
@@ -183,8 +188,8 @@ namespace ChessEngine
 
 		uint8_t	 castling_rights_mask[NONE]{};
 
-		Square rook_source_sq[CASTLING_RIGHT_NB]{};
-		Square enpassant_square{};
+		Square	 rook_source_sq[CASTLING_RIGHT_NB]{};
+		Square	 enpassant_square{};
 
 		CastlingRights castle{};
 
@@ -205,10 +210,10 @@ namespace ChessEngine
 		return piece_board[s];
 	}
 
-	inline Piece Position::moved_piece(Move m) const 
-	{ 
+	inline Piece Position::moved_piece(Move m) const
+	{
 		assert(m.is_move_ok());
-		return get_piece_on(m.source_square()); 
+		return get_piece_on(m.source_square());
 	}
 
 	inline BITBOARD Position::get_pieces_bb(PieceType pt) const { return type[pt]; }
@@ -260,13 +265,22 @@ namespace ChessEngine
 
 	inline void Position::do_move(Move m, MoveInfo& new_info)
 	{
-		do_move(m, new_info, gives_check(m));
+		// gives_check() stays at the false, 
+		// but for now it doesn't do anything 
+		// so i will not be evaluating it for now
+		do_move(m, new_info, false);
 	}
 
 	inline bool Position::is_castling_interrupted(CastlingRights cr) const
 	{
 		assert(cr == WK || cr == WQ || cr == BK || cr == BQ);
 		return get_all_pieces_bb() & castling_path[cr];
+	}
+
+	inline Square Position::castling_rook_square(CastlingRights cr) const
+	{
+		assert(cr == WK || cr == WQ || cr == BK || cr == BQ);
+		return rook_source_sq[cr];
 	}
 }
 #endif // !POSITION_H

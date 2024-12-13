@@ -36,13 +36,13 @@ namespace ChessEngine
 		if (m.move_type() == MT_CASTLING)
 			target = make_square(target > source ? FILE_G : FILE_C, rank_of(source));
 
-		std::string move = squareToCoordinates[source];
-		move += squareToCoordinates[target];
+		std::string move_str = squareToCoordinates[source];
+		move_str += squareToCoordinates[target];
 
 		if (m.move_type() == MT_PROMOTION)
-			move += tolower(ascii_pieces[get_piece(BLACK, m.promoted())]);
+			move_str += ascii_pieces[get_piece(BLACK, m.promoted())];
 
-		return move;
+		return move_str;
 	}
 
 	template<bool Root>
@@ -67,8 +67,6 @@ namespace ChessEngine
 			{
 				pos.do_move(m, inf);
 				
-				std::cout << pos;
-
 				count = leaf
 					? MoveList(pos).size()
 					: perft<false>(pos, depth - 1);
@@ -77,7 +75,7 @@ namespace ChessEngine
 				pos.undo_move(m, inf);
 			}
 			if(Root)
-				std::cout << move(m) << ": " << count << std::endl;
+				std::cout << m << ": " << count << std::endl;
 		}
 
 		return nodes;

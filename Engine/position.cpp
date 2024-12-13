@@ -6,6 +6,7 @@
 #include <cstring>
 
 #include "position.h"
+#include "bitboard.h"
 #include "defs.h"
 
 namespace ChessEngine
@@ -773,10 +774,10 @@ namespace ChessEngine
 		castling_rights_mask[r_source] |= cr;
 		rook_source_sq[cr] = r_source;
 
-		Square r_target = sq_relative_to_side(cr & KINGSIDE ? G1 : C1, c);
-		Square k_target = sq_relative_to_side(cr & QUEENSIDE ? F1 : D1, c);
+		Square r_target = sq_relative_to_side(cr & KINGSIDE ? F1 : D1, c);
+		Square k_target = sq_relative_to_side(cr & QUEENSIDE ? G1 : C1, c);
 
-		Square k_and_r = k_source | int(r_source);
+		BITBOARD k_and_r = square_to_BB(k_source) | r_source;
 
 		castling_path[cr] = (
 			in_between_bb(r_source, r_target) |

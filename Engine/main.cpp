@@ -33,7 +33,16 @@ int main()
 		pos.set("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/P1N2Q1p/1PPBBPPP/R3K2R b KQkq - 0 1");
 		std::cout << pos << std::endl;
 
-		std::cout << perft<false>(pos, 1);
+		/*print_bitboard(111);
+		print_bitboard(238);
+
+		std::cout << (pos.is_castling_interrupted(BK) ? "true" : "false") << "\n";
+		std::cout << (pos.is_castling_interrupted(BQ) ? "true" : "false");*/
+
+		ScoredMove ml[MAX_MOVES], * last;
+		last = generate_moves(pos, ml);
+
+		//std::cout << perft<true>(pos, 1);
 	}
 	else
 		//uci_loop();

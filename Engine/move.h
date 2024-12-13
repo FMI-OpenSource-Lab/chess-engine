@@ -56,7 +56,7 @@ namespace ChessEngine
 	class Move
 	{
 	public:
-		Move() = default;
+		inline Move() : move(0) {};
 
 		constexpr explicit Move(std::uint16_t m) :
 			move(m) {}
@@ -81,13 +81,13 @@ namespace ChessEngine
 			return MoveType(move & (0b0011 << 14));
 		}
 
-		constexpr std::uint16_t move_value() { return move; }
-		constexpr bool is_move_ok() const { return invalid_move().move != move && null_move().move != move; }
-
 		// null and none moves
 		// has the same source and target square whilst other moves have different source and destination squares
-		static constexpr Move null_move() { return Move(64); }
+		static constexpr Move null_move() { return Move(65); }
 		static constexpr Move invalid_move() { return Move(0); }
+
+		constexpr std::uint16_t move_value() { return move; }
+		constexpr bool is_move_ok() const { return invalid_move().move != move && null_move().move != move; }
 
 		static constexpr bool same_move(Move a, Move b) { return a.move == b.move; }
 
@@ -106,7 +106,7 @@ namespace ChessEngine
 		constexpr bool operator!=(const Move& m) const { return move != m.move; }
 		constexpr explicit operator bool() const { return move != 0; }
 	protected:
-		std::uint16_t move = 0;
+		std::uint16_t move;
 	};
 
 	const Move NO_MOVE = Move();

@@ -74,7 +74,9 @@ namespace ChessEngine
 	constexpr U64 DarkSquares = 0xAA55AA55AA55AA55ULL;
 
 	constexpr U64 rank_bb(Square s) { return Rank8_Bits << (rank_of(s) << 3); }
+	constexpr U64 rank_bb(Rank r) { return Rank8_Bits << (8 * r); }
 	constexpr U64 file_bb(Square s) { return FileA_Bits << file_of(s); }
+	constexpr U64 file_bb(File f) { return FileA_Bits << f; }
 
 	constexpr U64 board_edges(Square s) { return ((Rank8_Bits | Rank1_Bits & ~rank_bb(s)) | (FileA_Bits | FileH_Bits) & ~file_bb(s)); }
 
