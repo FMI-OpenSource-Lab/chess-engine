@@ -162,10 +162,7 @@ namespace ChessEngine
 		template<bool Do>
 		void do_castle(Color us, Square source, Square& target, Square& r_source, Square& r_target);
 
-		uint8_t get_castling_path(CastlingRights cr) const
-		{
-			return castling_path[cr];
-		}
+		BITBOARD get_castling_path(CastlingRights cr) const { return castling_path[cr]; }
 	private:
 		void set_castling_rights(Color c, Square r_source);
 

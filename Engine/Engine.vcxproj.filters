@@ -36,9 +36,6 @@
     <ClCompile Include="score.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="perft.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="defs.h">

@@ -122,26 +122,9 @@ namespace ChessEngine
 			if (pos.can_castle(Us & ANY))
 				for (CastlingRights cr : {Us& KINGSIDE, Us& QUEENSIDE})
 				{
-					std::cout << "interrupted: "
-						<< pos.is_castling_interrupted(cr) << "\n";
-
-					std::cout << "can castle: "
-						<< pos.can_castle(cr) << "\n";
-
-					print_bitboard(pos.get_all_pieces_bb() & pos.get_castling_path(cr));
-
 					if (!pos.is_castling_interrupted(cr) && pos.can_castle(cr))
-						std::cout << Move{ ksq, pos.castling_rook_square(cr), MT_CASTLING };
+						*move_list++ = Move{ ksq, pos.castling_rook_square(cr), MT_CASTLING };
 				}
-
-			if (pos.can_castle(Us & ANY))
-			{
-				for (CastlingRights cr : {Us& KINGSIDE, Us& QUEENSIDE})
-				{
-					BITBOARD rank_bb = rank_bb(rank_relative_to_side(Us, RANK_1));
-
-				}
-			}
 
 			return move_list;
 		}
@@ -149,15 +132,15 @@ namespace ChessEngine
 		template<Color Us>
 		ScoredMove* generate_all(const Position& pos, ScoredMove* move_list)
 		{
-			//move_list = generate_pawn_moves<Us>(pos, move_list);
+			move_list = generate_pawn_moves<Us>(pos, move_list);
 
 			move_list = generate_castling_moves<Us>(pos, move_list);
 
-			/*move_list = generate_piece_moves<Us, KNIGHT>(pos, move_list);
+			move_list = generate_piece_moves<Us, KNIGHT>(pos, move_list);
 			move_list = generate_piece_moves<Us, BISHOP>(pos, move_list);
 			move_list = generate_piece_moves<Us, ROOK>(pos, move_list);
 			move_list = generate_piece_moves<Us, QUEEN>(pos, move_list);
-			move_list = generate_piece_moves<Us, KING>(pos, move_list);*/
+			move_list = generate_piece_moves<Us, KING>(pos, move_list);
 
 			return move_list;
 		}

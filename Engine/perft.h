@@ -3,6 +3,7 @@
 
 #include <iomanip>
 #include <string>
+#include <fstream>
 
 #include "defs.h"
 #include "position.h"
@@ -22,7 +23,7 @@ namespace ChessEngine
 #endif // _WIN64
 	}
 
-	inline std::string move(Move m)
+	inline std::string uci_move(Move m)
 	{
 		if (m == Move::invalid_move())
 			return "(none)";
@@ -56,6 +57,11 @@ namespace ChessEngine
 		ScoredMove move_list[MAX_MOVES], * last;
 		last = generate_moves(pos, move_list);
 
+		std::ofstream perft_results;
+		perft_results.open("./results.txt");
+
+		U64 start = get_time_ms();
+
 		for (const auto& m : MoveList(pos))
 		{
 			if (Root && depth <= 1)
@@ -66,7 +72,7 @@ namespace ChessEngine
 			else
 			{
 				pos.do_move(m, inf);
-				
+
 				count = leaf
 					? MoveList(pos).size()
 					: perft<false>(pos, depth - 1);
@@ -74,9 +80,16 @@ namespace ChessEngine
 
 				pos.undo_move(m, inf);
 			}
-			if(Root)
-				std::cout << m << ": " << count << std::endl;
+			if (Root)
+			{
+				std::cout << uci_move(m) << ": " << count << std::endl;
+				perft_results << uci_move(m) << ": " << count << std::endl;
+			}
 		}
+		perft_results.close();
+
+		std::cout << "\nDepth: " << depth;
+		std::cout << "\nTime: " << (get_time_ms() - start) << "ms\n";
 
 		return nodes;
 	}

@@ -29,20 +29,13 @@ int main()
 		InfoListPtr infos = InfoListPtr(new std::deque<MoveInfo>(1));
 
 		// pin position: "3r4/bk6/8/r1pPK3/8/8/6B1/8 w - - 0 1";
-		
-		pos.set("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/P1N2Q1p/1PPBBPPP/R3K2R b KQkq - 0 1");
+
+		pos.set("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1 ");
 		std::cout << pos << std::endl;
 
-		/*print_bitboard(111);
-		print_bitboard(238);
+		// a1b1 -> rook problem
 
-		std::cout << (pos.is_castling_interrupted(BK) ? "true" : "false") << "\n";
-		std::cout << (pos.is_castling_interrupted(BQ) ? "true" : "false");*/
-
-		ScoredMove ml[MAX_MOVES], * last;
-		last = generate_moves(pos, ml);
-
-		//std::cout << perft<true>(pos, 1);
+		std::cout << "Nodes: " << perft<true>(pos, 2);
 	}
 	else
 		//uci_loop();

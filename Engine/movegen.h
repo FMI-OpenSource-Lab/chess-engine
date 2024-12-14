@@ -28,7 +28,7 @@ namespace ChessEngine
 
 	struct ScoredMove : public Move
 	{
-		int score;
+		int score = 0;
 		void operator=(Move m) { move = m.move_value(); }
 	};
 

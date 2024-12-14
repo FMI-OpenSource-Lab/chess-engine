@@ -775,7 +775,7 @@ namespace ChessEngine
 		rook_source_sq[cr] = r_source;
 
 		Square r_target = sq_relative_to_side(cr & KINGSIDE ? F1 : D1, c);
-		Square k_target = sq_relative_to_side(cr & QUEENSIDE ? G1 : C1, c);
+		Square k_target = sq_relative_to_side(cr & KINGSIDE ? G1 : C1, c);
 
 		BITBOARD k_and_r = square_to_BB(k_source) | r_source;
 

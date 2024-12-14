@@ -78,7 +78,7 @@ namespace ChessEngine
 	constexpr U64 file_bb(Square s) { return FileA_Bits << file_of(s); }
 	constexpr U64 file_bb(File f) { return FileA_Bits << f; }
 
-	constexpr U64 board_edges(Square s) { return ((Rank8_Bits | Rank1_Bits & ~rank_bb(s)) | (FileA_Bits | FileH_Bits) & ~file_bb(s)); }
+	constexpr U64 board_edges(Square s) { return ((Rank8_Bits | Rank1_Bits) & ~rank_bb(s)) | ((FileA_Bits | FileH_Bits) & ~file_bb(s)); }
 
 	// Not files
 	constexpr U64 not_A = 18374403900871474942ULL;	// ~FileA_Bits bitboard value where the A file is set to zero
