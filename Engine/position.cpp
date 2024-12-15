@@ -222,9 +222,12 @@ namespace ChessEngine
 		// handles also incorrect FEN's with fullmove = 0
 		fullmove_number = std::max(2 * (fullmove_number - 1), 0) + (side == BLACK);
 
+		checkers = get_attackers_to(square<KING>(side)) & get_opponent_pieces_bb();
+
 		move_info->castling_rights = castle;
 		move_info->en_passant = enpassant_square;
 		move_info->fifty_move = rule_fifty;
+		move_info->checkers = checkers;
 
 		calculate_threats();
 
@@ -526,10 +529,13 @@ namespace ChessEngine
 			rule_fifty = 0;
 		}
 
+		checkers = gives_check ? get_attackers_to(square<KING>(them)) & get_our_pieces_bb() : 0ULL;
+
 		side = ~side;
 
 		calculate_threats();
 
+		new_info.checkers = checkers;
 		new_info.en_passant = enpassant_square;
 		new_info.castling_rights = castle;
 		new_info.fifty_move = rule_fifty;
@@ -647,32 +653,26 @@ namespace ChessEngine
 		case MT_CASTLING:
 		{
 			target = sq_relative_to_side(target > source ? G1 : C1, us);
-			Direction step = target > source ? RIGHT : LEFT;
+			Direction step = target > source ? LEFT : RIGHT;
 
 			for (Square s = target; s != source; s += step)
 				if (get_attackers_to(s) & opp) return false;
 
 			return true;
 		}
-		default:
-		{
-			if (moved_piece(m) == KING) // moving the king
-				// Check if the target square is attacked by the enemy
-				return !(get_attackers_to(target, get_all_pieces_bb() ^ source) & opp);
-
-			// Since king exposing to checks is handled
-			// Other cases are:
-
-			// Capture of checking piece. The captured piece is NOT absoliutely pinned
-			bool are_aligned = are_squares_aligned(source, target, ksq);
-			// Moving along the direction, towards or away from the king
-			bool can_block = get_king_blockers(us) & target;
-
-			return !(are_aligned || can_block);
-		}
 		}
 
-		return false;
+		if (moved_piece(m) == KING) // moving the king
+			// Check if the target square is attacked by the enemy
+			return !(get_attackers_to(target, get_all_pieces_bb() ^ source) & opp);
+
+		// Since king exposing to checks is handled
+		// Other cases are:
+
+		// Capture of checking piece. The captured piece is NOT absoliutely pinned
+		// Moving along the direction, towards or away from the king
+		return !(get_king_blockers(us) & source)
+			|| are_squares_aligned(source, target, ksq);
 	}
 
 	// Helper for do/undo castling move

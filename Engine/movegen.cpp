@@ -100,7 +100,7 @@ namespace ChessEngine
 
 			BITBOARD bb = pos.get_pieces_bb(Pt, Us);
 			BITBOARD all = pos.get_all_pieces_bb();
-			BITBOARD not_our = ~pos.get_pieces_bb(Us); // every square except the squares occupied by Us
+			BITBOARD not_our = ~pos.get_our_pieces_bb();
 
 			while (bb)
 			{
@@ -115,32 +115,23 @@ namespace ChessEngine
 		}
 
 		template<Color Us>
-		ScoredMove* generate_castling_moves(const Position& pos, ScoredMove* move_list)
+		ScoredMove* generate_all(const Position& pos, ScoredMove* move_list)
 		{
 			Square ksq = pos.square<KING>(Us);
 
-			if (pos.can_castle(Us & ANY))
-				for (CastlingRights cr : {Us& KINGSIDE, Us& QUEENSIDE})
-				{
-					if (!pos.is_castling_interrupted(cr) && pos.can_castle(cr))
-						*move_list++ = Move{ ksq, pos.castling_rook_square(cr), MT_CASTLING };
-				}
-
-			return move_list;
-		}
-
-		template<Color Us>
-		ScoredMove* generate_all(const Position& pos, ScoredMove* move_list)
-		{
 			move_list = generate_pawn_moves<Us>(pos, move_list);
-
-			move_list = generate_castling_moves<Us>(pos, move_list);
 
 			move_list = generate_piece_moves<Us, KNIGHT>(pos, move_list);
 			move_list = generate_piece_moves<Us, BISHOP>(pos, move_list);
 			move_list = generate_piece_moves<Us, ROOK>(pos, move_list);
 			move_list = generate_piece_moves<Us, QUEEN>(pos, move_list);
 			move_list = generate_piece_moves<Us, KING>(pos, move_list);
+
+			// Generate castle
+			if (pos.can_castle(Us & ANY))
+				for (CastlingRights cr : {Us& KINGSIDE, Us& QUEENSIDE})
+					if (!pos.is_castling_interrupted(cr) && pos.can_castle(cr))
+						*move_list++ = Move{ ksq, pos.castling_rook_square(cr), MT_CASTLING };
 
 			return move_list;
 		}

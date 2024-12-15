@@ -16,7 +16,7 @@ namespace ChessEngine
 		GT_CAPTURE,
 		GT_QUIET,
 		GT_EVASION,
-		GT_NON_EVATION,
+		GT_NON_EVASION,
 		GT_LEGAL
 	};
 
@@ -36,8 +36,10 @@ namespace ChessEngine
 
 	struct MoveList
 	{
-		explicit MoveList(const Position& pos) :
-			last(generate_moves(pos, move_list)) {}
+		explicit MoveList(const Position& pos) : last(0) 
+		{
+			last = generate_moves(pos, move_list);
+		}
 
 		const ScoredMove* begin() const { return move_list; }
 		const ScoredMove* end() const { return last; }

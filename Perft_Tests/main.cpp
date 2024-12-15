@@ -2,71 +2,48 @@
 #include <fstream>
 #include <string>
 #include <algorithm>
-#include <vector>
-#include <map>
-#include <unordered_map>
+#include <vector>>
 #include <iomanip>
+
+#include "../Engine/defs.h"
 
 int main()
 {
 	std::string results_str{};
 
-	std::ifstream results("../results.txt");
+	std::ifstream ml_results("../results.txt");
 	std::ifstream sf_results("../sf_results.txt");
 
-	std::map <std::string, int> sf{};
-	std::map<std::string, int> ml{};
+	std::vector<std::string> sf{};
+	std::vector<std::string> ml{};
 
-	std::string delimiter = ": ";
-	while (std::getline(results, results_str))
-	{
-		std::string key = results_str.substr(0, results_str.find(delimiter));
-		std::string value = results_str.substr(results_str.find(delimiter) + 2, results_str.length());
+	ml.reserve(MAX_MOVES);
+	while (std::getline(ml_results, results_str))
+		ml.emplace_back(results_str);
 
-		ml.insert({ key, std::stoi(value) });
-	}
+	ml_results.close();
 
-	results.close();
-
+	sf.reserve(MAX_MOVES);
 	while (std::getline(sf_results, results_str))
-	{
-		std::string key = results_str.substr(0, results_str.find(delimiter));
-		int value = std::stoi(results_str.substr(results_str.find(delimiter) + 2, results_str.length()));
-
-		sf.insert({ key, value });
-	}
+		sf.emplace_back(results_str);
 
 	sf_results.close();
 
-	std::cout << "Move  Correct  Wrong" << '\n';
-	std::cout << "---------------------\n";
+	std::sort(ml.begin(), ml.end());
+	std::sort(sf.begin(), sf.end());
 
-	// Process map1 (Your moves)
-	for (const auto& pair : ml) {
-		auto it = sf.find(pair.first);
-		if (it == sf.end()) {
-			// Move exists only in map1 (no correct Stockfish equivalent)
-			std::cout << std::left << std::setw(8) << pair.first
-				<< std::setw(8) << pair.second
-				<< std::setw(8) << "-" << '\n';
-		}
-		else if (pair.second != it->second) {
-			// Move exists in both maps but values differ
-			std::cout << std::left << std::setw(8) << pair.first
-				<< std::setw(8) << pair.second
-				<< std::setw(8) << it->second << '\n';
-		}
-	}
+	auto& bigger = ml.size() > sf.size() ? ml : sf;
+	auto& smaller = ml.size() > sf.size() ? sf : ml;
 
-	// Process map2 for moves only in Stockfish's map
-	for (const auto& pair : sf) {
-		auto it = ml.find(pair.first);
-		if (it == ml.end()) {
-			// Move exists only in map2 (correct move not present in your moves)
-			std::cout << std::left << std::setw(8) << pair.first
-				<< std::setw(8) << "-"
-				<< std::setw(8) << pair.second << '\n';
+	for (int i = 0; i < bigger.size(); i++)
+	{
+		if (i < smaller.size())
+		{
+			if (bigger[i] != smaller[i])
+				std::cout << bigger[i] << " | " << smaller[i] << std::endl;
 		}
+		else
+			std::cout << bigger[i] << " | " << "----" << std::endl;
 	}
 
 	return 0;

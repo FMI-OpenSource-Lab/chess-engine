@@ -66,6 +66,7 @@ namespace ChessEngine
 		Square			en_passant = NONE;
 		PLY_TYPE		fifty_move = 0; // halfmove clock
 		Piece			captured_piece = NO_PIECE;
+		BITBOARD		checkers = 0ULL;
 	};
 
 	// List to keep track of position states along the setup
@@ -115,6 +116,7 @@ namespace ChessEngine
 		inline BITBOARD	get_threats() const { return threats; }
 		inline BITBOARD	get_king_blockers(Color c) const { return blocking_pieces[c]; }
 		inline BITBOARD	get_pinners(Color c) const { return pinning_pieces[c]; }
+		inline BITBOARD get_checkers() const { return checkers; }
 
 		// Booleans
 		bool is_empty(Square s) const { return get_piece_on(s) == NO_PIECE; }
@@ -179,6 +181,7 @@ namespace ChessEngine
 		BITBOARD threats{};
 		BITBOARD pinning_pieces[BOTH]{};
 		BITBOARD blocking_pieces[BOTH]{};
+		BITBOARD checkers;
 
 		Piece	 piece_board[SQUARE_TOTAL]{};
 		Piece	 captured{};
@@ -260,18 +263,15 @@ namespace ChessEngine
 		piece_board[target] = s_p;
 	}
 
-	inline void Position::do_move(Move m, MoveInfo& new_info)
-	{
-		// gives_check() stays at the false, 
-		// but for now it doesn't do anything 
-		// so i will not be evaluating it for now
-		do_move(m, new_info, false);
-	}
-
 	inline bool Position::is_castling_interrupted(CastlingRights cr) const
 	{
 		assert(cr == WK || cr == WQ || cr == BK || cr == BQ);
 		return get_all_pieces_bb() & castling_path[cr];
+	}
+
+	inline void Position::do_move(Move m, MoveInfo& new_info)
+	{
+		do_move(m, new_info, gives_check(m));
 	}
 
 	inline Square Position::castling_rook_square(CastlingRights cr) const
