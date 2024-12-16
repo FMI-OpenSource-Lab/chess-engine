@@ -626,7 +626,7 @@ namespace ChessEngine
 
 		switch (mt)
 		{
-			// This case is testet after removing the enemy pawn and moving our pawn
+			// This case is tested after removing the enemy pawn and moving our pawn
 			// Checking for discovered check
 		case MT_EN_PASSANT:
 		{

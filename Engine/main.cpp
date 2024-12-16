@@ -30,13 +30,10 @@ int main()
 
 		// pin position: "3r4/bk6/8/r1pPK3/8/8/6B1/8 w - - 0 1";
 
-		pos.set("r3k2r/p1ppqpb1/bn2pnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq - 1 1");
+		pos.set("r3k2r/p1ppqpb1/bnN1pnp1/3P4/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 1 1");
 		std::cout << pos << std::endl;
 
-		// a1b1 -> rook problem
-
-		//std::cout << "Nodes: " << perft<true>(pos, 1);
-		perft_test(pos, 1);
+		std::cout << "Nodes: " << perft<true>(pos, 1);
 	}
 	else
 		//uci_loop();

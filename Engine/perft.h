@@ -59,7 +59,7 @@ namespace ChessEngine
 
 		U64 start = get_time_ms();
 
-		for (const auto& m : MoveList(pos))
+		for (const auto& m : MoveList<GT_LEGAL>(pos))
 		{
 			if (Root && depth <= 1)
 			{
@@ -70,13 +70,12 @@ namespace ChessEngine
 			{
 				pos.do_move(m, inf);
 
-				if (!pos.is_legal(m))
-					continue;
-
 				count = leaf
-					? MoveList(pos).size()
+					? MoveList<GT_LEGAL>(pos).size()
 					: perft<false>(pos, depth - 1);
 				nodes += count;
+
+				// std::cout << pos << "\n";
 
 				pos.undo_move(m, inf);
 			}
@@ -92,65 +91,6 @@ namespace ChessEngine
 		std::cout << "\nTime: " << (get_time_ms() - start) << "ms\n";
 
 		return nodes;
-	}
-
-	inline void perft_driver(Position& pos, int depth, long& nodes)
-	{
-		MoveInfo mi{};
-
-		if (depth == 0)
-		{
-			nodes++;
-			return;
-		}
-
-		for (const auto& move : MoveList(pos))
-		{
-			pos.do_move(move, mi);
-
-			if (!pos.is_legal(move))
-			{
-				pos.undo_move(move, mi);
-				continue;
-			}
-
-			perft_driver(pos, depth - 1, nodes);
-
-			pos.undo_move(move, mi);
-		}
-	}
-
-	inline void perft_test(Position& pos, int depth)
-	{
-		MoveInfo mi{};
-
-		long nodes = 0;
-
-		long start = get_time_ms();
-		for (const auto& move : MoveList(pos))
-		{
-			pos.do_move(move, mi);
-
-			if (!pos.is_legal(move))
-			{
-				pos.undo_move(move, mi);
-				continue;
-			}
-
-			long c_nodes = nodes;
-
-			perft_driver(pos, depth - 1, nodes);
-
-			long old_nodes = nodes - c_nodes;
-
-			pos.undo_move(move, mi);
-
-			std::cout << uci_move(move) << ": " << old_nodes << std::endl;
-		}
-
-		std::cout << "\nNodes: " << nodes;
-		std::cout << "\nDepth: " << depth;
-		std::cout << "\nTime: " << (get_time_ms() - start) << "ms\n";
 	}
 }
 #endif // !PERFT_H

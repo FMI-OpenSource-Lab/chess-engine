@@ -13,11 +13,11 @@ namespace ChessEngine
 
 	enum GenerationTypes
 	{
-		GT_CAPTURE,
-		GT_QUIET,
-		GT_EVASION,
-		GT_NON_EVASION,
-		GT_LEGAL
+		GT_CAPTURE,		// Capturing a piece
+		GT_QUIET,		// No captures nor promotions
+		GT_EVASION,		// Evade (escape or block) a check
+		GT_NOISY,		// Combination of capture and evasion
+		GT_LEGAL		// Only legal moves
 	};
 
 	// TODO:
@@ -32,14 +32,13 @@ namespace ChessEngine
 		void operator=(Move m) { move = m.move_value(); }
 	};
 
+	template<GenerationTypes>
 	ScoredMove* generate_moves(const Position& pos, ScoredMove* move_list);
 
+	template<GenerationTypes T>
 	struct MoveList
 	{
-		explicit MoveList(const Position& pos) : last(0) 
-		{
-			last = generate_moves(pos, move_list);
-		}
+		explicit MoveList(const Position& pos) : last(generate_moves<T>(pos, move_list)) {}
 
 		const ScoredMove* begin() const { return move_list; }
 		const ScoredMove* end() const { return last; }
