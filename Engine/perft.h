@@ -75,8 +75,6 @@ namespace ChessEngine
 					: perft<false>(pos, depth - 1);
 				nodes += count;
 
-				// std::cout << pos << "\n";
-
 				pos.undo_move(m, inf);
 			}
 			if (Root)

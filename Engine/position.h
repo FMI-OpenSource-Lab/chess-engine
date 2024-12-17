@@ -98,7 +98,6 @@ namespace ChessEngine
 
 		// Bitboards
 		inline BITBOARD get_pieces_bb(PieceType pt = ALL_PIECES) const;
-		inline BITBOARD get_pieces_bb(Piece p) const { return bitboards[p]; }
 		inline BITBOARD get_pieces_bb(PieceType pt, Color c) const { return bitboards[get_piece(c, pt)]; }
 		inline BITBOARD get_pieces_bb(Color c) const { return occupancies[c]; }
 
@@ -242,6 +241,7 @@ namespace ChessEngine
 	{
 		Piece p = piece_board[s];
 
+		rm_bit(bitboards[p], s);
 		rm_bit(type[ALL_PIECES], s);
 		rm_bit(type[type_of_piece(p)], s);
 		rm_bit(occupancies[get_piece_color(p)], s);
@@ -252,15 +252,16 @@ namespace ChessEngine
 
 	inline void Position::move_piece(Square source, Square target)
 	{
-		Piece s_p = piece_board[source];
+		Piece p = piece_board[source];
 		BITBOARD dest = square_to_BB(source) | square_to_BB(target);
 
 		type[ALL_PIECES] ^= dest;
-		type[type_of_piece(s_p)] ^= dest;
-		occupancies[get_piece_color(s_p)] ^= dest;
+		type[type_of_piece(p)] ^= dest;
+		occupancies[get_piece_color(p)] ^= dest;
+		bitboards[p] ^= dest;
 
 		piece_board[source] = NO_PIECE;
-		piece_board[target] = s_p;
+		piece_board[target] = p;
 	}
 
 	inline bool Position::is_castling_interrupted(CastlingRights cr) const

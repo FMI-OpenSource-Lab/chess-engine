@@ -35,11 +35,12 @@ namespace ChessEngine
 			BITBOARD pawns = pos.get_pieces_bb(PAWN, Us);
 
 			BITBOARD empty = pos.get_all_empty_squares_bb();
-			BITBOARD enemies = Type == GT_EVASION ? pos.get_checkers() : pos.get_opponent_pieces_bb();;
+			BITBOARD enemies = Type == GT_EVASION 
+				? pos.get_checkers() : pos.get_opponent_pieces_bb();
 			
 			BITBOARD on7th = pawns & promotion_rank;
 
-			if (Type != GT_CAPTURE) // Quiet or Evation
+			if (Type != GT_CAPTURE) // Quietm Evasion or Noisy
 			{
 				BITBOARD pushed_pawns = move_to<up>(pawns & ~promotion_rank) & empty;
 				BITBOARD d_pushed_pawns = move_to<up>(pushed_pawns & third_rank) & empty;
@@ -109,8 +110,6 @@ namespace ChessEngine
 					BITBOARD ep_pawns = 
 						(pawns & ~promotion_rank) & pawn_attacks_bb(them, ep_square);
 
-					print_bitboard(ep_pawns);
-
 					assert(ep_pawns);
 
 					while (ep_pawns)
@@ -158,7 +157,7 @@ namespace ChessEngine
 					occ = in_between_bb(ksq, getLS1B(checkers_to_our_king));
 					break;
 				case GT_QUIET: // All the empty squares, since quiets are pawn moves
-					occ = ~pos.get_all_pieces_bb();
+					occ = pos.get_all_empty_squares_bb();
 					break;
 				case GT_CAPTURE: // If move is capture then we are interested in opp's pieces
 					occ = pos.get_opponent_pieces_bb();
@@ -185,7 +184,7 @@ namespace ChessEngine
 				*move_list++ = Move{ ksq, pop_ls1b(king) };
 
 			// Generate castle
-			if (pos.can_castle(Us & ANY))
+			if ((Type == GT_QUIET || Type == GT_NOISY) && pos.can_castle(Us & ANY))
 				for (CastlingRights cr : {Us& KINGSIDE, Us& QUEENSIDE})
 					if (!pos.is_castling_interrupted(cr) && pos.can_castle(cr))
 						*move_list++ = Move{ ksq, pos.castling_rook_square(cr), MT_CASTLING };
@@ -229,12 +228,15 @@ namespace ChessEngine
 
 		while (cur != move_list)
 		{
+			if (cur->move_value() == 3112)
+				std::cout << "\nA2A3\n";
+
 			// if there exists a source square to a move it means that we are moving a 
 			// our king blocker
 			bool is_pinned_piece_moved = pinned & cur->source_square();
 			bool is_king_moving = cur->source_square() == ksq;
 			bool is_en_passant = cur->move_type() == MT_EN_PASSANT;
-
+			
 			if ((is_pinned_piece_moved || is_king_moving || is_en_passant) && !pos.is_legal(*cur))
 				*cur = *(--move_list); // assign previous move
 			else

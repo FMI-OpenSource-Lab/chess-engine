@@ -445,14 +445,12 @@ namespace ChessEngine
 
 		Piece on_source = get_piece_on(source);
 		Piece on_target = get_piece_on(target);
-		Piece captured =
-			m_type == MT_EN_PASSANT
+		Piece captured = m_type == MT_EN_PASSANT
 			? get_piece(them, PAWN) // captured piece is opponents pawn
 			: on_target; // can be NO_PIECE or every other piece (without KING)
 
 		assert(get_piece_color(on_source) == us); // moving our piece instead of enemy piece
-		assert(captured == NO_PIECE ||
-			get_piece_color(captured) == (m_type != MT_CASTLING ? them : us));
+		assert(captured == NO_PIECE || get_piece_color(captured) == (m_type != MT_CASTLING ? them : us));
 		assert(type_of_piece(captured) != KING); // make sure king is not captured
 
 		// Castling
@@ -662,7 +660,7 @@ namespace ChessEngine
 		}
 		}
 
-		if (moved_piece(m) == KING) // moving the king
+		if (type_of_piece(get_piece_on(source)) == KING) // moving the king
 			// Check if the target square is attacked by the enemy
 			return !(get_attackers_to(target, get_all_pieces_bb() ^ source) & opp);
 
