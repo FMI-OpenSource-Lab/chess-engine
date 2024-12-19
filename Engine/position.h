@@ -62,11 +62,14 @@ namespace ChessEngine
 	struct MoveInfo
 	{
 		// Copied when making a move
-		CastlingRights	castling_rights = CASTLE_NB;
-		Square			en_passant = NONE;
-		PLY_TYPE		fifty_move = 0; // halfmove clock
-		Piece			captured_piece = NO_PIECE;
-		BITBOARD		checkers = 0ULL;
+		CastlingRights	castling_rights;
+		Square			en_passant;
+		PLY_TYPE		fifty_move; // halfmove clock
+		Piece			captured_piece;
+
+		// Not copied
+		MoveInfo* next;
+		MoveInfo* prev;
 	};
 
 	// List to keep track of position states along the setup
@@ -87,18 +90,18 @@ namespace ChessEngine
 		Position& operator=(const Position&) = delete;
 
 		// FEN i/o
-		Position& set(const char* fen);
+		Position& set(const char* fen, MoveInfo* mi);
 		std::string get_fen() const;
 
 		// Squares
-		Square ep_square() const { return enpassant_square; }
+		Square ep_square() const { return move_info->en_passant; }
 		template<PieceType pt>
 		Square square(Color c) const { return getLS1B(get_pieces_bb(pt, c)); }
 		Square castling_rook_square(CastlingRights cr) const;
 
 		// Bitboards
-		inline BITBOARD get_pieces_bb(PieceType pt = ALL_PIECES) const;
-		inline BITBOARD get_pieces_bb(PieceType pt, Color c) const { return bitboards[get_piece(c, pt)]; }
+		inline BITBOARD get_pieces_bb(PieceType pt) const;
+		inline BITBOARD get_pieces_bb(PieceType pt, Color c) const { return (type[pt] & occupancies[c]); }
 		inline BITBOARD get_pieces_bb(Color c) const { return occupancies[c]; }
 
 		inline BITBOARD get_our_pieces_bb() const { return occupancies[side]; }
@@ -120,7 +123,7 @@ namespace ChessEngine
 		// Booleans
 		bool is_empty(Square s) const { return get_piece_on(s) == NO_PIECE; }
 		bool gives_check(Move m) const;
-		bool can_castle(CastlingRights cr) const { return castle & cr; }
+		bool can_castle(CastlingRights cr) const { return move_info->castling_rights & cr; }
 		bool is_castling_interrupted(CastlingRights cr) const;
 		bool is_legal(Move m) const;
 
@@ -131,7 +134,7 @@ namespace ChessEngine
 
 		// PLY
 		PLY_TYPE game_ply() const { return fullmove_number; };
-		PLY_TYPE rule_fifty_count() const { return rule_fifty; };
+		PLY_TYPE fifty_move_count() const { return move_info->fifty_move; };
 
 		// Value
 		Value see(Move m) const;
@@ -139,21 +142,18 @@ namespace ChessEngine
 		// Doing and undoing moves
 		void do_move(Move m, MoveInfo& new_info);
 		void do_move(Move m, MoveInfo& new_info, bool gives_check);
-		void undo_move(Move m, MoveInfo& new_info);
+		void undo_move(Move m);
 
 		void update_blocks_and_pins(Color c);
 		void remove_piece(Square s);
 		void place_piece(Piece p, Square s);
 		void calculate_threats();
 
-		void clear_mi_stack(); // clear the move info stack
-		void set_mi_stack(MoveInfo& mi); // set the move info stack
-
 		// Caslte & side
 		CastlingRights castling_rights(Color c) const {
-			return c & CastlingRights(castle);
+			return c & CastlingRights(move_info->castling_rights);
 		}
-		CastlingRights get_castling_rights() const { return castle; }
+		CastlingRights get_castling_rights() const { return move_info->castling_rights; }
 
 		Color side_to_move() const { return side; }
 
@@ -168,12 +168,10 @@ namespace ChessEngine
 		void set_castling_rights(Color c, Square r_source);
 
 		void move_piece(Square source, Square target);
-		void restore_prev_info(MoveInfo& mi);
-
+		
 		BITBOARD get_least_valuable_piece(BITBOARD attacks, Color by_side, PieceType& pt) const;
 
 		// Data
-		BITBOARD bitboards[PIECE_NB]{};
 		BITBOARD occupancies[BOTH + 1]{};
 		BITBOARD type[PIECE_TYPE_NB]{};
 		BITBOARD castling_path[CASTLING_RIGHT_NB]{};
@@ -188,19 +186,14 @@ namespace ChessEngine
 		uint8_t	 castling_rights_mask[NONE]{};
 
 		Square	 rook_source_sq[CASTLING_RIGHT_NB]{};
-		Square	 enpassant_square{};
-
-		CastlingRights castle{};
-
+		
 		Color	 side{};
 
 		PLY_TYPE fullmove_number{};
-		PLY_TYPE rule_fifty{};
 		PLY_TYPE repetition{};
 
 		// State info 
-		//std::array<MoveInfo, TOTAL_MAX_DEPTH> move_info;
-		MoveInfo move_info[TOTAL_MAX_DEPTH];
+		MoveInfo* move_info;
 	};
 
 	inline Piece Position::get_piece_on(Square s) const
@@ -228,21 +221,16 @@ namespace ChessEngine
 	{
 		piece_board[s] = p;
 
-		set_bit(bitboards[p], s);
+		set_bit(type[type_of_piece(p)], s);
 		set_bit(occupancies[get_piece_color(p)], s);
 
 		occupancies[BOTH] |= occupancies[WHITE] | occupancies[BLACK];
-		type[ALL_PIECES] |= type[type_of_piece(p)] |= s;
-
-		set_bit(occupancies[get_piece_color(p)], s);
 	}
 
 	inline void Position::remove_piece(Square s)
 	{
 		Piece p = piece_board[s];
 
-		rm_bit(bitboards[p], s);
-		rm_bit(type[ALL_PIECES], s);
 		rm_bit(type[type_of_piece(p)], s);
 		rm_bit(occupancies[get_piece_color(p)], s);
 		rm_bit(occupancies[BOTH], s);
@@ -255,10 +243,12 @@ namespace ChessEngine
 		Piece p = piece_board[source];
 		BITBOARD dest = square_to_BB(source) | square_to_BB(target);
 
-		type[ALL_PIECES] ^= dest;
+		// remove source and target
 		type[type_of_piece(p)] ^= dest;
+		// remove occupanices of this colour
 		occupancies[get_piece_color(p)] ^= dest;
-		bitboards[p] ^= dest;
+		// remove the source and add the target 
+		occupancies[BOTH] ^= dest;
 
 		piece_board[source] = NO_PIECE;
 		piece_board[target] = p;

@@ -20,33 +20,27 @@ namespace ChessEngine
 		GT_LEGAL		// Only legal moves
 	};
 
-	// TODO:
-	// When generating pawn moves an alternative approach will be to generate the
-	// promotions on different function, then everything else
-	// as well as adding more classifications for the moves such as
-	// CAPTURE, QSEARCH, QUIETS and etc.
-
-	struct ScoredMove : public Move
+	struct Moves : public Move
 	{
-		int score = 0;
+		Move moves[MAX_MOVES];
+		int count = 0;
 		void operator=(Move m) { move = m.move_value(); }
 	};
 
-	template<GenerationTypes>
-	ScoredMove* generate_moves(const Position& pos, ScoredMove* move_list);
+	Moves* generate_moves(const Position& pos, Moves* move_list);
 
-	template<GenerationTypes T>
 	struct MoveList
 	{
-		explicit MoveList(const Position& pos) : last(generate_moves<T>(pos, move_list)) {}
+		explicit MoveList(Position& pos) : last(generate_moves(pos, moves_list)) {}
 
-		const ScoredMove* begin() const { return move_list; }
-		const ScoredMove* end() const { return last; }
-		size_t size() const { return last - move_list; }
+		const Moves* begin() const { return moves_list; }
+		const Moves* end() const { return last; }
+		const size_t size() const { return moves_list->count; }
 
-		bool contains_move(Move m) const { return std::find(begin(), end(), m) != end(); }
+		bool contains(Move m) const { return std::find(begin(), end(), m) != end(); }
+
 	private:
-		ScoredMove move_list[MAX_MOVES], * last;
+		Moves moves_list[1], * last;
 	};
 }
 #endif // !MOVEGEN_H

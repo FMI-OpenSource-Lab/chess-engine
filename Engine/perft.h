@@ -49,18 +49,17 @@ namespace ChessEngine
 	template<bool Root>
 	U64 perft(Position& pos, int depth)
 	{
-		MoveInfo inf{};
+		MoveInfo move_info{};
 
 		U64 count, nodes = 0;
 		const bool leaf = (depth == 2);
 
-		std::ofstream perft_results;
-		perft_results.open("../results.txt");
+		//std::ofstream perft_results;
+		//perft_results.open("../results.txt");
 
-		U64 start = get_time_ms();
-
-		for (const auto& m : MoveList<GT_LEGAL>(pos))
+		for (const auto& m : MoveList(pos))
 		{
+
 			if (Root && depth <= 1)
 			{
 				count = 1;
@@ -68,27 +67,53 @@ namespace ChessEngine
 			}
 			else
 			{
-				pos.do_move(m, inf);
+				pos.do_move(m, move_info);
 
 				count = leaf
-					? MoveList<GT_LEGAL>(pos).size()
+					? MoveList(pos).size()
 					: perft<false>(pos, depth - 1);
 				nodes += count;
 
-				pos.undo_move(m, inf);
+				pos.undo_move(m);
 			}
 			if (Root)
 			{
-				std::cout << uci_move(m) << ": " << count << std::endl;
-				perft_results << uci_move(m) << ": " << count << std::endl;
+				//std::cout << uci_move(m) << ": " << count << std::endl;
+
+				//perft_results << uci_move(m) << ": " << count << std::endl;
 			}
 		}
-		perft_results.close();
-
-		std::cout << "\nDepth: " << depth;
-		std::cout << "\nTime: " << (get_time_ms() - start) << "ms\n";
 
 		return nodes;
+	}
+
+	inline void perft_debug(Position& pos, int depth)
+	{
+		U64 start = get_time_ms();
+
+		std::cout << "\nNodes: " << perft<true>(pos, depth);
+		std::cout << "\nDepth: " << depth;
+		std::cout << "\nTime: " << (get_time_ms() - start) << "ms\n";
+	}
+
+	inline void perft_test_table(Position& pos)
+	{
+		int depth;
+		std::cout << "Depth: ";
+		std::cin >> depth;
+
+		std::cout << "\n\nDepth";
+		std::cout << std::setw(20) << "Nodes";
+		std::cout << std::setw(10) << "Time\n";
+		std::cout << "--------------------------------------\n";
+
+		for (int i = 1; i <= depth; i++)
+		{
+			U64 start_time = get_time_ms();
+
+			std::cout << i << " " << perft<false>(pos, i);
+			std::cout << " | " << get_time_ms() - start_time << " ms\n";
+		}
 	}
 }
 #endif // !PERFT_H

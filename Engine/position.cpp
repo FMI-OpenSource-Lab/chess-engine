@@ -4,6 +4,7 @@
 #include <sstream>
 #include <memory>
 #include <cstring>
+#include <stddef.h>
 
 #include "position.h"
 #include "bitboard.h"
@@ -68,26 +69,7 @@ namespace ChessEngine
 		return os;
 	}
 
-	void Position::clear_mi_stack()
-	{
-		for (auto& mi : move_info)
-		{
-			mi.castling_rights = CASTLE_NB;
-			mi.en_passant = NONE;
-			mi.captured_piece = NO_PIECE;
-			mi.fifty_move = 0;
-		}
-	}
-
-	void Position::set_mi_stack(MoveInfo& mi)
-	{
-		mi.en_passant = enpassant_square;
-		mi.castling_rights = castle;
-		mi.fifty_move = rule_fifty;
-		mi.captured_piece = captured;
-	}
-
-	Position& Position::set(const char* fen)
+	Position& Position::set(const char* fen, MoveInfo* mi)
 	{
 		/*
 		FEN describes a Chess position, It is one line ASCII string.
@@ -130,12 +112,13 @@ namespace ChessEngine
 
 		// reset boards and state variables
 		memset(this, 0, sizeof(Position));
-		memset(move_info, 0, sizeof(MoveInfo));
+		memset(mi, 0, sizeof(MoveInfo));
+		move_info = mi;
+
 		// std::fill_n(piece_board, SQUARE_TOTAL, NO_PIECE);
 
 		side = WHITE;
-		enpassant_square = NONE;
-		castle = CASTLE_NB;
+		CastlingRights *castle = &move_info->castling_rights;
 
 		size_t idx;
 
@@ -180,19 +163,20 @@ namespace ChessEngine
 			Square r_sq = NONE;
 			Color c = islower(*fen_ptr) ? BLACK : WHITE;
 			Piece rook = get_piece(c, ROOK);
+			CastlingRights cr = *castle;
 
 			switch (*fen_ptr++)
 			{
-			case 'K': castle = castle | WK;
+			case 'K': *castle = cr | WK;
 				for (r_sq = H1; get_piece_on(r_sq) != rook; --r_sq);
 				break; // break from switch
-			case 'Q': castle = castle | WQ;
+			case 'Q': *castle = cr | WQ;
 				for (r_sq = A1; get_piece_on(r_sq) != rook; ++r_sq);
 				break;// break from switch
-			case 'k': castle = castle | BK;
+			case 'k': *castle = cr | BK;
 				for (r_sq = H8; get_piece_on(r_sq) != rook; --r_sq);
 				break; // break from switch
-			case 'q': castle = castle | BQ;
+			case 'q': *castle = cr | BQ;
 				for (r_sq = A8; get_piece_on(r_sq) != rook; --r_sq);
 				break; // break from switch
 			case '-':
@@ -206,28 +190,22 @@ namespace ChessEngine
 		if (*++fen_ptr != '-')
 		{
 			// init enpassant suqare
-			enpassant_square =
-				make_square(
+			move_info->en_passant = make_square(
 					File(fen_ptr[0] - 'a'),
 					Rank(8 - (fen_ptr[1] - '0')));
 		}
 		else
-			enpassant_square = NONE;
+			move_info->en_passant = NONE;
 
 		std::istringstream ss(fen_ptr);
 		// Halfmove clock and fullmove number
-		ss >> std::skipws >> rule_fifty >> fullmove_number;
+		ss >> std::skipws >> move_info->fifty_move >> fullmove_number;
 
 		// Convert from fullmove starting from one to gamePly starting from 0
 		// handles also incorrect FEN's with fullmove = 0
 		fullmove_number = std::max(2 * (fullmove_number - 1), 0) + (side == BLACK);
 
 		checkers = get_attackers_to(square<KING>(side)) & get_opponent_pieces_bb();
-
-		move_info->castling_rights = castle;
-		move_info->en_passant = enpassant_square;
-		move_info->fifty_move = rule_fifty;
-		move_info->checkers = checkers;
 
 		calculate_threats();
 
@@ -271,13 +249,11 @@ namespace ChessEngine
 
 		if (!can_castle(ANY)) ss << '-';
 
-		// En passant square
-
-		ss << " " << (ep_square() == NONE
+		ss << " " << (ep_square() == NONE // En passant square
 			? "- "
 			: squareToCoordinates[ep_square()])
-			<< " " << rule_fifty << " "
-			<< 1 + (fullmove_number - (side == BLACK)) / 2;
+			<< " " << move_info->fifty_move << " " // Rule 50
+			<< 1 + (fullmove_number - (side == BLACK)) / 2; // Current move count
 
 		return ss.str();
 	}
@@ -418,22 +394,30 @@ namespace ChessEngine
 		}
 	}
 
-	void Position::restore_prev_info(MoveInfo& mi)
-	{
-		castle = mi.castling_rights;
-		rule_fifty = mi.fifty_move;
-		captured = mi.captured_piece;
-		enpassant_square = mi.en_passant;
-	}
-
 	// Makes a move and saves the information in the Info
 	// Move is assumed to be legal
 	void Position::do_move(Move m, MoveInfo& new_info, bool gives_check)
 	{
 		assert(m.is_move_ok());
+		assert(&new_info != move_info);
+
+		// Copy the old struct into the new one up to the captured_piece field
+		// prev and next are not copied
+		std::memcpy(&new_info, move_info, 
+			offsetof(struct MoveInfo, captured_piece));
+		
+		// Much like a linked list
+		// Assign then previous block to be equal to the old struct
+		new_info.prev = move_info;
+
+		// then the next on the old to be the current new
+		move_info->next = &new_info;
+
+		// and the one we are at to be the current new
+		move_info = &new_info;
 
 		fullmove_number++; // increment on every move, displayed correctly on get_fen()
-		rule_fifty++; // will be reset ot 0 in case of capture or pawn move
+		++move_info->fifty_move; // will be reset ot 0 in case of capture or pawn move
 
 		Color us = side;
 		Color them = ~us;
@@ -475,26 +459,28 @@ namespace ChessEngine
 				capture_sq -= pawn_push_direction(us);
 
 				assert(on_source == get_piece(us, PAWN));
-				assert(target == enpassant_square);
+				assert(target == move_info->en_passant);
 				assert(rank_relative_to_side(us, rank_of(target)) == RANK_6);
 				assert(on_target == NO_PIECE);
 				assert(get_piece_on(capture_sq) == get_piece(them, PAWN));
 			}
 
 			remove_piece(capture_sq);
-			rule_fifty = 0;
+			move_info->fifty_move = 0;
 		}
 
 		// Reset en passant square
-		if (enpassant_square != NONE)
+		if (move_info->en_passant != NONE)
 		{
-			enpassant_square = NONE;
+			move_info->en_passant = NONE;
 		}
 
 		// Update castling rights if needed
-		if (castle && (castling_rights_mask[source] | castling_rights_mask[target]))
+		if (move_info->castling_rights && (castling_rights_mask[source] | castling_rights_mask[target]))
 		{
-			castle = castle & ~(castling_rights_mask[source] | castling_rights_mask[target]);
+			move_info->castling_rights = move_info->castling_rights 
+				& ~(castling_rights_mask[source] | 
+					castling_rights_mask[target]);
 		}
 
 		if (m_type != MT_CASTLING)
@@ -508,7 +494,7 @@ namespace ChessEngine
 			if ((int(target) ^ int(source)) == 16 // double push
 				&& (pawn_attacks_bb(us, target - pawn_push_direction(us)) & get_pieces_bb(PAWN, them)))
 			{
-				enpassant_square = target - pawn_push_direction(us);
+				move_info->en_passant = target - pawn_push_direction(us);
 			}
 			else if (m_type == MT_PROMOTION)
 			{
@@ -524,26 +510,24 @@ namespace ChessEngine
 
 			}
 
-			rule_fifty = 0;
+			move_info->fifty_move = 0;
 		}
 
-		checkers = gives_check ? get_attackers_to(square<KING>(them)) & get_our_pieces_bb() : 0ULL;
+		checkers = gives_check 
+			? get_attackers_to(square<KING>(them)) & get_our_pieces_bb() 
+			: 0ULL;
+		
+		move_info->captured_piece = captured;
 
 		side = ~side;
 
 		calculate_threats();
 
-		new_info.checkers = checkers;
-		new_info.en_passant = enpassant_square;
-		new_info.castling_rights = castle;
-		new_info.fifty_move = rule_fifty;
-		new_info.captured_piece = captured;
-
 		// Repetition calculation needs to happen
 		// will do after hashing the moves
 	}
 
-	void Position::undo_move(Move m, MoveInfo& new_info)
+	void Position::undo_move(Move m)
 	{
 		assert(m.is_move_ok());
 
@@ -555,13 +539,12 @@ namespace ChessEngine
 		Square target = m.target_square();
 
 		Piece on_target = get_piece_on(target);
-		Piece captured = new_info.captured_piece;
 		PieceType target_piece = type_of_piece(on_target);
 
 		MoveType mt = m.move_type();
-
+		
 		assert(is_empty(source) || mt == MT_CASTLING);
-		assert(type_of_piece(captured) != KING);
+		assert(type_of_piece(move_info->captured_piece) != KING);
 
 		if (mt == MT_PROMOTION)
 		{
@@ -583,7 +566,7 @@ namespace ChessEngine
 		{
 			move_piece(target, source);
 
-			if (captured)
+			if (move_info->captured_piece)
 			{
 				Square cap_sq = target;
 
@@ -592,17 +575,19 @@ namespace ChessEngine
 					cap_sq -= pawn_push_direction(us);
 
 					assert(target_piece == PAWN);
-					assert(target == enpassant_square);
+					assert(target == move_info->prev->en_passant);
 					assert(rank_relative_to_side(us, rank_of(target)) == RANK_6);
 					assert(get_piece_on(cap_sq) == NO_PIECE);
-					assert(captured == get_piece(~us, PAWN));
+					assert(move_info->captured_piece == get_piece(~us, PAWN));
 				}
 
-				assert(get_piece_color(captured) == ~us);
-				place_piece(captured, cap_sq);
+				assert(get_piece_color(move_info->captured_piece) == ~us);
+				place_piece(move_info->captured_piece, cap_sq);
 			}
 		}
 
+		// return to the previous state
+		move_info = move_info->prev;
 		fullmove_number--;
 	}
 
@@ -628,7 +613,7 @@ namespace ChessEngine
 			// Checking for discovered check
 		case MT_EN_PASSANT:
 		{
-			assert(target == enpassant_square);
+			assert(target == move_info->en_passant);
 			assert(moved_piece(m) == get_piece(us, PAWN));
 
 			Square cap_sq = target - pawn_push_direction(us);

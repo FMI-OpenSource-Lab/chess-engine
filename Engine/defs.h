@@ -201,7 +201,7 @@ constexpr Square sq_relative_to_side(Square s, Color c) { return Square(int(s) ^
 // Piece, PieceType and Color helper methods
 constexpr Piece get_piece(Color c, PieceType pt) { return Piece(pt + (c * 6)); }
 
-constexpr PieceType type_of_piece(Piece p) { return PieceType((p % 6)); }
+constexpr PieceType type_of_piece(Piece p) { return PieceType(p - 6 * int(p / 7)); }
 
 constexpr Color get_piece_color(Piece p)
 {
@@ -209,13 +209,8 @@ constexpr Color get_piece_color(Piece p)
 	// if piece is below 7 (white) the number will be betwenn [0:1)
 	// will become 1 or greater if piece is black
 	// due to integer rounding we work with 0 and 1 only
-	return Color(p / 7); 
+	return Color(p / 7);
 }
-
-// bit macros
-#define get_bit(bitboard, square) (bitboard & (1ULL << square)) // checks for available bit
-#define set_bit(bitboard, square) (bitboard |= (1ULL << square)) // set piece to square
-#define rm_bit(bitboard, square) ((bitboard) &= ~(1ULL << square)) // if theres a 1 remove it, if 0 don't
 
 constexpr int TOTAL_MAX_DEPTH = 512;
 
