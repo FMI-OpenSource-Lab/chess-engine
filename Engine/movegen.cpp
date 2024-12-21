@@ -10,25 +10,20 @@ namespace ChessEngine
 {
 	namespace
 	{
-		void add_move(Moves* move_list, Move move)
-		{
-			move_list->moves[move_list->count] = move;
-
-			++move_list->count;
-		}
-
 		template<Direction D>
-		void make_promotions(Moves* move_list, Square target)
+		ScoredMoves* make_promotions(ScoredMoves* move_list, Square target)
 		{
-			add_move(move_list, Move{ target - D, target, MT_PROMOTION, PROMOTE_QUEEN });
+			*move_list++ = Move{ target - D, target, MT_PROMOTION, PROMOTE_QUEEN };
 
-			add_move(move_list, Move{ target - D, target, MT_PROMOTION, PROMOTE_KNIGHT });
-			add_move(move_list, Move{ target - D, target, MT_PROMOTION, PROMOTE_BISHOP });
-			add_move(move_list, Move{ target - D, target, MT_PROMOTION, PROMOTE_ROOK });
+			*move_list++ = Move{ target - D, target, MT_PROMOTION, PROMOTE_KNIGHT };
+			*move_list++ = Move{ target - D, target, MT_PROMOTION, PROMOTE_BISHOP };
+			*move_list++ = Move{ target - D, target, MT_PROMOTION, PROMOTE_ROOK };
+
+			return move_list;
 		}
 
-		template<Color Us>
-		void generate_pawn_moves(const Position& pos, Moves* move_list)
+		template<Color Us, GenerationTypes Type>
+		ScoredMoves* generate_pawn_moves(const Position& pos, ScoredMoves* move_list, BITBOARD block)
 		{
 			constexpr Color them = ~Us;
 			constexpr Direction up = pawn_push_direction(Us);
@@ -39,58 +34,77 @@ namespace ChessEngine
 
 			BITBOARD pawns = pos.get_pieces_bb(PAWN, Us);
 			BITBOARD empty = pos.get_all_empty_squares_bb();
-			BITBOARD enemies = pos.get_opponent_pieces_bb();
 
-			BITBOARD pushed_pawns = move_to<up>(pawns & ~promotion_rank) & empty;
-			BITBOARD d_pushed_pawns = move_to<up>(pushed_pawns & third_rank) & empty;
-			BITBOARD promote = move_to<up>(pawns & promotion_rank) & empty;
-
-			while (pushed_pawns)
+			if (Type != GT_CAPTURE)
 			{
-				Square target = pop_ls1b(pushed_pawns);
-				add_move(move_list, Move{ target - up, target });
+				BITBOARD pushed_pawns = move_to<up>(pawns & ~promotion_rank) & empty;
+				BITBOARD d_pushed_pawns = move_to<up>(pushed_pawns & third_rank) & empty;
+
+				if (Type == GT_QSEARCH)
+				{
+					pushed_pawns &= block;
+					d_pushed_pawns &= block;
+				}
+
+				while (pushed_pawns)
+				{
+					Square target = pop_ls1b(pushed_pawns);
+					*move_list++ = Move{ target - up, target };
+				}
+
+				while (d_pushed_pawns)
+				{
+					Square target = pop_ls1b(d_pushed_pawns);
+					*move_list++ = Move{ target - up - up, target };
+				}
 			}
 
-			while (d_pushed_pawns)
+			if (Type == GT_CAPTURE || GT_QSEARCH || GT_ALL)
 			{
-				Square target = pop_ls1b(d_pushed_pawns);
-				add_move(move_list, Move{ target - up - up, target });
-			}
+				BITBOARD enemies = pos.get_opponent_pieces_bb();
+				BITBOARD promote = move_to<up>(pawns & promotion_rank) & empty;
 
-			while (promote)
-				make_promotions<up>(move_list, pop_ls1b(promote));
+				BITBOARD left_attacks = move_to<up_left>(pawns) & enemies;
+				BITBOARD right_attacks = move_to<up_right>(pawns) & enemies;
 
-			BITBOARD left_attacks = move_to<up_left>(pawns) & enemies;
-			BITBOARD right_attacks = move_to<up_right>(pawns) & enemies;
+				if (Type == GT_QSEARCH)
+					promote &= block;
 
-			while (left_attacks)
-			{
-				Square target = pop_ls1b(left_attacks);
-				Square source = target - up_left;
+				while (left_attacks)
+				{
+					Square target = pop_ls1b(left_attacks);
+					Square source = target - up_left;
 
-				if (promotion_rank & source) // in case of promotions
-					make_promotions<up_left>(move_list, target);
-				else
-					add_move(move_list, Move{ source, target });
-			}
+					if (promotion_rank & source) // in case of promotions
+						move_list = make_promotions<up_left>(move_list, target);
+					else
+						*move_list++ = Move{ source, target };
+				}
 
-			while (right_attacks)
-			{
-				Square target = pop_ls1b(right_attacks);
-				Square source = target - up_right;
+				while (right_attacks)
+				{
+					Square target = pop_ls1b(right_attacks);
+					Square source = target - up_right;
 
-				if (promotion_rank & source) // in case of promotions
-					make_promotions<up_right>(move_list, target);
-				else
-					add_move(move_list, Move{ source, target });
+					if (promotion_rank & source) // in case of promotions
+						move_list = make_promotions<up_right>(move_list, target);
+					else
+						*move_list++ = Move{ source, target };
+				}
+
+				while (promote)
+					move_list = make_promotions<up>(move_list, pop_ls1b(promote));
 			}
 
 			Square ep_square = pos.ep_square();
+
 			if (ep_square != NONE)
 			{
+				assert(rank_of(ep_square) == rank_relative_to_side(Us, RANK_6));
+
 				// if pawn is blocking a check we cannot capture it with en passant
-				if (in_between_bb(pos.square<KING>(Us), pos.get_checkers()) & (ep_square + up))
-					return;
+				if (in_between_bb(pos.square<KING>(Us), getLS1B(pos.get_checkers())) & (ep_square + up))
+					return move_list;
 
 				// Every pawn that is not promoting and can be captured via ep
 				BITBOARD ep_pawns =
@@ -99,12 +113,14 @@ namespace ChessEngine
 				assert(ep_pawns);
 
 				while (ep_pawns)
-					add_move(move_list, Move{ pop_ls1b(ep_pawns), ep_square, MT_EN_PASSANT });
+					*move_list++ = Move{ pop_ls1b(ep_pawns), ep_square, MT_EN_PASSANT };
 			}
+
+			return move_list;
 		}
 
 		template<Color Us, PieceType Pt>
-		void generate_piece_moves(const Position& pos, Moves* move_list)
+		ScoredMoves* generate_piece_moves(const Position& pos, ScoredMoves* move_list)
 		{
 			static_assert(Pt != PAWN, "Unsupported piece type in generate_moves()");
 
@@ -118,19 +134,21 @@ namespace ChessEngine
 				BITBOARD attacks = attacks_bb_by<Pt>(source, all) & not_our_sq;
 
 				while (attacks)
-					add_move(move_list, Move{ source, pop_ls1b(attacks) }); // Quiets and captures;
+					*move_list++ = Move{ source, pop_ls1b(attacks) }; // Quiets and captures;
 			}
+
+			return move_list;
 		}
 
-		template<Color Us>
-		void generate_castling_moves(const Position& pos, Moves* move_list)
+		template<Color Us, GenerationTypes Type>
+		ScoredMoves* generate_castling_moves(const Position& pos, ScoredMoves* move_list)
 		{
 			Square ksq = pos.square<KING>(Us);
 			BITBOARD all = pos.get_all_pieces_bb();
 
 			// Gives WK and/or WQ if white
 			// and BK and/or BQ if black
-			if (pos.can_castle(Us & ANY) && !pos.get_attackers_to(ksq, all))
+			if ((Type == GT_QUIET || Type == GT_ALL) || (pos.can_castle(Us & ANY) && !pos.get_attackers_to(ksq, all)))
 			{
 				bool is_safe = true;
 
@@ -152,65 +170,86 @@ namespace ChessEngine
 					}
 
 					if (is_safe && !pos.is_castling_interrupted(cr) && pos.can_castle(cr))
-						add_move(move_list, Move{ ksq, pos.castling_rook_square(cr), MT_CASTLING });
+						*move_list++ = Move{ ksq, pos.castling_rook_square(cr), MT_CASTLING };
 				}
 			}
+
+			return move_list;
 		}
 
-		template<Color Us>
-		void generate_all(const Position& pos, Moves* move_list)
+		template<Color Us, GenerationTypes Type>
+		ScoredMoves* generate_all(const Position& pos, ScoredMoves* move_list)
 		{
-			move_list->count = 0;
-
-			generate_pawn_moves<Us>(pos, move_list);
-
-			generate_castling_moves<Us>(pos, move_list);
-
-			generate_piece_moves<Us, KNIGHT>(pos, move_list);
-			generate_piece_moves<Us, BISHOP>(pos, move_list);
-			generate_piece_moves<Us, ROOK>(pos, move_list);
-			generate_piece_moves<Us, QUEEN>(pos, move_list);
-			generate_piece_moves<Us, KING>(pos, move_list);
-		}
-
-		template<Color Us>
-		Moves* filtered_moves(const Position& pos, Moves* move_list)
-		{
-			BITBOARD pinned = pos.get_king_blockers(Us) & pos.get_our_pieces_bb();
-			Square ksq = pos.square<KING>(Us);
-			Moves curr[1];
-
-			curr->count = 0;
-			
-			for (size_t move_i = 0; move_i < move_list->count; move_i++)
+			BITBOARD checkers = pos.get_checkers();
+			// In case of double check skip straight to generating king moves
+			if (Type != GT_QSEARCH || !has_bit_after_pop(checkers))
 			{
-				// this is for saving computational time
+				BITBOARD block = Type == GT_QSEARCH
+					? in_between_bb(pos.square<KING>(Us), getLS1B(checkers))
+					: 0ULL;
 
-				// since is_legal test for en_passant illegals
-				// king stepping into checks
-				// or moving our piece that discoveres a check to our king
-				bool is_moving_pp = pinned & move_list->moves[move_i].source_square();
-				bool is_king_moving = move_list->moves[move_i].source_square() == ksq;
-				bool is_en_passant = move_list->moves[move_i].move_type() == MT_EN_PASSANT;
+				move_list = generate_pawn_moves<Us, Type>(pos, move_list, block);
 
-				if ((is_moving_pp || is_king_moving || is_en_passant) && 
-					!pos.is_legal(move_list->moves[move_i])) // if not legal
-					continue;
-				else // if legal
-					add_move(curr, move_list->moves[move_i]);
+				move_list = generate_piece_moves<Us, KNIGHT>(pos, move_list);
+				move_list = generate_piece_moves<Us, BISHOP>(pos, move_list);
+				move_list = generate_piece_moves<Us, ROOK>(pos, move_list);
+				move_list = generate_piece_moves<Us, QUEEN>(pos, move_list);
 			}
 
-			return curr;
+			move_list = generate_piece_moves<Us, KING>(pos, move_list);
+			move_list = generate_castling_moves<Us, Type>(pos, move_list);
+
+			return move_list;
 		}
 
 	} // namespace
 
-	Moves* generate_moves(const Position& pos, Moves* move_list)
+	template<GenerationTypes Type>
+	ScoredMoves* generate_moves(const Position& pos, ScoredMoves* move_list)
 	{
 		Color us = pos.side_to_move();
 
 		return us == WHITE
-			? filtered_moves<WHITE>(pos, move_list)
-			: filtered_moves<BLACK>(pos, move_list);
+			? generate_all<WHITE, Type>(pos, move_list)
+			: generate_all<BLACK, Type>(pos, move_list);
+	}
+
+	template ScoredMoves* generate_moves<GT_ALL>(const Position&, ScoredMoves*);
+	template ScoredMoves* generate_moves<GT_CAPTURE>(const Position&, ScoredMoves*);
+	template ScoredMoves* generate_moves<GT_QUIET>(const Position&, ScoredMoves*);
+	template ScoredMoves* generate_moves<GT_QSEARCH>(const Position&, ScoredMoves*);
+
+	template<>
+	ScoredMoves* generate_moves<GT_LEGAL>(const Position& pos, ScoredMoves* move_list)
+	{
+		Color us = pos.side_to_move();
+		BITBOARD pinned = pos.get_king_blockers(us) & pos.get_our_pieces_bb();
+		Square ksq = pos.square<KING>(us);
+		ScoredMoves* curr = move_list;
+
+		if (pos.get_checkers())
+			move_list = generate_moves<GT_QSEARCH>(pos, move_list);
+		else
+			move_list = generate_moves<GT_ALL>(pos, move_list);
+
+		while (curr != move_list)
+		{
+			// this is for saving computational time
+
+			// since is_legal test for en_passant illegals
+			// king stepping into checks
+			// or moving our piece that discovers a check to our king
+			bool is_moving_pp = pinned & curr->source_square();
+			bool is_king_moving = curr->source_square() == ksq;
+			bool is_en_passant = curr->move_type() == MT_EN_PASSANT;
+
+			if ((is_moving_pp || is_king_moving || is_en_passant) &&
+				!pos.is_legal(*curr)) // if not legal
+				*curr = *(--move_list);
+			else // if legal
+				++curr;
+		}
+
+		return move_list;
 	}
 }

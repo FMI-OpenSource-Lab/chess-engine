@@ -13,34 +13,35 @@ namespace ChessEngine
 
 	enum GenerationTypes
 	{
+		GT_ALL,			// Quiet and capture moves
 		GT_CAPTURE,		// Capturing a piece
 		GT_QUIET,		// No captures nor promotions
-		GT_EVASION,		// Evade (escape or block) a check
-		GT_NOISY,		// Combination of capture and evasion
+		GT_QSEARCH,		// Evade (escape or block) a check
 		GT_LEGAL		// Only legal moves
 	};
 
-	struct Moves : public Move
+	struct ScoredMoves : public Move
 	{
-		Move moves[MAX_MOVES];
-		int count = 0;
+		int score = 0;
 		void operator=(Move m) { move = m.move_value(); }
 	};
 
-	Moves* generate_moves(const Position& pos, Moves* move_list);
+	template<GenerationTypes>
+	ScoredMoves* generate_moves(const Position& pos, ScoredMoves* move_list);
 
+	template<GenerationTypes T>
 	struct MoveList
 	{
-		explicit MoveList(Position& pos) : last(generate_moves(pos, moves_list)) {}
+		explicit MoveList(Position& pos) :
+			last(generate_moves<T>(pos, moves_list)) {}
 
-		const Moves* begin() const { return moves_list; }
-		const Moves* end() const { return last; }
-		const size_t size() const { return moves_list->count; }
+		const ScoredMoves* begin() const { return moves_list; }
+		const ScoredMoves* end() const { return last; }
+		const size_t size() const { return last - moves_list; }
 
-		bool contains(Move m) const { return std::find(begin(), end(), m) != end(); }
-
+		bool contains_move(Move m) const { return std::find(begin(), end(), m) != end(); }
 	private:
-		Moves moves_list[1], * last;
+		ScoredMoves moves_list[MAX_MOVES], * last;
 	};
 }
 #endif // !MOVEGEN_H

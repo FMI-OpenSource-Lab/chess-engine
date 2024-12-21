@@ -57,7 +57,7 @@ namespace ChessEngine
 		//std::ofstream perft_results;
 		//perft_results.open("../results.txt");
 
-		for (const auto& m : MoveList(pos))
+		for (const auto& m : MoveList<GT_LEGAL>(pos))
 		{
 
 			if (Root && depth <= 1)
@@ -70,7 +70,7 @@ namespace ChessEngine
 				pos.do_move(m, move_info);
 
 				count = leaf
-					? MoveList(pos).size()
+					? MoveList<GT_LEGAL>(pos).size()
 					: perft<false>(pos, depth - 1);
 				nodes += count;
 
@@ -78,7 +78,7 @@ namespace ChessEngine
 			}
 			if (Root)
 			{
-				//std::cout << uci_move(m) << ": " << count << std::endl;
+				std::cout << uci_move(m) << ": " << count << std::endl;
 
 				//perft_results << uci_move(m) << ": " << count << std::endl;
 			}

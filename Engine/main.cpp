@@ -32,8 +32,8 @@ int main()
 
 		pos.set(TEST_FEN, &infos->back());
 		std::cout << pos << std::endl;
-		
-		std::cout << perft<true>(pos, 1);
+
+		std::cout<<perft<true>(pos, 2);
 	}
 	else
 		//uci_loop();
