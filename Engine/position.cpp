@@ -550,7 +550,7 @@ namespace ChessEngine
 		{
 			assert(rank_relative_to_side(us, rank_of(target)) == RANK_8);
 			assert(target_piece == m.promoted());
-			assert(target_piece >= KNIGHT && target <= QUEEN);
+			assert(target_piece >= KNIGHT && target_piece <= QUEEN);
 
 			remove_piece(target);
 			on_target = get_piece(us, PAWN);

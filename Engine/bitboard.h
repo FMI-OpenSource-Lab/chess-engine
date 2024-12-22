@@ -23,8 +23,9 @@ namespace ChessEngine
 	extern U64 bishopAttacks(U64 occ, Square s);
 	extern U64 rookAttacks(U64 occ, Square s);
 
-	constexpr U64 square_to_BB(Square square) 
+	constexpr U64 square_to_BB(Square square)
 	{
+		assert(is_square_ok(square));
 		return (1ULL << square);
 	}
 
@@ -47,16 +48,19 @@ namespace ChessEngine
 	inline U64 operator|(Square s1, Square s2) { return square_to_BB(s1) | s2; }
 
 	// checks for available bit
-	inline U64 get_bit(U64 bitboard, Square square) { 
-		return bitboard & square; }
+	inline U64 get_bit(U64 bitboard, Square square) {
+		return bitboard & square;
+	}
 
 	// set piece to square
-	inline void set_bit(U64& bitboard, Square square) { 
-		bitboard |= square; }
+	inline void set_bit(U64& bitboard, Square square) {
+		bitboard |= square;
+	}
 
 	// if theres a 1 remove it, if 0 don't
-	inline void rm_bit(U64& bitboard, Square square) { 
-		bitboard &= ~square_to_BB(square); }
+	inline void rm_bit(U64& bitboard, Square square) {
+		bitboard &= ~square_to_BB(square);
+	}
 
 	// Files
 	constexpr U64 FileA_Bits = 0x0101010101010101ULL; // first row is ones
@@ -278,7 +282,8 @@ namespace ChessEngine
 		U64 bb{};
 
 		for (auto& pt : { ROOK, BISHOP })
-			bb |= (attacks_bb_by(pt, source, 0) & (attacks_bb_by(pt, target, 0)));
+			if (pseudo_attacks[pt][source] & target)
+				bb |= (attacks_bb_by(pt, source, 0) & (attacks_bb_by(pt, target, 0)));
 
 		return (bb | source | target) & with;
 	}

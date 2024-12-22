@@ -54,12 +54,11 @@ namespace ChessEngine
 		U64 count, nodes = 0;
 		const bool leaf = (depth == 2);
 
-		//std::ofstream perft_results;
-		//perft_results.open("../results.txt");
+		std::ofstream perft_results;
+		perft_results.open("../results.txt");
 
 		for (const auto& m : MoveList<GT_LEGAL>(pos))
 		{
-
 			if (Root && depth <= 1)
 			{
 				count = 1;
@@ -80,9 +79,11 @@ namespace ChessEngine
 			{
 				std::cout << uci_move(m) << ": " << count << std::endl;
 
-				//perft_results << uci_move(m) << ": " << count << std::endl;
+				perft_results << uci_move(m) << ": " << count << "\n";
 			}
 		}
+
+		perft_results.close();
 
 		return nodes;
 	}

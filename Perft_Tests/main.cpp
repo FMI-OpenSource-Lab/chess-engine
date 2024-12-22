@@ -32,8 +32,12 @@ int main()
 	std::sort(ml.begin(), ml.end());
 	std::sort(sf.begin(), sf.end());
 
-	auto& bigger = ml.size() > sf.size() ? ml : sf;
-	auto& smaller = ml.size() > sf.size() ? sf : ml;
+	const auto& bigger = ml.size() > sf.size() ? ml : sf;
+	const auto& smaller = ml.size() > sf.size() ? sf : ml;
+
+	std::cout << (bigger == ml ? "ce" : "sf")
+		<< "         " << (smaller == sf ? "sf" : "ml")
+		<< "\n" << std::string(25, '-') << std::endl;
 
 	for (int i = 0; i < bigger.size(); i++)
 	{
