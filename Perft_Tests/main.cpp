@@ -5,9 +5,21 @@
 #include <string>
 #include <algorithm>
 #include <vector>
+#include <unordered_map>
 #include <iomanip>
+#include <iterator>
+#include <set>
+#include <sstream>
 
 #include "../Engine/defs.h"
+
+constexpr auto RED = "\033[1;31m"; // Red text;
+constexpr auto RESET = "\033[0m"; // Reset color;
+constexpr auto WHITE_BG = "\033[47m"; // White background;
+
+constexpr auto UNDERLINE = "\033[4m"; // Underline text;
+
+using Pair = std::pair<std::string, uint64_t>;
 
 int main()
 {
@@ -16,73 +28,91 @@ int main()
 	std::ifstream ce_results("../results.txt");
 	std::ifstream sf_results("../sf_results.txt");
 
-	std::vector<std::string> sf{};
-	std::vector<std::string> ce{};
+	std::string fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ";
 
-	ce.reserve(MAX_MOVES);
+	std::vector<Pair> sf{};
+	std::vector<Pair> ce{};
+
 	while (std::getline(ce_results, results_str))
-		ce.emplace_back(results_str);
+	{
+		std::string key = results_str.substr(0, 4);
+		uint64_t value = std::stoull(results_str.substr(6, results_str.size()));
+
+		auto pair = Pair(key, value);
+
+		ce.emplace_back(pair);
+	}
 
 	ce_results.close();
 
-	sf.reserve(MAX_MOVES);
 	while (std::getline(sf_results, results_str))
-		sf.emplace_back(results_str);
+	{
+		std::string key = results_str.substr(0, 4);
+		uint64_t value = std::stoull(results_str.substr(6, results_str.size()));
+
+		auto pair = Pair(key, value);
+
+		sf.emplace_back(pair);
+	}
 
 	sf_results.close();
 
 	std::sort(ce.begin(), ce.end());
 	std::sort(sf.begin(), sf.end());
 
-	const int ce_size = ce.size();
-	const int sf_size = sf.size();
+	std::vector<Pair>::iterator it1 = ce.begin();
+	std::vector<Pair>::iterator it2 = sf.begin();
 
-	const int total = std::max(ce_size, sf_size);
+	const int key_width = 10;
+	const int value_width = 8;
 
-	std::cout << "Moves" << " | " << " sf     " << " | " << " ce" << "\n\n";
+	std::cout << std::left << std::setw(key_width) << "CE Moves"
+		<< " | " << std::setw(key_width) << "SF Moves"
+		<< " | " << std::setw(value_width) << "CE Nodes"
+		<< " | " << std::setw(value_width) << "SF Nodes"
+		<< std::endl;
 
-	if (!std::abs(ce_size - sf_size)) // equal sizes
-	{
-		for (int i = 0; i < ce_size; i++)
-		{
-			std::string ce_move = ce[i].substr(0, 4);
-			std::string sf_move = sf[i].substr(0, 4);
+	std::cout << std::string(45, '-') << std::endl;
 
-			if (ce_move == sf_move) // matching moves
-			{
-				std::string ce_nodes = ce[i].substr(6, ce[i].size());
-				std::string sf_nodes = sf[i].substr(6, sf[i].size());
+	while (it1 != ce.end() || it2 != sf.end()) {
+		bool isDifferent = false;
+		std::string key1 = "----", key2 = "----";
+		uint64_t val1 = 0, val2 = 0;
 
-				if (ce_nodes != sf_nodes) // Print differences
-					std::cout << ce_move << "  |  " << sf_nodes << " |  " << ce_nodes << "\n";
-			}
-			else // not matching moves
-			{
-				// e1c1: 3551583
-
-				// check from next element, since current moves aren't equal
-				for (int j = i; j < ce_size; j++)
-				{
-					std::string sf_next_move = sf[j].substr(0, 4);
-
-					if (ce_move == sf_next_move) // if a match is found on the next moves
-					{
-						// std::cout << ce_move << "  |  " << sf_next_move << "\n";
-						
-						std::swap(ce[i], sf[j]);
-						break;
-					}
-				}
-
-				std::cout << sf[i].substr(0, 4) << "  |  " << ce[i].substr(0, 4) << "\n";
-			}
+		if (it1 != ce.end() && (it2 == sf.end() || it1->first < it2->first)) {
+			key1 = it1->first;
+			val1 = it1->second;
+			isDifferent = true; // Different because key is missing in vec2
+			++it1;
 		}
-	}
-	else // diff sizes
-	{
+		else if (it2 != sf.end() && (it1 == ce.end() || it1->first > it2->first)) {
+			key2 = it2->first;
+			val2 = it2->second;
+			isDifferent = true; // Different because key is missing in vec1
+			++it2;
+		}
+		else {
+			key1 = it1->first;
+			key2 = it2->first;
+			val1 = it1->second;
+			val2 = it2->second;
 
-	}
+			if (val1 != val2) isDifferent = true; // Different because values mismatch
 
+			++it1;
+			++it2;
+		}
+
+		if (isDifferent)
+			std::cout << UNDERLINE << RED;
+
+		// Print row with proper alignment
+		std::cout << std::left << std::setw(key_width) << key1
+			<< " | " << std::setw(key_width) << key2
+			<< " | " << std::setw(value_width) << val1
+			<< " | " << std::setw(value_width) << val2
+			<< " | " << RESET << std::endl;
+	}
 
 	return 0;
 }
