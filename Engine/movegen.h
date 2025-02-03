@@ -27,7 +27,7 @@ namespace ChessEngine
 	};
 
 	template<GenerationTypes>
-	ScoredMoves* generate_moves(const Position& pos, ScoredMoves* move_list);
+	inline ScoredMoves* generate_moves(const Position& pos, ScoredMoves* move_list);
 
 	template<GenerationTypes T>
 	struct MoveList

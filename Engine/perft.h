@@ -47,7 +47,7 @@ namespace ChessEngine
 	}
 
 	template<bool Root>
-	U64 perft(Position& pos, int depth)
+	inline U64 perft(Position& pos, int depth)
 	{
 		MoveInfo move_info{};
 
@@ -115,6 +115,15 @@ namespace ChessEngine
 			std::cout << i << " " << perft<false>(pos, i);
 			std::cout << " | " << get_time_ms() - start_time << " ms\n";
 		}
+	}
+
+	inline U64 perft(const char* fen, int depth)
+	{
+		InfoListPtr infos(new std::deque<MoveInfo>(1));
+		Position p;
+		p.set(fen, &infos->back());
+
+		return perft<true>(p, depth);
 	}
 }
 #endif // !PERFT_H
