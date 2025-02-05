@@ -32,7 +32,7 @@ namespace ChessEngine
 	template<GenerationTypes T>
 	struct MoveList
 	{
-		explicit MoveList(Position& pos) :
+		explicit MoveList(const Position& pos) :
 			last(generate_moves<T>(pos, moves_list)) {}
 
 		const ScoredMoves* begin() const { return moves_list; }

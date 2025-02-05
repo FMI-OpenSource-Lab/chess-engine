@@ -76,10 +76,7 @@ namespace ChessEngine
 
 		constexpr PieceType promoted() const { return PieceType(((move >> 12) & 3) + KNIGHT); }
 
-		constexpr MoveType move_type() const
-		{
-			return MoveType(move & (0b0011 << 14));
-		}
+		constexpr MoveType move_type() const { return MoveType(move & (0b0011 << 14)); }
 
 		// null and none moves
 		// has the same source and target square whilst other moves have different source and destination squares

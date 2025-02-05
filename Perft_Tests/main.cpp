@@ -116,7 +116,7 @@ void compare_results()
 
 int main()
 {
-	int depth = 4;
+	int depth = 5;
 
 	do
 	{
