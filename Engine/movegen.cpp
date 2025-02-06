@@ -146,13 +146,15 @@ namespace ChessEngine
 		ScoredMoves* generate_castling_moves(const Position& pos, ScoredMoves* move_list)
 		{
 			Square ksq = pos.square<KING>(Us);
+
 			BITBOARD all = pos.get_all_pieces_bb();
+			BITBOARD opp = pos.get_opponent_pieces_bb();
 
 			// Gives WK and/or WQ if white
 			// and BK and/or BQ if black
-			if ((Type == GT_QUIET || Type == GT_ALL) || (pos.can_castle(Us & ANY) && !pos.get_attackers_to(ksq, all)))
+			if ((Type == GT_QUIET || Type == GT_ALL) || (pos.can_castle(Us & ANY)))
 			{
-				bool is_safe = true;
+				BITBOARD has_attackers = 0ULL;
 
 				for (const auto& cr : { Us & KINGSIDE, Us & QUEENSIDE })
 				{
@@ -161,17 +163,17 @@ namespace ChessEngine
 						Square f1 = sq_relative_to_side(F1, Us);
 						Square g1 = sq_relative_to_side(G1, Us);
 
-						is_safe = (pos.get_attackers_to(f1, all) | pos.get_attackers_to(g1, all));
+						has_attackers = (pos.get_attackers_to(ksq, all) | pos.get_attackers_to(f1, all) | pos.get_attackers_to(g1, all)) & opp;
 					}
 					else if (cr == WQ || cr == BQ)
 					{
 						Square d1 = sq_relative_to_side(D1, Us);
 						Square c1 = sq_relative_to_side(C1, Us);
 
-						is_safe = (pos.get_attackers_to(d1, all) | pos.get_attackers_to(c1, all));
+						has_attackers = (pos.get_attackers_to(ksq, all) | pos.get_attackers_to(d1, all) | pos.get_attackers_to(c1, all)) & opp;
 					}
 
-					if (is_safe && (!pos.is_castling_interrupted(cr) && pos.can_castle(cr)))
+					if (!has_attackers && (!pos.is_castling_interrupted(cr) && pos.can_castle(cr)))
 						*move_list++ = Move{ ksq, pos.castling_rook_square(cr), MT_CASTLING };
 				}
 			}

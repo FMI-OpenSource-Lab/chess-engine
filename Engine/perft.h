@@ -70,7 +70,7 @@ namespace ChessEngine
 
 				count = leaf
 					? MoveList<GT_LEGAL>(pos).size()
-					: perft<false>(pos, depth - 1);
+					: perft<true>(pos, depth - 1);
 
 				nodes += count;
 

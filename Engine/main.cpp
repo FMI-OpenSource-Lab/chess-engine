@@ -32,6 +32,8 @@ int main()
 		// pin position: "3r4/bk6/8/r1pPK3/8/8/6B1/8 w - - 0 1";
 		pos.set(TEST_FEN, &infos->back());
 		std::cout << pos;
+
+		print_bitboard(10380797141088993280ULL);
 	}
 	else
 		uci_loop();
