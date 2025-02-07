@@ -60,21 +60,19 @@ namespace ChessEngine
 		for (const auto& m : MoveList<GT_LEGAL>(pos))
 		{
 			if (Root && depth <= 1)
-			{
-				count = 1;
-				nodes++;
-			}
+				count = 1, nodes++;
 			else
 			{
 				pos.do_move(m, move_info);
 
 				count = leaf
 					? MoveList<GT_LEGAL>(pos).size()
-					: perft<true>(pos, depth - 1);
+					: perft<false>(pos, depth - 1);
 
 				nodes += count;
 
 				pos.undo_move(m);
+				std::cout << uci_move(m) << ": " << count << std::endl;
 			}
 			if (Root)
 			{

@@ -40,7 +40,7 @@ namespace ChessEngine
 				BITBOARD pushed_pawns = move_to<up>(pawns & ~promotion_rank) & empty;
 				BITBOARD d_pushed_pawns = move_to<up>(pushed_pawns & third_rank) & empty;
 
-				if (Type == GT_QSEARCH)
+				if (Type == GT_EVADE)
 				{
 					pushed_pawns &= block;
 					d_pushed_pawns &= block;
@@ -59,12 +59,12 @@ namespace ChessEngine
 				}
 			}
 
-			if (Type == GT_CAPTURE || GT_QSEARCH || GT_ALL)
+			if (Type == GT_CAPTURE || GT_EVADE || GT_ALL)
 			{
 				BITBOARD enemies = pos.get_opponent_pieces_bb();
 				BITBOARD promote = move_to<up>(pawns & promotion_rank) & empty;
 
-				if (Type == GT_QSEARCH)
+				if (Type == GT_EVADE)
 				{
 					promote &= block;
 					enemies = pos.get_checkers(); // consider only enemies
@@ -105,7 +105,7 @@ namespace ChessEngine
 					assert(rank_of(ep_square) == rank_relative_to_side(Us, RANK_6));
 
 					// if pawn is blocking a check we cannot capture it with en passant
-					if ((Type == GT_QSEARCH) && (block & (ep_square + up)))
+					if ((Type == GT_EVADE) && (block & (ep_square + up)))
 						return move_list;
 
 					// Every pawn that is not promoting and can be captured via ep
@@ -173,7 +173,7 @@ namespace ChessEngine
 						has_attackers = (pos.get_attackers_to(ksq, all) | pos.get_attackers_to(d1, all) | pos.get_attackers_to(c1, all)) & opp;
 					}
 
-					if (!has_attackers && (!pos.is_castling_interrupted(cr) && pos.can_castle(cr)))
+					if (!has_attackers && !pos.is_castling_interrupted(cr) && pos.can_castle(cr))
 						*move_list++ = Move{ ksq, pos.castling_rook_square(cr), MT_CASTLING };
 				}
 			}
@@ -190,11 +190,11 @@ namespace ChessEngine
 			BITBOARD block = 0ULL;
 
 			// In case of double check skip straight to generating king moves
-			if (Type != GT_QSEARCH || !has_bit_after_pop(checkers))
+			if (Type != GT_EVADE || !has_bit_after_pop(checkers))
 			{
 				switch (Type)
 				{
-				case GT_QSEARCH:	block = in_between_bb(ksq, getLS1B(checkers)); break;
+				case GT_EVADE:		block = in_between_bb(ksq, getLS1B(checkers)); break;
 				case GT_CAPTURE:	block = pos.get_opponent_pieces_bb(); break;
 				case GT_QUIET:		block = pos.get_all_empty_squares_bb(); break;
 				case GT_ALL:		block = ~pos.get_our_pieces_bb(); break;
@@ -209,7 +209,7 @@ namespace ChessEngine
 			}
 
 			// capture enemy or move to other square that is not occupied by us
-			BITBOARD k_bb = attacks_bb_by<KING>(ksq) & ~pos.get_our_pieces_bb();
+			BITBOARD k_bb = attacks_bb_by<KING>(ksq) & (Type == GT_EVADE ? ~pos.get_our_pieces_bb() : block);
 
 			while (k_bb)
 				*move_list++ = Move{ ksq, pop_ls1b(k_bb) };
@@ -221,6 +221,7 @@ namespace ChessEngine
 
 	} // namespace
 
+	// returns a pointer at the end of the list
 	template<GenerationTypes Type>
 	ScoredMoves* generate_moves(const Position& pos, ScoredMoves* move_list)
 	{
@@ -231,10 +232,15 @@ namespace ChessEngine
 			: generate_all<BLACK, Type>(pos, move_list);
 	}
 
+	// <GT_ALL>			generates all pseudo-legal captures, quiets and attakcs
+	// <GT_CAPTURE>		generates all pseudo-legal captures
+	// <GT_QUIET>		generates all pseudo-legal quiet moves
+	// <GT_EVADE>		generates all pseudo-legal check blocks or checkers captures
+
 	template ScoredMoves* generate_moves<GT_ALL>(const Position&, ScoredMoves*);
 	template ScoredMoves* generate_moves<GT_CAPTURE>(const Position&, ScoredMoves*);
 	template ScoredMoves* generate_moves<GT_QUIET>(const Position&, ScoredMoves*);
-	template ScoredMoves* generate_moves<GT_QSEARCH>(const Position&, ScoredMoves*);
+	template ScoredMoves* generate_moves<GT_EVADE>(const Position&, ScoredMoves*);
 
 	template<>
 	ScoredMoves* generate_moves<GT_LEGAL>(const Position& pos, ScoredMoves* move_list)
@@ -245,7 +251,7 @@ namespace ChessEngine
 		ScoredMoves* curr = move_list;
 
 		if (pos.get_checkers())
-			move_list = generate_moves<GT_QSEARCH>(pos, move_list);
+			move_list = generate_moves<GT_EVADE>(pos, move_list);
 		else
 			move_list = generate_moves<GT_ALL>(pos, move_list);
 

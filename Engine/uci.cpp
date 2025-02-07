@@ -46,7 +46,8 @@ namespace ChessEngine
 
 		if (strncmp(current, "startpos", 8) == 0)
 			pos.set(START_FEN, &mi);
-
+		else if (strncmp(current, "testpos", 7) == 0)
+			pos.set(TEST_FEN, &mi);
 		else // UCI "fen" command
 		{
 			// fen command is available

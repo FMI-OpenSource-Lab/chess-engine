@@ -248,9 +248,8 @@ namespace ChessEngine
 	}
 
 	// calculate the line that is formed between two points
-	// for bishops and rooks because they are the only pieces
-	// that can move horizontaly or diagonaly 
-	// (except the queen, but she is a combination of rook and bishop)
+	// return that line bitboard + the target square
+	// or only the target square in case of knight attack
 	inline U64 in_between_bb(Square source, Square target)
 	{
 		PieceType pt = NO_PIECE_TYPE;
@@ -277,7 +276,7 @@ namespace ChessEngine
 	}
 
 	// Returns true if all 3 squares are aligned
-	inline bool are_squares_aligned(Square source, Square target, Square with)
+	inline bool are_squares_aligned(Square source, Square target, Square aligned_with)
 	{
 		U64 bb{};
 
@@ -285,7 +284,7 @@ namespace ChessEngine
 			if (pseudo_attacks[pt][source] & target)
 				bb |= (attacks_bb_by(pt, source, 0) & (attacks_bb_by(pt, target, 0)));
 
-		return (bb | source | target) & with;
+		return (bb | source | target) & aligned_with;
 	}
 
 	inline void print_bitboard(U64 bitboard)

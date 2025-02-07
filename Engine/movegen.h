@@ -16,7 +16,7 @@ namespace ChessEngine
 		GT_ALL,			// Quiet and capture moves
 		GT_CAPTURE,		// Capturing a piece
 		GT_QUIET,		// No captures nor promotions
-		GT_QSEARCH,		// Evade (escape or block) a check
+		GT_EVADE,		// Evade (escape or block) a check
 		GT_LEGAL		// Only legal moves
 	};
 
