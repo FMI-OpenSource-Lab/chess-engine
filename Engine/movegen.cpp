@@ -35,7 +35,7 @@ namespace ChessEngine
 			BITBOARD pawns = pos.get_pieces_bb(PAWN, Us);
 			BITBOARD empty = pos.get_all_empty_squares_bb();
 
-			if (Type != GT_CAPTURE)
+			if (Type != GT_CAPTURE) // Including QUIETS, EVASION QUIETS and ALL
 			{
 				BITBOARD pushed_pawns = move_to<up>(pawns & ~promotion_rank) & empty;
 				BITBOARD d_pushed_pawns = move_to<up>(pushed_pawns & third_rank) & empty;
@@ -59,16 +59,16 @@ namespace ChessEngine
 				}
 			}
 
-			if (Type == GT_CAPTURE || GT_EVADE || GT_ALL)
+			if (Type != GT_QUIET) // Including CAPTURES, EVASIONS CAPTURES and ALL
 			{
-				BITBOARD enemies = pos.get_opponent_pieces_bb();
+				// Promotions are under the subset of EVASION CAPTURES (Ec)
+				// And can happen only when the move is not QUIET, which means that in any other case
+				// such as CAPTURE, EVADE check and/or both at the same time (ALL) are the only cases where promotion can occur
+
+				BITBOARD enemies = Type == GT_EVADE ? pos.get_checkers() : pos.get_opponent_pieces_bb();
 				BITBOARD promote = move_to<up>(pawns & promotion_rank) & empty;
 
-				if (Type == GT_EVADE)
-				{
-					promote &= block;
-					enemies = pos.get_checkers(); // consider only enemies
-				}
+				if (Type == GT_EVADE) promote &= block; // If we are evading a check, consider the only promotions that block or capture that checking piece
 
 				BITBOARD left_attacks = move_to<up_left>(pawns) & enemies;
 				BITBOARD right_attacks = move_to<up_right>(pawns) & enemies;
@@ -125,18 +125,17 @@ namespace ChessEngine
 		template<Color Us, PieceType Pt>
 		ScoredMoves* generate_piece_moves(const Position& pos, ScoredMoves* move_list, BITBOARD& block_or_cap)
 		{
-			static_assert(Pt != PAWN && Pt != KING, "Unsupported piece type in generate_moves()");
+			static_assert(Pt != PAWN && Pt != KING, "Unsupported piece type in generate_piece_moves()");
 
 			BITBOARD bb = pos.get_pieces_bb(Pt, Us);
 			BITBOARD all = pos.get_all_pieces_bb();
-
+			
 			while (bb)
 			{
 				Square source = pop_ls1b(bb);
 				BITBOARD attacks = attacks_bb_by<Pt>(source, all) & block_or_cap;
 
-				while (attacks)
-					*move_list++ = Move{ source, pop_ls1b(attacks) }; // Quiets and captures;
+				while (attacks) *move_list++ = Move{ source, pop_ls1b(attacks) };
 			}
 
 			return move_list;
@@ -152,11 +151,11 @@ namespace ChessEngine
 
 			// Gives WK and/or WQ if white
 			// and BK and/or BQ if black
-			if ((Type == GT_QUIET || Type == GT_ALL) || (pos.can_castle(Us & ANY)))
+			if ((Type == GT_QUIET || Type == GT_ALL) && pos.can_castle(Us & ANY))
 			{
 				BITBOARD has_attackers = 0ULL;
 
-				for (const auto& cr : { Us & KINGSIDE, Us & QUEENSIDE })
+				for (CastlingRights cr : { Us & KINGSIDE, Us & QUEENSIDE })
 				{
 					if (cr == WK || cr == BK)
 					{
@@ -173,7 +172,7 @@ namespace ChessEngine
 						has_attackers = (pos.get_attackers_to(ksq, all) | pos.get_attackers_to(d1, all) | pos.get_attackers_to(c1, all)) & opp;
 					}
 
-					if (!has_attackers && !pos.is_castling_interrupted(cr) && pos.can_castle(cr))
+					if (!has_attackers && (!pos.is_castling_interrupted(cr) && pos.can_castle(cr)))
 						*move_list++ = Move{ ksq, pos.castling_rook_square(cr), MT_CASTLING };
 				}
 			}

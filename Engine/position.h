@@ -115,7 +115,7 @@ namespace ChessEngine
 		template<PieceType pt>
 		inline BITBOARD	get_attacks_by(Color c) const;
 		inline BITBOARD	get_checked_squares(PieceType pt) const;
-		inline BITBOARD	get_threats() const { return threats; }
+		inline BITBOARD	get_threats(PieceType pt) const { return threats[pt]; }
 		inline BITBOARD	get_king_blockers(Color c) const { return blocking_pieces[c]; }
 		inline BITBOARD	get_pinners(Color c) const { return pinning_pieces[c]; }
 		inline BITBOARD get_checkers() const { return checkers; }
@@ -175,7 +175,7 @@ namespace ChessEngine
 		BITBOARD occupancies[BOTH + 1]{};
 		BITBOARD type[PIECE_TYPE_NB]{};
 		BITBOARD castling_path[CASTLING_RIGHT_NB]{};
-		BITBOARD threats{};
+		BITBOARD threats[PIECE_TYPE_NB]{};
 		BITBOARD pinning_pieces[BOTH]{};
 		BITBOARD blocking_pieces[BOTH]{};
 		BITBOARD checkers;

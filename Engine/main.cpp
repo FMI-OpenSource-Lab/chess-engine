@@ -8,19 +8,11 @@
 
 using namespace ChessEngine;
 
-void init_all()
-{
-	// Initialize attacks
-	// Attacks::init();
-
-	// Initialize bitboards
-	Bitboards::init();
-}
-
 int main()
 {
-	init_all();
-	bool debug = false;
+	Bitboards::init();
+
+	bool debug = true;
 
 	if (debug)
 	{
@@ -33,7 +25,7 @@ int main()
 		pos.set(TEST_FEN, &infos->back());
 		std::cout << pos;
 
-		print_bitboard(10380797141088993280ULL);
+		std::cout << "Nodes: " << perft<true>(pos, 5);
 	}
 	else
 		uci_loop();

@@ -51,7 +51,7 @@ namespace ChessEngine
 	{
 		MoveInfo move_info{};
 
-		U64 count, nodes = 0;
+		U64 count = 0, nodes = 0;
 		const bool leaf = (depth == 2);
 
 		std::ofstream perft_results;
@@ -60,24 +60,26 @@ namespace ChessEngine
 		for (const auto& m : MoveList<GT_LEGAL>(pos))
 		{
 			if (Root && depth <= 1)
-				count = 1, nodes++;
+			{
+				count = 1;
+				nodes++;
+			}
 			else
 			{
 				pos.do_move(m, move_info);
 
-				count = leaf
-					? MoveList<GT_LEGAL>(pos).size()
-					: perft<false>(pos, depth - 1);
+				if (leaf)
+					count = MoveList<GT_LEGAL>(pos).size();
+				else 
+					count = perft<false>(pos, depth - 1);
 
 				nodes += count;
 
 				pos.undo_move(m);
-				std::cout << uci_move(m) << ": " << count << std::endl;
 			}
 			if (Root)
 			{
 				std::cout << uci_move(m) << ": " << count << std::endl;
-
 				perft_results << uci_move(m) << ": " << count << "\n";
 			}
 		}

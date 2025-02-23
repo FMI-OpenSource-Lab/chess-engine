@@ -118,7 +118,7 @@ namespace ChessEngine
 		// std::fill_n(piece_board, SQUARE_TOTAL, NO_PIECE);
 
 		side = WHITE;
-		CastlingRights *castle = &move_info->castling_rights;
+		CastlingRights* castle = &move_info->castling_rights;
 
 		size_t idx;
 
@@ -191,8 +191,8 @@ namespace ChessEngine
 		{
 			// init enpassant suqare
 			move_info->en_passant = make_square(
-					File(fen_ptr[0] - 'a'),
-					Rank(8 - (fen_ptr[1] - '0')));
+				File(fen_ptr[0] - 'a'),
+				Rank(8 - (fen_ptr[1] - '0')));
 		}
 		else
 			move_info->en_passant = NONE;
@@ -206,7 +206,6 @@ namespace ChessEngine
 		fullmove_number = std::max(2 * (fullmove_number - 1), 0) + (side == BLACK);
 
 		checkers = get_attackers_to(square<KING>(side)) & get_opponent_pieces_bb();
-
 		calculate_threats();
 
 		return *this;
@@ -403,9 +402,9 @@ namespace ChessEngine
 
 		// Copy the old struct into the new one up to the captured_piece field
 		// prev and next are not copied
-		std::memcpy(&new_info, move_info, 
+		std::memcpy(&new_info, move_info,
 			offsetof(struct MoveInfo, captured_piece));
-		
+
 		// Much like a linked list
 		// Assign then previous block to be equal to the old struct
 		new_info.prev = move_info;
@@ -478,8 +477,8 @@ namespace ChessEngine
 		// Update castling rights if needed
 		if (move_info->castling_rights && (castling_rights_mask[source] | castling_rights_mask[target]))
 		{
-			move_info->castling_rights = move_info->castling_rights 
-				& ~(castling_rights_mask[source] | 
+			move_info->castling_rights = move_info->castling_rights
+				& ~(castling_rights_mask[source] |
 					castling_rights_mask[target]);
 		}
 
@@ -513,10 +512,10 @@ namespace ChessEngine
 			move_info->fifty_move = 0;
 		}
 
-		checkers = gives_check 
-			? get_attackers_to(square<KING>(them)) & get_our_pieces_bb() 
+		checkers = gives_check
+			? get_attackers_to(square<KING>(them)) & get_our_pieces_bb()
 			: 0ULL;
-		
+
 		move_info->captured_piece = captured;
 
 		side = ~side;
@@ -542,7 +541,7 @@ namespace ChessEngine
 		PieceType target_piece = type_of_piece(on_target);
 
 		MoveType mt = m.move_type();
-		
+
 		assert(is_empty(source) || mt == MT_CASTLING);
 		assert(type_of_piece(move_info->captured_piece) != KING);
 
@@ -753,6 +752,8 @@ namespace ChessEngine
 
 		CastlingRights cr = c & (k_source < r_source ? KINGSIDE : QUEENSIDE);
 
+		move_info->castling_rights = move_info->castling_rights | cr;
+
 		castling_rights_mask[k_source] |= cr;
 		castling_rights_mask[r_source] |= cr;
 		rook_source_sq[cr] = r_source;
@@ -770,17 +771,19 @@ namespace ChessEngine
 
 	void Position::calculate_threats()
 	{
-		threats = 0ULL;
-
 		update_blocks_and_pins(WHITE);
 		update_blocks_and_pins(BLACK);
 
-		threats |= get_attacks_by<PAWN>(~side);
-		threats |= get_attacks_by<KNIGHT>(~side);
-		threats |= get_attacks_by<BISHOP>(~side);
-		threats |= get_attacks_by<ROOK>(~side);
-		threats |= get_attacks_by<QUEEN>(~side);
-		threats |= get_attacks_by<KING>(~side);
+		Square ksq = square<KING>(~side);
+
+		BITBOARD our = get_all_pieces_bb();
+
+		threats[PAWN] = pawn_attacks_bb(~side, ksq);
+		threats[KNIGHT] = attacks_bb_by<KNIGHT>(ksq);
+		threats[BISHOP] = attacks_bb_by<BISHOP>(ksq, our);
+		threats[ROOK] = attacks_bb_by<ROOK>(ksq, our);
+		threats[QUEEN] = threats[BISHOP] | threats[ROOK];
+		threats[KING] = 0; // Can't have threats by king
 	}
 
 	void Position::update_blocks_and_pins(Color c)
