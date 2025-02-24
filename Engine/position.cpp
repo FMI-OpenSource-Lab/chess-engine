@@ -331,7 +331,7 @@ namespace ChessEngine
 		// then intersect with the target
 		// if its king, result will be greater than 0, hence a check
 		// else result will be 0, hence not a check
-		if (get_checked_squares(type_of_piece(get_piece_on(source))) & target)
+		if (get_threats(type_of_piece(get_piece_on(source))) & target)
 			return true;
 
 		// Discovered check
@@ -362,7 +362,7 @@ namespace ChessEngine
 
 			// Handle the case where the promoted piece checks the king
 		case MT_PROMOTION:
-			return attacks_bb_by(m.promoted(), target, get_all_pieces_bb() ^ source);
+			return attacks_bb_by(m.promoted(), target, get_all_pieces_bb() ^ source) & opp_king_square;
 
 			// Handle the en passant capture with check
 			// Direct and discovered checks are already handled above
@@ -373,12 +373,8 @@ namespace ChessEngine
 			Square csq = make_square(file_of(target), rank_of(source));
 			BITBOARD bb = (get_all_pieces_bb() ^ source ^ csq) | target;
 
-			BITBOARD rook_from_king_bb =
-				attacks_bb_by<ROOK>(square<KING>(~us), bb) &
-				(get_pieces_bb(QUEEN, us) | get_pieces_bb(ROOK, us));
-			BITBOARD bishop_from_king_bb =
-				attacks_bb_by<BISHOP>(square<KING>(~us), bb) &
-				(get_pieces_bb(QUEEN, us) | get_pieces_bb(BISHOP, us));
+			BITBOARD rook_from_king_bb = attacks_bb_by<ROOK>(opp_king_square, bb) & (get_pieces_bb(QUEEN, us) | get_pieces_bb(ROOK, us));
+			BITBOARD bishop_from_king_bb = attacks_bb_by<BISHOP>(opp_king_square, bb) & (get_pieces_bb(QUEEN, us) | get_pieces_bb(BISHOP, us));
 
 			// Return true if sliders are attacking king after the capture
 			return rook_from_king_bb | bishop_from_king_bb;
@@ -388,7 +384,7 @@ namespace ChessEngine
 			// Castling is encoded as king captures the rook
 			Square rook_target = sq_relative_to_side(target > source ? F1 : D1, us);
 
-			return get_checked_squares(ROOK) & rook_target;
+			return get_threats(ROOK) & rook_target;
 		}
 		}
 	}
@@ -469,18 +465,11 @@ namespace ChessEngine
 		}
 
 		// Reset en passant square
-		if (move_info->en_passant != NONE)
-		{
-			move_info->en_passant = NONE;
-		}
-
+		if (move_info->en_passant != NONE) move_info->en_passant = NONE;
+		
 		// Update castling rights if needed
-		if (move_info->castling_rights && (castling_rights_mask[source] | castling_rights_mask[target]))
-		{
-			move_info->castling_rights = move_info->castling_rights
-				& ~(castling_rights_mask[source] |
-					castling_rights_mask[target]);
-		}
+		if (move_info->castling_rights && (castling_rights_mask[source] | castling_rights_mask[target])) move_info->castling_rights 
+			= move_info->castling_rights & ~(castling_rights_mask[source] | castling_rights_mask[target]);
 
 		if (m_type != MT_CASTLING)
 		{
@@ -623,12 +612,10 @@ namespace ChessEngine
 			BITBOARD occ = get_all_pieces_bb() ^ source ^ cap_sq;
 			BITBOARD opp_queen = get_pieces_bb(QUEEN, ~us);
 
-			BITBOARD r_att =
-				attacks_bb_by<ROOK>(ksq, occ) & (get_pieces_bb(ROOK, ~us) | opp_queen);
-			BITBOARD b_att =
-				attacks_bb_by<BISHOP>(ksq, occ) & (get_pieces_bb(BISHOP, ~us) | opp_queen);
+			BITBOARD r_att = attacks_bb_by<ROOK>(ksq, occ) & (get_pieces_bb(ROOK, ~us) | opp_queen);
+			BITBOARD b_att = attacks_bb_by<BISHOP>(ksq, occ) & (get_pieces_bb(BISHOP, ~us) | opp_queen);
 
-			return !r_att && !b_att;
+			return !(r_att | b_att);
 		}
 		// Not castling into check
 		// Not checking if the castling path is clear

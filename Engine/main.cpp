@@ -25,7 +25,7 @@ int main()
 		pos.set(TEST_FEN, &infos->back());
 		std::cout << pos;
 
-		std::cout << "Nodes: " << perft<true>(pos, 5);
+		std::cout << "\nNodes: " << perft<true>(pos, 5) << "\n";
 	}
 	else
 		uci_loop();

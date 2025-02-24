@@ -129,7 +129,7 @@ namespace ChessEngine
 
 			BITBOARD bb = pos.get_pieces_bb(Pt, Us);
 			BITBOARD all = pos.get_all_pieces_bb();
-			
+
 			while (bb)
 			{
 				Square source = pop_ls1b(bb);
@@ -155,7 +155,7 @@ namespace ChessEngine
 			{
 				BITBOARD has_attackers = 0ULL;
 
-				for (CastlingRights cr : { Us & KINGSIDE, Us & QUEENSIDE })
+				for (CastlingRights cr : { Us& KINGSIDE, Us& QUEENSIDE })
 				{
 					if (cr == WK || cr == BK)
 					{
@@ -181,7 +181,7 @@ namespace ChessEngine
 		}
 
 		template<Color Us, GenerationTypes Type>
-		ScoredMoves* generate_all(const Position& pos, ScoredMoves* move_list)
+		ScoredMoves* generate_all_pseudo_legal(const Position& pos, ScoredMoves* move_list)
 		{
 			Square ksq = pos.square<KING>(Us);
 
@@ -227,11 +227,11 @@ namespace ChessEngine
 		Color us = pos.side_to_move();
 
 		return us == WHITE
-			? generate_all<WHITE, Type>(pos, move_list)
-			: generate_all<BLACK, Type>(pos, move_list);
+			? generate_all_pseudo_legal<WHITE, Type>(pos, move_list)
+			: generate_all_pseudo_legal<BLACK, Type>(pos, move_list);
 	}
 
-	// <GT_ALL>			generates all pseudo-legal captures, quiets and attakcs
+	// <GT_ALL>			generates all pseudo-legal captures, quiets and evasions
 	// <GT_CAPTURE>		generates all pseudo-legal captures
 	// <GT_QUIET>		generates all pseudo-legal quiet moves
 	// <GT_EVADE>		generates all pseudo-legal check blocks or checkers captures
@@ -247,12 +247,18 @@ namespace ChessEngine
 		Color us = pos.side_to_move();
 		BITBOARD pinned = pos.get_king_blockers(us) & pos.get_our_pieces_bb();
 		Square ksq = pos.square<KING>(us);
+
 		ScoredMoves* curr = move_list;
 
-		if (pos.get_checkers())
-			move_list = generate_moves<GT_EVADE>(pos, move_list);
-		else
-			move_list = generate_moves<GT_ALL>(pos, move_list);
+		move_list = pos.get_checkers() ? generate_moves<GT_EVADE>(pos, move_list) : generate_moves<GT_ALL>(pos, move_list);
+
+		BITBOARD moving_pinned_piece = 0ULL;
+
+		bool moving_king_into_check = false;
+		bool ep_illegal = false;
+
+		// *curr			-> begining of the list
+		// *move_list		-> end of the list
 
 		while (curr != move_list)
 		{
@@ -261,15 +267,15 @@ namespace ChessEngine
 			// since is_legal test for en_passant illegals
 			// king stepping into checks
 			// or moving our piece that discovers a check to our king
-			bool is_moving_pp = pinned & curr->source_square();
-			bool is_king_moving = curr->source_square() == ksq;
-			bool is_en_passant = curr->move_type() == MT_EN_PASSANT;
+			moving_pinned_piece = pinned & curr->source_square();
 
-			if ((is_moving_pp || is_king_moving || is_en_passant) &&
-				!pos.is_legal(*curr)) // if not legal
-				*curr = *(--move_list);
+			moving_king_into_check = curr->source_square() == ksq;
+			ep_illegal = curr->move_type() == MT_EN_PASSANT;
+
+			if ((moving_pinned_piece || moving_king_into_check || ep_illegal) && !pos.is_legal(*curr)) // if not legal
+				*curr = *(--move_list); // 'first' will be equal to the 'penultimate' move
 			else // if legal
-				++curr;
+				++curr; // advance to the next move
 		}
 
 		return move_list;

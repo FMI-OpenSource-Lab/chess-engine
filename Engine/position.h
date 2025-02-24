@@ -49,14 +49,6 @@ namespace ChessEngine
 
 	using BITBOARD = U64;
 
-	enum class Movegen : uint16_t
-	{
-		ALL,
-		QSEARCH,
-		QUIET,
-		CAPTURE
-	};
-
 	// Info structure stores information needed to restore a position
 	// to its previous state when a move is taken back
 	struct MoveInfo
