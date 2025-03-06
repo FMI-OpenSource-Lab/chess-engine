@@ -16,10 +16,8 @@ namespace ChessEngine
 
 		0000 0000 0011 1111 source square				| 6 bits
 		0000 1111 1100 0000 target square				| 6 bits
-		0011 0000 0000 0000 promoted piece				| 2 bits
-		0100 0000 0000 0000 promotion flag				| 1 bits
-		1000 0000 0000 0000 enpassant capture flag		| 1 bit
-		1100 0000 0000 0000 castling flag				| 2 bit
+		0011 0000 0000 0000 move type					| 1 bit
+		1100 0000 0000 0000 promotion type				| 2 bits
 
 		Promoted piece types bits:
 
@@ -39,18 +37,18 @@ namespace ChessEngine
 
 	enum MoveType
 	{
-		MT_NORMAL,
-		MT_PROMOTION = 1 << 14,
-		MT_EN_PASSANT = 2 << 14,
-		MT_CASTLING = 3 << 14
+		MT_NORMAL = 0,
+		MT_PROMOTION,
+		MT_EN_PASSANT,
+		MT_CASTLING
 	};
 
 	enum PromotionType
 	{
-		PROMOTE_KNIGHT,
-		PROMOTE_BISHOP = 1 << 12,
-		PROMOTE_ROOK = 2 << 12,
-		PROMOTE_QUEEN = 3 << 12,
+		PROMOTE_KNIGHT = 0,
+		PROMOTE_BISHOP,
+		PROMOTE_ROOK,
+		PROMOTE_QUEEN,
 	};
 
 	class Move
@@ -59,38 +57,42 @@ namespace ChessEngine
 		inline Move() : move(0) {};
 
 		constexpr explicit Move(std::uint16_t m) :
-			move(m) {}
+			move(m) {
+		}
 
 		constexpr Move(Square source, Square target) :
-			move((target << 6) + source) {}
+			move((target << 6) + source) {
+		}
 
 		constexpr Move(Square source, Square target, MoveType mt)
-			: move(mt + (target << 6) + source) {}
+			: move((mt << 12) + (target << 6) + source) {
+		}
 
 		constexpr Move(Square source, Square target, MoveType mt, PromotionType pt)
-			: move(mt + pt + (target << 6) + source) {}
+			: move((pt << 14) + (mt << 12) + (target << 6) + source) {
+		}
 
 		constexpr Square source_square() const { return Square(move & 0x3F); }
 
 		constexpr Square target_square() const { return Square((move >> 6) & 0x3F); }
 
-		constexpr PieceType promoted() const { return PieceType(((move >> 12) & 3) + KNIGHT); }
+		constexpr MoveType move_type() const { return MoveType((move >> 12) & 3); }
 
-		constexpr MoveType move_type() const { return MoveType(move & (0b0011 << 14)); }
+		constexpr PieceType promoted() const { return PieceType(((move >> 14) & 3) + KNIGHT); }
 
 		// null and none moves
 		// has the same source and target square whilst other moves have different source and destination squares
 		static constexpr Move null_move() { return Move(65); }
 		static constexpr Move invalid_move() { return Move(0); }
 
-		constexpr std::uint16_t move_value() { return move; }
+		constexpr std::uint16_t move_value() const { return move; }
 		constexpr bool is_move_ok() const { return invalid_move().move != move && null_move().move != move; }
 
 		static constexpr bool same_move(Move a, Move b) { return a.move == b.move; }
 
-		friend std::ostream& operator<<(std::ostream& os, Move const& mv) {
-			os << squareToCoordinates[mv.source_square()]
-				<< squareToCoordinates[mv.target_square()];
+		friend std::ostream& operator<<(std::ostream& os, Move const& mv) 
+		{
+			os << squareToCoordinates[mv.source_square()] << squareToCoordinates[mv.target_square()];
 
 			if (mv.move_type() == MT_PROMOTION)
 				os << " PNBRQKpnbrqk"[get_piece(BLACK, mv.promoted())]; // BLACK because we want the lowercase letter of the promtoed piece

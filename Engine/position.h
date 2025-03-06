@@ -86,9 +86,9 @@ namespace ChessEngine
 		std::string get_fen() const;
 
 		// Squares
-		Square ep_square() const { return move_info->en_passant; }
 		template<PieceType pt>
-		Square square(Color c) const { return getLS1B(get_pieces_bb(pt, c)); }
+		Square square(Color c) const { return get_ls1b(get_pieces_bb(pt, c)); }
+		Square ep_square() const { return move_info->en_passant; }
 		Square castling_rook_square(CastlingRights cr) const;
 
 		// Bitboards
@@ -110,14 +110,15 @@ namespace ChessEngine
 		inline BITBOARD	get_threats(PieceType pt) const { return threats[pt]; }
 		inline BITBOARD	get_king_blockers(Color c) const { return blocking_pieces[c]; }
 		inline BITBOARD	get_pinners(Color c) const { return pinning_pieces[c]; }
-		inline BITBOARD get_checkers() const { return checkers; }
-
+		
 		// Booleans
 		bool is_empty(Square s) const { return get_piece_on(s) == NO_PIECE; }
 		bool gives_check(Move m) const;
 		bool can_castle(CastlingRights cr) const { return move_info->castling_rights & cr; }
 		bool is_castling_interrupted(CastlingRights cr) const;
 		bool is_legal(Move m) const;
+		bool is_square_attacked(Square s) const;
+		bool is_square_attacked(Square s, Color c) const;
 
 		// Pieces
 		Piece get_piece_on(Square s) const;
@@ -132,60 +133,55 @@ namespace ChessEngine
 		Value see(Move m) const;
 
 		// Doing and undoing moves
-		void do_move(Move m, MoveInfo& new_info);
-		void do_move(Move m, MoveInfo& new_info, bool gives_check);
-		void undo_move(Move m);
+		void do_move(const Move& m, MoveInfo& new_info);
+		void undo_move(const Move& m);
 
 		void update_blocks_and_pins(Color c);
 		void remove_piece(Square s);
 		void place_piece(Piece p, Square s);
 		void calculate_threats();
+		void print_attacked_squares(Color c) const;
 
 		// Caslte & side
-		CastlingRights castling_rights(Color c) const {
-			return c & CastlingRights(move_info->castling_rights);
-		}
-		CastlingRights get_castling_rights() const { return move_info->castling_rights; }
+		CastlingRights castling_rights(Color c) const { return c & CastlingRights(move_info->castling_rights); }
 
 		Color side_to_move() const { return side; }
 
 		// Overrides
 		friend std::ostream& operator<<(std::ostream& os, const Position& position);
-
+	private:
 		template<bool Do>
 		void do_castle(Color us, Square source, Square& target, Square& r_source, Square& r_target);
-
-		BITBOARD get_castling_path(CastlingRights cr) const { return castling_path[cr]; }
-	private:
 		void set_castling_rights(Color c, Square r_source);
-
 		void move_piece(Square source, Square target);
-		
+
 		BITBOARD get_least_valuable_piece(BITBOARD attacks, Color by_side, PieceType& pt) const;
 
 		// Data
-		BITBOARD occupancies[BOTH + 1]{};
-		BITBOARD type[PIECE_TYPE_NB]{};
-		BITBOARD castling_path[CASTLING_RIGHT_NB]{};
-		BITBOARD threats[PIECE_TYPE_NB]{};
-		BITBOARD pinning_pieces[BOTH]{};
-		BITBOARD blocking_pieces[BOTH]{};
-		BITBOARD checkers;
-
-		Piece	 piece_board[SQUARE_TOTAL]{};
-		Piece	 captured{};
-
-		uint8_t	 castling_rights_mask[NONE]{};
+		BITBOARD occupancies[BOTH + 1]{};				// All pieces of the side to move
+		BITBOARD type[PIECE_TYPE_NB]{};					// All the piece types
+		BITBOARD castling_path[CASTLING_RIGHT_NB]{};	// Castling path depending on the castling side
+		BITBOARD threats[PIECE_TYPE_NB]{};				// Piece type threads
+		BITBOARD pinning_pieces[BOTH]{};				// Pieces that are pinning
+		BITBOARD blocking_pieces[BOTH]{};				// Pieces that are blocking
+		
+		Piece	 piece_board[SQUARE_TOTAL]{};			// Board of pieces
+		Piece	 captured{};							// Captured piece
 
 		Square	 rook_source_sq[CASTLING_RIGHT_NB]{};
-		
+
 		Color	 side{};
 
 		PLY_TYPE fullmove_number{};
 		PLY_TYPE repetition{};
 
 		// State info 
-		MoveInfo* move_info;
+		MoveInfo* move_info{};
+	};
+
+	inline bool Position::is_square_attacked(Square s) const 
+	{
+		return is_square_attacked(s, side);
 	};
 
 	inline Piece Position::get_piece_on(Square s) const
@@ -250,11 +246,6 @@ namespace ChessEngine
 	{
 		assert(cr == WK || cr == WQ || cr == BK || cr == BQ);
 		return get_all_pieces_bb() & castling_path[cr];
-	}
-
-	inline void Position::do_move(Move m, MoveInfo& new_info)
-	{
-		do_move(m, new_info, gives_check(m));
 	}
 
 	inline Square Position::castling_rook_square(CastlingRights cr) const

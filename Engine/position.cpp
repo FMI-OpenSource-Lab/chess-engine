@@ -54,7 +54,7 @@ namespace ChessEngine
 			? squareToCoordinates[enpassant]
 			: "no") << "\n";
 
-		CastlingRights castle = position.get_castling_rights();
+		CastlingRights castle = position.move_info->castling_rights;
 
 		std::string castling;
 		(castle & WK) ? castling += 'K' : castling += '-';
@@ -118,7 +118,7 @@ namespace ChessEngine
 		// std::fill_n(piece_board, SQUARE_TOTAL, NO_PIECE);
 
 		side = WHITE;
-		CastlingRights* castle = &move_info->castling_rights;
+		CastlingRights castle = move_info->castling_rights;
 
 		size_t idx;
 
@@ -163,24 +163,18 @@ namespace ChessEngine
 			Square r_sq = NONE;
 			Color c = islower(*fen_ptr) ? BLACK : WHITE;
 			Piece rook = get_piece(c, ROOK);
-			CastlingRights cr = *castle;
 
 			switch (*fen_ptr++)
 			{
-			case 'K': *castle = cr | WK;
-				for (r_sq = H1; get_piece_on(r_sq) != rook; --r_sq);
-				break; // break from switch
-			case 'Q': *castle = cr | WQ;
-				for (r_sq = A1; get_piece_on(r_sq) != rook; ++r_sq);
-				break;// break from switch
-			case 'k': *castle = cr | BK;
-				for (r_sq = H8; get_piece_on(r_sq) != rook; --r_sq);
-				break; // break from switch
-			case 'q': *castle = cr | BQ;
-				for (r_sq = A8; get_piece_on(r_sq) != rook; --r_sq);
-				break; // break from switch
-			case '-':
-				break;
+			case 'K': castle = castle | WK;
+				for (r_sq = H1; get_piece_on(r_sq) != rook; --r_sq); break;
+			case 'Q': castle = castle | WQ;
+				for (r_sq = A1; get_piece_on(r_sq) != rook; ++r_sq); break;
+			case 'k': castle = castle | BK;
+				for (r_sq = H8; get_piece_on(r_sq) != rook; --r_sq); break;
+			case 'q': castle = castle | BQ;
+				for (r_sq = A8; get_piece_on(r_sq) != rook; --r_sq); break;
+			case '-': break;
 			}
 
 			set_castling_rights(c, r_sq);
@@ -205,7 +199,6 @@ namespace ChessEngine
 		// handles also incorrect FEN's with fullmove = 0
 		fullmove_number = std::max(2 * (fullmove_number - 1), 0) + (side == BLACK);
 
-		checkers = get_attackers_to(square<KING>(side)) & get_opponent_pieces_bb();
 		calculate_threats();
 
 		return *this;
@@ -265,27 +258,65 @@ namespace ChessEngine
 			: pawn_attacks_bb<BLACK>(get_pieces_bb(PAWN, BLACK));
 
 		BITBOARD attacks = 0ULL;
-		BITBOARD bb = get_pieces_bb(pt, c);
-		BITBOARD all = get_all_pieces_bb();
+		BITBOARD attackers = get_pieces_bb(pt, c);
 
-		while (bb)
-			attacks |= attacks_bb_by(QUEEN, pop_ls1b(bb), all);
+		while (attackers)
+			attacks |= attacks_bb_by<pt>(pop_ls1b(attackers), get_all_pieces_bb());
 
 		return attacks;
 	}
 
 	inline BITBOARD Position::get_attackers_to(Square s, BITBOARD occ) const
 	{
-		BITBOARD pawn_att =
-			(pawn_attacks_bb<WHITE>(square_to_BB(s)) & get_pieces_bb(PAWN, BLACK))
-			| (pawn_attacks_bb<BLACK>(square_to_BB(s)) & get_pieces_bb(PAWN, WHITE));
+		BITBOARD w_pawn_att = pawn_attacks_bb(WHITE, s) & get_pieces_bb(PAWN, BLACK);
+		BITBOARD b_pawn_att = pawn_attacks_bb(BLACK, s) & get_pieces_bb(PAWN, WHITE);
 		BITBOARD knight_att = attacks_bb_by<KNIGHT>(s) & get_pieces_bb(KNIGHT);
 		BITBOARD horizontal = attacks_bb_by<ROOK>(s, occ) & (get_pieces_bb(ROOK) | get_pieces_bb(QUEEN));
 		BITBOARD diagonal = attacks_bb_by<BISHOP>(s, occ) & (get_pieces_bb(BISHOP) | get_pieces_bb(QUEEN));
 		BITBOARD king_att = attacks_bb_by<KING>(s) & get_pieces_bb(KING);
 
-		return
-			pawn_att | knight_att | horizontal | diagonal | king_att;
+		return w_pawn_att | b_pawn_att | knight_att | horizontal | diagonal | king_att;
+	}
+
+	inline bool Position::is_square_attacked(Square s, Color us) const
+	{
+		BITBOARD all = get_all_pieces_bb();
+
+		bool is_pawn_attack = us == WHITE
+			? pawn_attacks_bb(BLACK, s) & get_pieces_bb(PAWN, WHITE)
+			: pawn_attacks_bb(WHITE, s) & get_pieces_bb(PAWN, BLACK);
+
+		bool is_knight_attack = attacks_bb_by<KNIGHT>(s) & get_pieces_bb(KNIGHT, us);
+		bool is_bishop_attack = attacks_bb_by<BISHOP>(s, all) & get_pieces_bb(BISHOP, us);
+		bool is_rook_attack = attacks_bb_by<ROOK>(s, all) & get_pieces_bb(ROOK, us);
+		bool is_queen_attack = attacks_bb_by<QUEEN>(s, all) & get_pieces_bb(QUEEN, us);
+
+		return is_pawn_attack ||
+			is_knight_attack ||
+			is_bishop_attack ||
+			is_rook_attack ||
+			is_queen_attack;
+	}
+
+	void Position::print_attacked_squares(Color c) const
+	{
+		std::cout << "\nAttacked squares:\n\n";
+
+		for (Rank rank = RANK_8; rank <= RANK_1; ++rank)
+		{
+			for (File file = FILE_A; file <= FILE_H; ++file)
+			{
+				Square sq = make_square(file, rank);
+				std::string s = is_square_attacked(sq, c) ? " 1" : " 0";
+
+				std::cout << s;
+			}
+
+			std::cout << "  " << (8 - rank) << " \n";
+		}
+
+		// print files
+		std::cout << "\n a b c d e f g h \n\n";
 	}
 
 	// Shows a bitboard of the possible pieces that can give check to the opposite king in a given position
@@ -340,9 +371,8 @@ namespace ChessEngine
 
 		//	Already checked if a possible true result 
 		//  is not caused by direct check of sliding capture
-		if (blocking_pieces[~side] & source) return
-			!are_squares_aligned(source, target, opp_king_square)
-			|| m.move_type() == MT_CASTLING;
+		if (get_king_blockers(~us) & source)
+			return !are_squares_aligned(source, target, opp_king_square) || m.move_type() == MT_CASTLING;
 
 		// On move types
 		// In case of NORMAL move (a check cannot be given)
@@ -391,15 +421,14 @@ namespace ChessEngine
 
 	// Makes a move and saves the information in the Info
 	// Move is assumed to be legal
-	void Position::do_move(Move m, MoveInfo& new_info, bool gives_check)
+	void Position::do_move(const Move& m, MoveInfo& new_info)
 	{
 		assert(m.is_move_ok());
 		assert(&new_info != move_info);
 
 		// Copy the old struct into the new one up to the captured_piece field
 		// prev and next are not copied
-		std::memcpy(&new_info, move_info,
-			offsetof(struct MoveInfo, captured_piece));
+		std::memcpy(&new_info, move_info, offsetof(struct MoveInfo, captured_piece));
 
 		// Much like a linked list
 		// Assign then previous block to be equal to the old struct
@@ -466,15 +495,12 @@ namespace ChessEngine
 
 		// Reset en passant square
 		if (move_info->en_passant != NONE) move_info->en_passant = NONE;
-		
-		// Update castling rights if needed
-		if (move_info->castling_rights && (castling_rights_mask[source] | castling_rights_mask[target])) move_info->castling_rights 
-			= move_info->castling_rights & ~(castling_rights_mask[source] | castling_rights_mask[target]);
 
-		if (m_type != MT_CASTLING)
-		{
-			move_piece(source, target);
-		}
+		// Update castling rights if needed
+		move_info->castling_rights = move_info->castling_rights & CASTLING_RIGHTS_TABLE[source];
+		move_info->castling_rights = move_info->castling_rights & CASTLING_RIGHTS_TABLE[target];
+
+		if (m_type != MT_CASTLING) move_piece(source, target);
 
 		if (type_of_piece(on_source) == PAWN)
 		{
@@ -501,10 +527,6 @@ namespace ChessEngine
 			move_info->fifty_move = 0;
 		}
 
-		checkers = gives_check
-			? get_attackers_to(square<KING>(them)) & get_our_pieces_bb()
-			: 0ULL;
-
 		move_info->captured_piece = captured;
 
 		side = ~side;
@@ -515,7 +537,7 @@ namespace ChessEngine
 		// will do after hashing the moves
 	}
 
-	void Position::undo_move(Move m)
+	void Position::undo_move(const Move& m)
 	{
 		assert(m.is_move_ok());
 
@@ -591,6 +613,7 @@ namespace ChessEngine
 		MoveType mt = m.move_type();
 
 		BITBOARD opp = get_opponent_pieces_bb();
+		BITBOARD opp_queen = get_pieces_bb(QUEEN, ~us);
 
 		assert(get_piece_color(moved_piece(m)) == us);
 		assert(get_piece_on(square<KING>(us)) == get_piece(us, KING));
@@ -609,23 +632,25 @@ namespace ChessEngine
 			assert(get_piece_on(cap_sq) == get_piece(~us, PAWN));
 			assert(get_piece_on(target) == NO_PIECE);
 
-			BITBOARD occ = get_all_pieces_bb() ^ source ^ cap_sq;
-			BITBOARD opp_queen = get_pieces_bb(QUEEN, ~us);
+			BITBOARD occ = get_all_pieces_bb() ^ source ^ cap_sq; // remove our pawn and cap square
 
 			BITBOARD r_att = attacks_bb_by<ROOK>(ksq, occ) & (get_pieces_bb(ROOK, ~us) | opp_queen);
 			BITBOARD b_att = attacks_bb_by<BISHOP>(ksq, occ) & (get_pieces_bb(BISHOP, ~us) | opp_queen);
 
+			// if such attack after removing the pieces does not exist
+			// then the move is legal, hence return true
 			return !(r_att | b_att);
 		}
 		// Not castling into check
-		// Not checking if the castling path is clear
+		// And castling path is clear
 		case MT_CASTLING:
 		{
 			target = sq_relative_to_side(target > source ? G1 : C1, us);
 			Direction step = target > source ? LEFT : RIGHT;
 
 			for (Square s = target; s != source; s += step)
-				if (get_attackers_to(s) & opp) return false;
+				if (is_square_attacked(s, ~us))
+					return false;
 
 			return true;
 		}
@@ -633,15 +658,24 @@ namespace ChessEngine
 
 		if (type_of_piece(get_piece_on(source)) == KING) // moving the king
 			// Check if the target square is attacked by the enemy
-			return !(get_attackers_to(target, get_all_pieces_bb() ^ source) & opp);
+		{
+			if (is_square_attacked(target, ~side)) return false;
+
+			// Check if moving the king exposes it to attacks from sliding pieces
+			BITBOARD occ = get_all_pieces_bb() ^ source; // remove the king
+			// Get the rook and bishop attacks
+			BITBOARD b1 = attacks_bb_by<ROOK>(target, occ) & (get_pieces_bb(ROOK, ~us) | opp_queen);
+			BITBOARD b2 = attacks_bb_by<BISHOP>(target, occ) & (get_pieces_bb(BISHOP, ~us) | opp_queen);
+
+			return !(b1 | b2);
+		}
 
 		// Since king exposing to checks is handled
 		// Other cases are:
 
 		// Capture of checking piece. The captured piece is NOT absoliutely pinned
 		// Moving along the direction, towards or away from the king
-		return !(get_king_blockers(us) & source)
-			|| are_squares_aligned(source, target, ksq);
+		return !(get_king_blockers(us) & source) || are_squares_aligned(source, target, ksq);
 	}
 
 	// Helper for do/undo castling move
@@ -649,6 +683,7 @@ namespace ChessEngine
 	void Position::do_castle(Color us, Square source, Square& target, Square& r_source, Square& r_target)
 	{
 		bool king_side = target > source;
+
 		r_source = target;
 		r_target = sq_relative_to_side(king_side ? F1 : D1, us);
 		target = sq_relative_to_side(king_side ? G1 : C1, us);
@@ -741,8 +776,6 @@ namespace ChessEngine
 
 		move_info->castling_rights = move_info->castling_rights | cr;
 
-		castling_rights_mask[k_source] |= cr;
-		castling_rights_mask[r_source] |= cr;
 		rook_source_sq[cr] = r_source;
 
 		Square r_target = sq_relative_to_side(cr & KINGSIDE ? F1 : D1, c);
@@ -763,12 +796,12 @@ namespace ChessEngine
 
 		Square ksq = square<KING>(~side);
 
-		BITBOARD our = get_all_pieces_bb();
+		BITBOARD all = get_all_pieces_bb();
 
 		threats[PAWN] = pawn_attacks_bb(~side, ksq);
 		threats[KNIGHT] = attacks_bb_by<KNIGHT>(ksq);
-		threats[BISHOP] = attacks_bb_by<BISHOP>(ksq, our);
-		threats[ROOK] = attacks_bb_by<ROOK>(ksq, our);
+		threats[BISHOP] = attacks_bb_by<BISHOP>(ksq, all);
+		threats[ROOK] = attacks_bb_by<ROOK>(ksq, all);
 		threats[QUEEN] = threats[BISHOP] | threats[ROOK];
 		threats[KING] = 0; // Can't have threats by king
 	}

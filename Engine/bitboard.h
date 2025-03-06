@@ -234,17 +234,12 @@ namespace ChessEngine
 #undef S
 	}
 
-	constexpr Square getLS1B(U64 bitboard)
+	constexpr Square get_ls1b(U64 bitboard)
 	{
 		// count trailing bits before LS1B
 		int lsb = u64_log2(bitboard & -bitboard);
 
 		return lsb == -1 ? NONE : Square(lsb);
-	}
-
-	constexpr void resetLSB(U64& bitboard)
-	{
-		bitboard &= bitboard - 1;
 	}
 
 	// calculate the line that is formed between two points
@@ -320,7 +315,7 @@ namespace ChessEngine
 		for (int count = 0; count < bitsInMask; count++)
 		{
 			// get the lsb square
-			Square square = getLS1B(attackMask);
+			Square square = get_ls1b(attackMask);
 
 			// remove LSB
 			rm_bit(attackMask, square);
@@ -343,8 +338,8 @@ namespace ChessEngine
 	{
 		assert(bitboard);
 
-		Square s = getLS1B(bitboard);
-		resetLSB(bitboard);
+		Square s = get_ls1b(bitboard);
+		bitboard &= bitboard - 1;
 
 		return s;
 	}
