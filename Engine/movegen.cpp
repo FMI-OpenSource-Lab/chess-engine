@@ -71,7 +71,7 @@ namespace ChessEngine
 				{
 					// If we are evading a check, consider the only promotions that block or capture that checking piece
 					promote &= block;
-					enemies = block;
+					enemies &= block;
 				}
 
 				BITBOARD left_attacks = move_to<up_left>(pawns) & enemies;

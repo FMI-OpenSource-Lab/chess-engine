@@ -23,81 +23,58 @@ namespace ChessEngine
 #endif // _WIN64
 	}
 
-	inline std::string uci_move(const Move& m)
+	inline U64 perft_driver(Position& pos, int depth)
 	{
-		if (m == Move::invalid_move())
-			return "(none)";
+		if (depth == 0) return 1ULL;
 
-		if (m == Move::null_move())
-			return "0000";
-
-		Square source = m.source_square();
-		Square target = m.target_square();
-
-		if (m.move_type() == MT_CASTLING)
-			target = make_square(target > source ? FILE_G : FILE_C, rank_of(source));
-
-		std::string move_str = squareToCoordinates[source];
-		move_str += squareToCoordinates[target];
-
-		if (m.move_type() == MT_PROMOTION)
-			move_str += ascii_pieces[get_piece(BLACK, m.promoted())];
-
-		return move_str;
-	}
-
-	template<bool Root>
-	inline U64 perft(Position& pos, int depth)
-	{
-		U64 count = 0, nodes = 0;
-		const bool leaf = (depth == 2);
-
-		std::ofstream perft_results;
-		perft_results.open("../results.txt");
+		U64 nodes = 0;
 
 		for (const auto& m : MoveList<GT_LEGAL>(pos))
 		{
-			if (Root && depth <= 1)
-			{
-				count = 1;
-				nodes++;
-			}
-			else
-			{
-				MoveInfo move_info;
-				pos.do_move(m, move_info);
+			MoveInfo move_info;
+			pos.do_move(m, move_info);
 
-				if (leaf)
-					count = MoveList<GT_LEGAL>(pos).size();
-				else
-					count = perft<false>(pos, depth - 1);
+			U64 count = perft_driver(pos, depth - 1);
 
-				nodes += count;
+			nodes += count;
 
-				pos.undo_move(m);
-			}
-			if (Root)
-			{
-				std::cout << uci_move(m) << ": " << count << std::endl;
-				perft_results << uci_move(m) << ": " << count << "\n";
-			}
+			pos.undo_move(m);
 		}
-
-		perft_results.close();
 
 		return nodes;
 	}
 
 	inline void perft_debug(Position& pos, int depth)
 	{
-		U64 start = get_time_ms();
+		U64 nodes = 0;
+		U64 start_time = get_time_ms();
 
-		std::cout << "\nNodes: " << perft<true>(pos, depth);
+		std::ofstream perft_results;
+		perft_results.open("../results.txt");
+
+		for (const auto& m : MoveList<GT_LEGAL>(pos))
+		{
+			MoveInfo move_info;
+			pos.do_move(m, move_info);
+
+			U64 count = perft_driver(pos, depth - 1);
+
+			pos.undo_move(m);
+
+			std::cout << m.uci_move() << ": " << count << std::endl;
+			perft_results << m.uci_move() << ": " << count << "\n";
+
+			nodes += count;
+		}
+
+		perft_results.close();
+
+		std::cout << "\nNodes: " << nodes;
 		std::cout << "\nDepth: " << depth;
-		std::cout << "\nTime: " << (get_time_ms() - start) << "ms\n";
+		std::cout << "\nTime: " << (get_time_ms() - start_time) << "ms\n";
 	}
 
-	inline void perft_test_table(Position& pos)
+	inline void print_perft_table(Position& pos)
 	{
 		int depth;
 		std::cout << "Depth: ";
@@ -108,77 +85,13 @@ namespace ChessEngine
 		std::cout << std::setw(10) << "Time\n";
 		std::cout << "--------------------------------------\n";
 
-		for (int i = 1; i <= depth; i++)
+		for (int i = 0; i <= depth; i++)
 		{
 			U64 start_time = get_time_ms();
-
-			std::cout << i << " " << perft<false>(pos, i);
-			std::cout << " | " << get_time_ms() - start_time << " ms\n";
+			
+			std::cout << i << std::setw(24) << perft_driver(pos, i);
+			std::cout << std::setw(10) << get_time_ms() - start_time << " ms\n";
 		}
-	}
-
-	inline U64 perft(const char* fen, int depth)
-	{
-		InfoListPtr infos(new std::deque<MoveInfo>(1));
-		Position p;
-		p.set(fen, &infos->back());
-
-		return perft<true>(p, depth);
-	}
-
-	inline U64 perft_new(Position& pos, int depth)
-	{
-		if (depth == 0) return 1ULL;
-
-		U64 nodes = 0;
-
-		MoveList<GT_LEGAL> moves(pos);
-
-		for (const auto& m : moves)
-		{
-			MoveInfo move_info;
-			pos.do_move(m, move_info);
-
-			U64 count = perft_new(pos, depth - 1);
-
-			nodes += count;
-
-			pos.undo_move(m);
-		}
-
-		return nodes;
-	}
-
-	inline void perft_root(Position& pos, int depth)
-	{
-		U64 nodes = 0;
-		U64 start_time = get_time_ms();
-
-		MoveList<GT_LEGAL> move_list(pos);
-
-		std::ofstream perft_results;
-		perft_results.open("../results.txt");
-
-		for (const auto& m : move_list)
-		{
-			MoveInfo move_info;
-			pos.do_move(m, move_info);
-
-			U64 count = perft_new(pos, depth - 1);
-
-			pos.undo_move(m);
-
-			std::cout << uci_move(m) << ": " << count << std::endl;
-			perft_results << uci_move(m) << ": " << count << "\n";
-
-			nodes += count;
-		}
-
-		perft_results.close();
-
-		std::cout << "\nNodes: " << nodes;
-		std::cout << "\nDepth: " << depth;
-		std::cout << "\nTime: " << (get_time_ms() - start_time) << "ms\n";
 	}
 }
 #endif // !PERFT_H

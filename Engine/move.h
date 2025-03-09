@@ -56,28 +56,18 @@ namespace ChessEngine
 	public:
 		inline Move() : move(0) {};
 
-		constexpr explicit Move(std::uint16_t m) :
-			move(m) {
-		}
+		constexpr explicit Move(std::uint16_t m) : move(m) {}
 
-		constexpr Move(Square source, Square target) :
-			move((target << 6) + source) {
-		}
+		constexpr Move(Square source, Square target) : move((target << 6) + source) {}
 
-		constexpr Move(Square source, Square target, MoveType mt)
-			: move((mt << 12) + (target << 6) + source) {
-		}
+		constexpr Move(Square source, Square target, MoveType mt) : move((mt << 12) + (target << 6) + source) {}
 
-		constexpr Move(Square source, Square target, MoveType mt, PromotionType pt)
-			: move((pt << 14) + (mt << 12) + (target << 6) + source) {
-		}
+		constexpr Move(Square source, Square target, MoveType mt, PromotionType pt) : move((pt << 14) + (mt << 12) + (target << 6) + source) {}
 
 		constexpr Square source_square() const { return Square(move & 0x3F); }
-
 		constexpr Square target_square() const { return Square((move >> 6) & 0x3F); }
 
 		constexpr MoveType move_type() const { return MoveType((move >> 12) & 3); }
-
 		constexpr PieceType promoted() const { return PieceType(((move >> 14) & 3) + KNIGHT); }
 
 		// null and none moves
@@ -90,7 +80,7 @@ namespace ChessEngine
 
 		static constexpr bool same_move(Move a, Move b) { return a.move == b.move; }
 
-		friend std::ostream& operator<<(std::ostream& os, Move const& mv) 
+		friend std::ostream& operator<<(std::ostream& os, Move const& mv)
 		{
 			os << squareToCoordinates[mv.source_square()] << squareToCoordinates[mv.target_square()];
 
@@ -98,6 +88,26 @@ namespace ChessEngine
 				os << " PNBRQKpnbrqk"[get_piece(BLACK, mv.promoted())]; // BLACK because we want the lowercase letter of the promtoed piece
 
 			return os;
+		}
+
+        std::string uci_move() const
+		{
+			if (*this == invalid_move())	return "(none)";
+			if (*this == null_move())		return "0000";
+
+			Square source = source_square();
+			Square target = target_square();
+
+			if (move_type() == MT_CASTLING)
+				target = make_square(target > source ? FILE_G : FILE_C, rank_of(source));
+
+			std::string move_str = squareToCoordinates[source];
+			move_str += squareToCoordinates[target];
+
+			if (move_type() == MT_PROMOTION)
+				move_str += " PNBRQKpnbrqk"[get_piece(BLACK, promoted())];
+
+			return move_str;
 		}
 
 		// overloads

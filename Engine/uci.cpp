@@ -109,7 +109,7 @@ namespace ChessEngine
 		else if (current = strstr(cmd, "perft"))
 		{
 			depth = atoi(current + 6);
-			std::cout << "\nNodes: " << perft<true>(pos, depth) << std::endl;
+			perft_debug(pos, depth);
 		}
 		else
 			std::cout << "Invalid command after go!\nTry go perft <number>\n" << current;
