@@ -5,6 +5,7 @@
 #include "perft.h"
 #include "vector_array.h"
 #include "uci.h"
+#include "score.h"
 
 using namespace ChessEngine;
 
@@ -26,7 +27,7 @@ int main()
 		
 		std::cout << pos;
 
-		print_perft_table(pos);
+		//std::cout << "Evaluation: " << evaluate(pos) << "\n";
 	}
 	else
 		uci_loop();

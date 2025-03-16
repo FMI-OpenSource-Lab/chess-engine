@@ -11,6 +11,12 @@
 
 namespace ChessEngine
 {
+	int Eval::simple_evaluation(const Position& pos, Color c)
+	{
+		return PAWN_VALUE * (pos.count<PAWN>(c) - pos.count<PAWN>(~c))
+			+ 0; // Instead of zero, calculate the value of the other pieces that are not pawns
+	}
+
 	/*
 	int evaluate()
 	{

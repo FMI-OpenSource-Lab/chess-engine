@@ -110,7 +110,7 @@ namespace ChessEngine
 		inline BITBOARD	get_threats(PieceType pt) const { return threats[pt]; }
 		inline BITBOARD	get_king_blockers(Color c) const { return blocking_pieces[c]; }
 		inline BITBOARD	get_pinners(Color c) const { return pinning_pieces[c]; }
-		
+
 		// Booleans
 		bool is_empty(Square s) const { return get_piece_on(s) == NO_PIECE; }
 		bool gives_check(Move m) const;
@@ -131,6 +131,10 @@ namespace ChessEngine
 
 		// Value
 		Value see(Move m) const;
+
+		// Piece count
+		template<PieceType pt>
+		int count(Color c) const;
 
 		// Doing and undoing moves
 		void do_move(const Move& m, MoveInfo& new_info);
@@ -164,7 +168,7 @@ namespace ChessEngine
 		BITBOARD threats[PIECE_TYPE_NB]{};				// Piece type threads
 		BITBOARD pinning_pieces[BOTH]{};				// Pieces that are pinning
 		BITBOARD blocking_pieces[BOTH]{};				// Pieces that are blocking
-		
+
 		Piece	 piece_board[SQUARE_TOTAL]{};			// Board of pieces
 		Piece	 captured{};							// Captured piece
 
@@ -175,11 +179,16 @@ namespace ChessEngine
 		PLY_TYPE fullmove_number{};
 		PLY_TYPE repetition{};
 
+		int		 piece_count[PIECE_NB]{};				// Piece count
+
 		// State info 
 		MoveInfo* move_info{};
 	};
 
-	inline bool Position::is_square_attacked(Square s) const 
+	template<PieceType pt>
+	inline int Position::count(Color c) const { return piece_count[get_piece(c, pt)]; }
+
+	inline bool Position::is_square_attacked(Square s) const
 	{
 		return is_square_attacked(s, side);
 	};
@@ -213,6 +222,9 @@ namespace ChessEngine
 		set_bit(occupancies[get_piece_color(p)], s);
 
 		occupancies[BOTH] |= occupancies[WHITE] | occupancies[BLACK];
+
+		piece_count[p]++;
+		piece_count[get_piece(get_piece_color(p), ALL_PIECES)]++;
 	}
 
 	inline void Position::remove_piece(Square s)
@@ -224,6 +236,9 @@ namespace ChessEngine
 		rm_bit(occupancies[BOTH], s);
 
 		piece_board[s] = NO_PIECE;
+
+		piece_count[p]--;
+		piece_count[get_piece(get_piece_color(p), ALL_PIECES)]--;
 	}
 
 	inline void Position::move_piece(Square source, Square target)

@@ -175,7 +175,7 @@ namespace ChessEngine
 			move_list = generate_piece_moves<Us, QUEEN>(pos, move_list, block);
 
 			// capture enemy or move to other square that is not occupied by us
-			BITBOARD k_bb = attacks_bb_by<KING>(ksq) & 
+			BITBOARD k_bb = attacks_bb_by<KING>(ksq) &
 				(Type == GT_EVADE ? ~pos.get_our_pieces_bb() : block);
 
 			while (k_bb) *move_list++ = Move{ ksq, pop_ls1b(k_bb) };
@@ -219,15 +219,34 @@ namespace ChessEngine
 		Color us = pos.side_to_move();
 		Square ksq = pos.square<KING>(us);
 
+		BITBOARD pinned = pos.get_king_blockers(us) & pos.get_our_pieces_bb();
+
+		bool is_in_check = pos.get_attackers_to(ksq) & pos.get_opponent_pieces_bb();
+
 		ScoredMoves* legal_move_list = move_list;
 		ScoredMoves pseudo_legal_moves[MAX_MOVES];
-				
-		ScoredMoves* end_moves = pos.get_attackers_to(ksq) & pos.get_opponent_pieces_bb()
+
+		// Checking if king is in check
+		// If it is, then we need to generate the evasions (since they are the only moves that are legal)
+		// else we will generate each move and check its legality
+		ScoredMoves* end_moves = is_in_check
 			? generate_moves<GT_EVADE>(pos, pseudo_legal_moves)
 			: generate_moves<GT_ALL>(pos, pseudo_legal_moves);
 
 		for (ScoredMoves* move = pseudo_legal_moves; move != end_moves; ++move)
-			if (pos.is_legal(*move)) *legal_move_list++ = *move;
+		{
+			// Some checks that might be a precondition to an illegal move
+			bool is_pinned = pinned & move->source_square(); // if pinned piece is moving
+			bool is_king_move = move->source_square() == ksq;// if king is moving
+			bool is_ep = move->move_type() == MT_EN_PASSANT; // if en passant is made
+
+			// Assuming other moves are legal
+			// if the preconditions pass we might be dealing with an illegal move
+			if ((is_pinned || is_king_move || is_ep) && !pos.is_legal(*move))
+				continue;
+
+			*legal_move_list++ = *move;
+		}
 
 		return legal_move_list;
 	}
