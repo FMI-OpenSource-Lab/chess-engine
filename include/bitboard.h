@@ -1,12 +1,12 @@
 #pragma once
-#ifndef BITBOARD_H
-#define BITBOARD_H
 
 #include <cassert>
 #include <iostream>
 #include <array>
 #include <vector>
+#include <cstdint>
 
+#include "defs.h"
 #include "consts.h"
 
 namespace ChessEngine
@@ -225,10 +225,11 @@ namespace ChessEngine
 		// {2^(2^k) | 0 <= k <= 5}
 		// eg: {2^32, 2^16, 2^8, 2^4, 2^2, 2^1}
 		// And sums the exponents k of the subtracted values.
-#define S(k) if (n >= (UINT64_C(1) << k)) { i += k; n >>= k; }
+#define S(k) if (n >= (uint64_t(1) << k)) { i += k; n >>= k; }
 
 		// returns -1 if input is 0, hence the bitboard is empty
-		int i = -(n == 0); S(32); S(16); S(8); S(4); S(2); S(1); return i;
+		int i = -(n == 0); 
+		S(32); S(16); S(8); S(4); S(2); S(1); return i;
 
 		// does log2 faster than cmaths log2 function
 #undef S
@@ -247,8 +248,6 @@ namespace ChessEngine
 	// or only the target square in case of knight attack
 	inline U64 in_between_bb(Square source, Square target)
 	{
-		PieceType pt = NO_PIECE_TYPE;
-
 		// source and target have commutative properties
 		// we can do [pt][source] & target or [pt][target] & source
 
@@ -371,4 +370,3 @@ namespace ChessEngine
 		return (bitboard * h01) >> 56;
 	}
 }
-#endif // !BITBOARD_H

@@ -13,8 +13,12 @@ namespace ChessEngine
 {
 	int Eval::simple_evaluation(const Position& pos, Color c)
 	{
+		std::cout << "\nPawn count: " << pos.count<PAWN>(c) << std::endl;
+		std::cout << "\nOther material count: " << pos.material_value(c) << std::endl;
+
+		// Calculates only the material balance
 		return PAWN_VALUE * (pos.count<PAWN>(c) - pos.count<PAWN>(~c))
-			+ 0; // Instead of zero, calculate the value of the other pieces that are not pawns
+			+ (pos.material_value(c) - pos.material_value(~c));
 	}
 
 	/*

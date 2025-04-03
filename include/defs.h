@@ -2,7 +2,7 @@
 #ifndef DEFS_H
 #define DEFS_H
 
-#define NAME "iuli 1.0"
+#define NAME "iuli 2.1.0"
 
 #if defined(_WIN64) && defined(_MSC_VER)  // No Makefile used
 #include <intrin.h>                   // Microsoft header for _BitScanForward64()
@@ -235,14 +235,13 @@ constexpr Value KNIGHT_VALUE = 305;
 constexpr Value BISHOP_VALUE = 333;
 constexpr Value ROOK_VALUE = 563;
 constexpr Value QUEEN_VALUE = 950;
-constexpr Value KING_VALUE = 10000;
 
 constexpr Value PieceValue[PIECE_NB] // All pieces 
 {
 	// WHITE
-	VALUE_ZERO, PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE, ROOK_VALUE, QUEEN_VALUE, KING_VALUE,
+	VALUE_ZERO, PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE, ROOK_VALUE, QUEEN_VALUE, VALUE_ZERO,
 	// BLACK
-				PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE, ROOK_VALUE, QUEEN_VALUE, KING_VALUE, VALUE_ZERO
+				PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE, ROOK_VALUE, QUEEN_VALUE, VALUE_ZERO, VALUE_ZERO
 };
 
 // Allow to use ++File, --File, ++Rank, --Rank and etc.

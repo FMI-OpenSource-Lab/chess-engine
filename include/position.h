@@ -9,7 +9,6 @@
 #include "defs.h"
 #include "move.h"
 #include "movegen.h"
-#include "vector_array.h"
 
 namespace ChessEngine
 {
@@ -57,6 +56,7 @@ namespace ChessEngine
 		CastlingRights	castling_rights;
 		Square			en_passant;
 		PLY_TYPE		fifty_move; // halfmove clock
+		Value			material[BOTH]; // Material value
 		Piece			captured_piece;
 
 		// Not copied
@@ -131,6 +131,8 @@ namespace ChessEngine
 
 		// Value
 		Value see(Move m) const;
+		Value material_value(Color c) const { return move_info->material[c]; }
+		Value material_value() const { return material_value(WHITE) + material_value(BLACK); }
 
 		// Piece count
 		template<PieceType pt>
@@ -188,6 +190,26 @@ namespace ChessEngine
 	template<PieceType pt>
 	inline int Position::count(Color c) const { return piece_count[get_piece(c, pt)]; }
 
+	inline bool Position::is_square_attacked(Square s, Color us) const
+	{
+		BITBOARD all = get_all_pieces_bb();
+
+		bool is_pawn_attack = us == WHITE
+			? pawn_attacks_bb(BLACK, s) & get_pieces_bb(PAWN, WHITE)
+			: pawn_attacks_bb(WHITE, s) & get_pieces_bb(PAWN, BLACK);
+
+		bool is_knight_attack = attacks_bb_by<KNIGHT>(s) & get_pieces_bb(KNIGHT, us);
+		bool is_bishop_attack = attacks_bb_by<BISHOP>(s, all) & get_pieces_bb(BISHOP, us);
+		bool is_rook_attack = attacks_bb_by<ROOK>(s, all) & get_pieces_bb(ROOK, us);
+		bool is_queen_attack = attacks_bb_by<QUEEN>(s, all) & get_pieces_bb(QUEEN, us);
+
+		return is_pawn_attack ||
+			is_knight_attack ||
+			is_bishop_attack ||
+			is_rook_attack ||
+			is_queen_attack;
+	}
+
 	inline bool Position::is_square_attacked(Square s) const
 	{
 		return is_square_attacked(s, side);
@@ -206,6 +228,18 @@ namespace ChessEngine
 	}
 
 	inline BITBOARD Position::get_pieces_bb(PieceType pt) const { return type[pt]; }
+
+	inline BITBOARD Position::get_attackers_to(Square s, BITBOARD occ) const
+	{
+		BITBOARD w_pawn_att = pawn_attacks_bb(WHITE, s) & get_pieces_bb(PAWN, BLACK);
+		BITBOARD b_pawn_att = pawn_attacks_bb(BLACK, s) & get_pieces_bb(PAWN, WHITE);
+		BITBOARD knight_att = attacks_bb_by<KNIGHT>(s) & get_pieces_bb(KNIGHT);
+		BITBOARD horizontal = attacks_bb_by<ROOK>(s, occ) & (get_pieces_bb(ROOK) | get_pieces_bb(QUEEN));
+		BITBOARD diagonal = attacks_bb_by<BISHOP>(s, occ) & (get_pieces_bb(BISHOP) | get_pieces_bb(QUEEN));
+		BITBOARD king_att = attacks_bb_by<KING>(s) & get_pieces_bb(KING);
+
+		return w_pawn_att | b_pawn_att | knight_att | horizontal | diagonal | king_att;
+	}
 
 	inline BITBOARD Position::get_attackers_to(Square s) const
 	{

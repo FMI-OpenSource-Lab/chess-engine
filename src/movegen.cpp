@@ -151,7 +151,7 @@ namespace ChessEngine
 			const Square ksq = pos.square<KING>(Us);
 
 			BITBOARD checkers =
-				pos.get_attackers_to(ksq, pos.get_all_pieces_bb()) & pos.get_opponent_pieces_bb();
+				pos.get_attackers_to(ksq) & pos.get_opponent_pieces_bb();
 
 			BITBOARD block = 0ULL;
 

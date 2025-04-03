@@ -200,6 +200,16 @@ namespace ChessEngine
 		fullmove_number = std::max(2 * (fullmove_number - 1), 0) + (side == BLACK);
 
 		calculate_threats();
+		move_info->material[WHITE] = move_info->material[BLACK] = VALUE_ZERO;
+
+		for (BITBOARD b = get_all_pieces_bb(); b; )
+		{
+			Piece p = get_piece_on(pop_ls1b(b));
+			PieceType pt = type_of_piece(p);
+			
+			if(pt != KING && pt != PAWN)
+				move_info->material[get_piece_color(p)] += PieceValue[p];
+		}
 
 		return *this;
 	}
@@ -264,38 +274,6 @@ namespace ChessEngine
 			attacks |= attacks_bb_by<pt>(pop_ls1b(attackers), get_all_pieces_bb());
 
 		return attacks;
-	}
-
-	inline BITBOARD Position::get_attackers_to(Square s, BITBOARD occ) const
-	{
-		BITBOARD w_pawn_att = pawn_attacks_bb(WHITE, s) & get_pieces_bb(PAWN, BLACK);
-		BITBOARD b_pawn_att = pawn_attacks_bb(BLACK, s) & get_pieces_bb(PAWN, WHITE);
-		BITBOARD knight_att = attacks_bb_by<KNIGHT>(s) & get_pieces_bb(KNIGHT);
-		BITBOARD horizontal = attacks_bb_by<ROOK>(s, occ) & (get_pieces_bb(ROOK) | get_pieces_bb(QUEEN));
-		BITBOARD diagonal = attacks_bb_by<BISHOP>(s, occ) & (get_pieces_bb(BISHOP) | get_pieces_bb(QUEEN));
-		BITBOARD king_att = attacks_bb_by<KING>(s) & get_pieces_bb(KING);
-
-		return w_pawn_att | b_pawn_att | knight_att | horizontal | diagonal | king_att;
-	}
-
-	inline bool Position::is_square_attacked(Square s, Color us) const
-	{
-		BITBOARD all = get_all_pieces_bb();
-
-		bool is_pawn_attack = us == WHITE
-			? pawn_attacks_bb(BLACK, s) & get_pieces_bb(PAWN, WHITE)
-			: pawn_attacks_bb(WHITE, s) & get_pieces_bb(PAWN, BLACK);
-
-		bool is_knight_attack = attacks_bb_by<KNIGHT>(s) & get_pieces_bb(KNIGHT, us);
-		bool is_bishop_attack = attacks_bb_by<BISHOP>(s, all) & get_pieces_bb(BISHOP, us);
-		bool is_rook_attack = attacks_bb_by<ROOK>(s, all) & get_pieces_bb(ROOK, us);
-		bool is_queen_attack = attacks_bb_by<QUEEN>(s, all) & get_pieces_bb(QUEEN, us);
-
-		return is_pawn_attack ||
-			is_knight_attack ||
-			is_bishop_attack ||
-			is_rook_attack ||
-			is_queen_attack;
 	}
 
 	void Position::print_attacked_squares(Color c) const
@@ -487,7 +465,9 @@ namespace ChessEngine
 				assert(rank_relative_to_side(us, rank_of(target)) == RANK_6);
 				assert(on_target == NO_PIECE);
 				assert(get_piece_on(capture_sq) == get_piece(them, PAWN));
-			}
+			} 
+			else
+				move_info->material[them] -= PieceValue[captured]; // remove the captured piece value
 
 			remove_piece(capture_sq);
 			move_info->fifty_move = 0;
@@ -522,6 +502,7 @@ namespace ChessEngine
 				remove_piece(target);
 				place_piece(promoted, target);
 
+				move_info->material[us] += PieceValue[promoted];
 			}
 
 			move_info->fifty_move = 0;
@@ -734,9 +715,8 @@ namespace ChessEngine
 			get_pieces_bb(ROOK) |
 			get_pieces_bb(QUEEN);
 
-		BITBOARD occ = get_all_pieces_bb();
 		BITBOARD source_set = square_to_BB(source);
-		BITBOARD attacks = get_attackers_to(target, occ);
+		BITBOARD attacks = get_attackers_to(target);
 
 		Piece attacked_piece = get_piece_on(target);
 		PieceType attacked_type = type_of_piece(attacked_piece);
@@ -745,6 +725,8 @@ namespace ChessEngine
 
 		do
 		{
+			BITBOARD occ = get_all_pieces_bb();
+
 			// next depth and side
 			depth++;
 			// current gain is calculated at getting the current attacking

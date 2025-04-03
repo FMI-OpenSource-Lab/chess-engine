@@ -3,7 +3,6 @@
 #include "position.h"
 #include "bitboard.h"
 #include "perft.h"
-#include "vector_array.h"
 #include "uci.h"
 #include "score.h"
 
@@ -27,7 +26,10 @@ int main()
 		
 		std::cout << pos;
 
-		//std::cout << "Evaluation: " << evaluate(pos) << "\n";
+		print_perft_table(pos);
+
+		// std::cout << "WHITE Evaluation: " << Eval::simple_evaluation(pos, WHITE) << "\n";
+		// std::cout << "BLACK Evaluation: " << Eval::simple_evaluation(pos, BLACK) << "\n";
 	}
 	else
 		uci_loop();
