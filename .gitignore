@@ -1,0 +1,39 @@
+# Ignore everything in the repository except for specific files and folders
+*
+
+# Do not ignore these files and folders
+!.gitignore
+
+# Do not ignore these folders and their contents
+!src/
+!src/**
+!include/
+!include/**
+
+# Do not remove CMakeLists.txt file
+!CMakeLists.txt
+
+# Ignore often generated files and folders
+build/
+bin/
+.vscode/
+CMakeFiles/
+CMakeCache.txt
+Makefile
+cmake_install.cmake
+
+# Ignore executable files
+*.exe
+*.o
+*.obj
+*.dll
+*.out
+*.a
+*.lib
+
+# Ignore temporary files
+*.log
+*.tmp
+*.swp
+*.user
+*.vcxproj*
