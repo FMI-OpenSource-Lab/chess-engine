@@ -2,6 +2,7 @@
 #define SCORE_H
 
 #include "movegen.h"
+#include "defs.h"
 
 #include<array>
 
@@ -17,7 +18,6 @@ namespace ChessEngine
 		Q = 1000,	= P * 10
 		K = 10000	= P * 100
 	*/
-	using Value = int;
 
 	static constexpr std::array<Value, 12>MATERIAL_SCORE = {
 		100,	// white pawn score
@@ -130,27 +130,36 @@ namespace ChessEngine
 	*/
 
 	// MVV LVA [attacker][victim]
-	static constexpr std::array<std::array<Value, 12>, 12> MVV_LVA { {
-		{105, 205, 305, 405, 505, 605,  105, 205, 305, 405, 505, 605},
-		{104, 204, 304, 404, 504, 604,  104, 204, 304, 404, 504, 604},
-		{103, 203, 303, 403, 503, 603,  103, 203, 303, 403, 503, 603},
-		{102, 202, 302, 402, 502, 602,  102, 202, 302, 402, 502, 602},
-		{101, 201, 301, 401, 501, 601,  101, 201, 301, 401, 501, 601},
-		{100, 200, 300, 400, 500, 600,  100, 200, 300, 400, 500, 600},
+	static constexpr Value MVV_LVA[12][12]
+	{
+		105, 205, 305, 405, 505, 605,  105, 205, 305, 405, 505, 605,
+		104, 204, 304, 404, 504, 604,  104, 204, 304, 404, 504, 604,
+		103, 203, 303, 403, 503, 603,  103, 203, 303, 403, 503, 603,
+		102, 202, 302, 402, 502, 602,  102, 202, 302, 402, 502, 602,
+		101, 201, 301, 401, 501, 601,  101, 201, 301, 401, 501, 601,
+		100, 200, 300, 400, 500, 600,  100, 200, 300, 400, 500, 600,
 
-		{105, 205, 305, 405, 505, 605,  105, 205, 305, 405, 505, 605},
-		{104, 204, 304, 404, 504, 604,  104, 204, 304, 404, 504, 604},
-		{103, 203, 303, 403, 503, 603,  103, 203, 303, 403, 503, 603},
-		{102, 202, 302, 402, 502, 602,  102, 202, 302, 402, 502, 602},
-		{101, 201, 301, 401, 501, 601,  101, 201, 301, 401, 501, 601},
-		{100, 200, 300, 400, 500, 600,  100, 200, 300, 400, 500, 600}}
+		105, 205, 305, 405, 505, 605,  105, 205, 305, 405, 505, 605,
+		104, 204, 304, 404, 504, 604,  104, 204, 304, 404, 504, 604,
+		103, 203, 303, 403, 503, 603,  103, 203, 303, 403, 503, 603,
+		102, 202, 302, 402, 502, 602,  102, 202, 302, 402, 502, 602,
+		101, 201, 301, 401, 501, 601,  101, 201, 301, 401, 501, 601,
+		100, 200, 300, 400, 500, 600,  100, 200, 300, 400, 500, 600
 	};
 
-	extern int evaluate();
-	extern int score_move(int move);
-	extern int sort_move(moves* move_list);
+	//extern Value evaluate(const Position& pos);
+	//extern int score_move(int move);
+	//extern int sort_move(moves* move_list);
 
-	extern void print_move_scores(moves* move_list);
-}
+	//extern void print_move_scores(moves* move_list);
+
+	class Position;
+
+	namespace Eval
+	{
+		int simple_evaluation(const Position& pos, Color c);
+		Value evaluate(const Position& pos);
+	} // namesoace Eval
+} // namespace ChessEngine
 
 #endif // !SCORE_H

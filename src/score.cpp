@@ -11,6 +11,17 @@
 
 namespace ChessEngine
 {
+	int Eval::simple_evaluation(const Position& pos, Color c)
+	{
+		std::cout << "\nPawn count: " << pos.count<PAWN>(c) << std::endl;
+		std::cout << "\nOther material count: " << pos.material_value(c) << std::endl;
+
+		// Calculates only the material balance
+		return PAWN_VALUE * (pos.count<PAWN>(c) - pos.count<PAWN>(~c))
+			+ (pos.material_value(c) - pos.material_value(~c));
+	}
+
+	/*
 	int evaluate()
 	{
 		Value score = 0;
@@ -123,4 +134,5 @@ namespace ChessEngine
 			printf(" score: %d\n", score_move(move_list->moves[count]));
 		}
 	}
+	*/
 }
