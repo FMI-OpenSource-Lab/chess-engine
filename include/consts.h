@@ -1,11 +1,9 @@
 #pragma once
-#ifndef CONSTS_H
-#define CONSTS_H
 
 #include "defs.h"
 #include <array>
 
-namespace ChessEngine
+namespace KhaosChess
 {
 	constexpr std::array<int, SQUARE_TOTAL> RELEVANT_BISHOP_BITS = {
 		6, 5, 5, 5, 5, 5, 5, 6,
@@ -193,8 +191,6 @@ namespace ChessEngine
 		13, 15, 15, 15, 12, 15, 15, 14
 	};
 }
-
-#endif // !CONSTS_H
 
 /*
 	Not A file

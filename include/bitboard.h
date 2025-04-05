@@ -9,7 +9,7 @@
 #include "defs.h"
 #include "consts.h"
 
-namespace ChessEngine
+namespace KhaosChess
 {
 	constexpr auto BISHOP_ATTACKS_SIZE = 512;
 	constexpr auto ROOK_ATTACKS_SIZE = 4096;

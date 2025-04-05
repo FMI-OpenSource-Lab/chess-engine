@@ -1,6 +1,3 @@
-#ifndef EVAL_H
-#define EVAL_H
-
-
-
-#endif // !EVAL_H
+#pragma once
+// Here liece the evaluation function for the chess engine
+// When i write it of course

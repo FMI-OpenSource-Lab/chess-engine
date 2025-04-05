@@ -1,5 +1,4 @@
-#ifndef PERFT_H
-#define PERFT_H
+#pragma once
 
 #include <iomanip>
 #include <string>
@@ -10,7 +9,7 @@
 #include "move.h"
 #include "movegen.h"
 
-namespace ChessEngine
+namespace KhaosChess
 {
 	static U64 get_time_ms()
 	{
@@ -49,9 +48,6 @@ namespace ChessEngine
 		U64 nodes = 0;
 		U64 start_time = get_time_ms();
 
-		std::ofstream perft_results;
-		perft_results.open("../results.txt");
-
 		for (const auto& m : MoveList<GT_LEGAL>(pos))
 		{
 			MoveInfo move_info;
@@ -62,12 +58,9 @@ namespace ChessEngine
 			pos.undo_move(m);
 
 			std::cout << m.uci_move() << ": " << count << std::endl;
-			perft_results << m.uci_move() << ": " << count << "\n";
 
 			nodes += count;
 		}
-
-		perft_results.close();
 
 		std::cout << "\nNodes: " << nodes;
 		std::cout << "\nDepth: " << depth;
@@ -94,4 +87,3 @@ namespace ChessEngine
 		}
 	}
 }
-#endif // !PERFT_H

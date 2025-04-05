@@ -1,5 +1,4 @@
-﻿#ifndef POSITION_H
-#define POSITION_H
+﻿#pragma once
 
 #include <vector>
 #include <memory>
@@ -10,17 +9,17 @@
 #include "move.h"
 #include "movegen.h"
 
-namespace ChessEngine
+namespace KhaosChess
 {
 	// Empty fen string
-	static const char* EMPTY_FEN = "8/8/8/8/8/8/8/8 b - - ";
+	extern const std::string EMPTY_FEN;
 
 	// Starting fen string
-	static const char* START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+	extern const std::string START_FEN;
 
 	// Some example fen string
-	static const char* TEST_FEN = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ";
-	static const char* TEST_ATTACKS_FEN = "8/8/8/3PN3/8/8/3p4/8 w - - ";
+	extern const std::string TEST_FEN;
+	extern const std::string TEST_ATTACKS_FEN;
 
 	/*
 		binary representation of castling rights
@@ -82,7 +81,7 @@ namespace ChessEngine
 		Position& operator=(const Position&) = delete;
 
 		// FEN i/o
-		Position& set(const char* fen, MoveInfo* mi);
+		Position& set(const std::string& fen, MoveInfo* mi);
 		std::string get_fen() const;
 
 		// Squares
@@ -303,4 +302,3 @@ namespace ChessEngine
 		return rook_source_sq[cr];
 	}
 }
-#endif // !POSITION_H

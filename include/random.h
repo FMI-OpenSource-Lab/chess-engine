@@ -1,11 +1,9 @@
 #pragma once
-#ifndef RANDOM_H
-#define RANDOM_H
 
 #include <cstdint>
 #include <vector>
 
-namespace ChessEngine
+namespace KhaosChess
 {
 	// pseudo random number generator
 	class PRNG
@@ -23,8 +21,6 @@ namespace ChessEngine
 		PRNG(uint16_t seed) : seed(seed) {}
 
 		template<typename T>
-
 		T rand() { return T(rand64() & rand64() & rand64()); }
 	};
 }
-#endif // !RANDOM_H

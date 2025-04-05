@@ -7,7 +7,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 # Project name and version
-project(Engine VERSION 1.0 LANGUAGES CXX)
+project(KhaosChess VERSION 1.0 LANGUAGES CXX)
 
 # Compiler settings
 set(CMAKE_CXX_STANDARD 17)

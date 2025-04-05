@@ -10,7 +10,7 @@
 #include <limits>
 #include <math.h>
 
-namespace ChessEngine
+namespace KhaosChess
 {
 	/*
 	int ply = 0;

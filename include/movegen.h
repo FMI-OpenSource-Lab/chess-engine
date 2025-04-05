@@ -1,5 +1,4 @@
-#ifndef MOVEGEN_H
-#define MOVEGEN_H
+#pragma once
 
 #include "defs.h"
 #include "move.h"
@@ -7,7 +6,7 @@
 
 #include<cstdint>
 
-namespace ChessEngine
+namespace KhaosChess
 {
 	class Position;
 
@@ -42,4 +41,3 @@ namespace ChessEngine
 		ScoredMoves moves_list[MAX_MOVES], * last;
 	};
 }
-#endif // !MOVEGEN_H

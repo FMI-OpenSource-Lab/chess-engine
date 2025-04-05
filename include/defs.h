@@ -1,8 +1,9 @@
 // system headers
-#ifndef DEFS_H
-#define DEFS_H
+#pragma once
 
-#define NAME "iuli 2.1.0"
+// Engine details
+#define NAME "KhaosChess 2.1.1"
+#define AUTHOR "Iulian Dashev"
 
 #if defined(_WIN64) && defined(_MSC_VER)  // No Makefile used
 #include <intrin.h>                   // Microsoft header for _BitScanForward64()
@@ -156,7 +157,11 @@ constexpr bool is_square_ok(Square s) { return s >= A8 && s <= H1; }
 inline CastlingRights operator&(Color c, CastlingRights cr) { return CastlingRights((c == WHITE ? WHITE_CASTLE : BLACK_CASTLE) & cr); }
 inline CastlingRights operator|(CastlingRights& c, CastlingRights a) { return CastlingRights(int(c) | int(a)); };
 inline CastlingRights operator&(CastlingRights& c, int d) { return CastlingRights(int(c) & int(d)); }
-
+inline CastlingRights& operator|=(CastlingRights& lhs, CastlingRights rhs) 
+{
+	lhs = static_cast<CastlingRights>(static_cast<int>(lhs) | static_cast<int>(rhs));
+	return lhs;
+}
 // Direction operator overloads
 constexpr Direction operator+(Direction d1, Direction d2) { return Direction(int(d1) + int(d2)); }
 constexpr Direction operator*(int i, Direction d) { return Direction(i * int(d)); }
@@ -257,7 +262,3 @@ ENABLE_INCR_OPERATORS_ON(File)
 ENABLE_INCR_OPERATORS_ON(Rank)
 
 #undef ENABLE_INCR_OPERATORS_ON
-
-// namespace ChessEngine
-
-#endif // !DEFS_H

@@ -4,7 +4,8 @@
 #include "defs.h"
 #include "random.h"
 
-namespace ChessEngine {
+namespace KhaosChess
+ {
 	// Table measuring the distance between 2 coordinates
 	unsigned short square_distance[SQUARE_TOTAL][SQUARE_TOTAL];
 
@@ -218,4 +219,4 @@ namespace ChessEngine {
 			return attacks;
 		}
 	}
-} // namespace ChessEngine
+} // namespace KhaosChess

@@ -15,7 +15,7 @@ This project was created as a diploma thesis for the completion of my Bachelor's
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-user/chess-engine.git](https://github.com/FMI-OpenSource-Lab/chess-engine.git
+git clone https://github.com/FMI-OpenSource-Lab/chess-engine.git
 cd chess-engine
 
 # 2. Create a build directory

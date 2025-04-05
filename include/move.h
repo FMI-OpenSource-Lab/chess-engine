@@ -1,5 +1,4 @@
-#ifndef MOVE_H
-#define MOVE_H
+#pragma once
 
 #include <cstdint>
 #include <string.h>
@@ -9,7 +8,7 @@
 #include "defs.h"
 #include "bitboard.h"
 
-namespace ChessEngine
+namespace KhaosChess
 {
 	/*
 		Binary move bits
@@ -80,7 +79,7 @@ namespace ChessEngine
 
 		static constexpr bool same_move(Move a, Move b) { return a.move == b.move; }
 
-		friend std::ostream& operator<<(std::ostream& os, Move const& mv)
+		friend std::ostream &operator<<(std::ostream &os, Move const &mv)
 		{
 			os << squareToCoordinates[mv.source_square()] << squareToCoordinates[mv.target_square()];
 
@@ -90,10 +89,12 @@ namespace ChessEngine
 			return os;
 		}
 
-        std::string uci_move() const
+		std::string uci_move() const
 		{
-			if (*this == invalid_move())	return "(none)";
-			if (*this == null_move())		return "0000";
+			if (*this == invalid_move())
+				return "(none)";
+			if (*this == null_move())
+				return "0000";
 
 			Square source = source_square();
 			Square target = target_square();
@@ -111,13 +112,13 @@ namespace ChessEngine
 		}
 
 		// overloads
-		constexpr bool operator==(const Move& m) const { return move == m.move; }
-		constexpr bool operator!=(const Move& m) const { return move != m.move; }
+		constexpr bool operator==(const Move &m) const { return move == m.move; }
+		constexpr bool operator!=(const Move &m) const { return move != m.move; }
 		constexpr explicit operator bool() const { return move != 0; }
+
 	protected:
 		std::uint16_t move;
 	};
 
 	const Move NO_MOVE = Move();
 }
-#endif // !MOVE_H

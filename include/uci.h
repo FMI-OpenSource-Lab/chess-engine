@@ -1,11 +1,10 @@
-#ifndef UCI_H
-#define UCI_H
+#pragma once
 
 #include <string>
 
 #include "position.h"
 
-namespace ChessEngine
+namespace KhaosChess
 {
 	class Position;
 	class Move;
@@ -16,4 +15,3 @@ namespace ChessEngine
 	extern void parse_go(const char* cmd, Position& pos);
 	extern void uci_loop();
 }
-#endif // !UCI_H

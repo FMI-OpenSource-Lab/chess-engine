@@ -6,13 +6,13 @@
 #include "uci.h"
 #include "score.h"
 
-using namespace ChessEngine;
+using namespace KhaosChess;
 
 int main()
 {
 	Bitboards::init();
 
-	bool debug = true;
+	bool debug = false;
 
 	if (debug)
 	{

@@ -1,9 +1,8 @@
-#ifndef SEARCH_H
-#define SEARCH_H
+#pragma once
 
 #include "defs.h"
 
-namespace ChessEngine
+namespace KhaosChess
 {
 	extern int ply;
 	extern int best_move;
@@ -13,4 +12,3 @@ namespace ChessEngine
 	extern int minimax(int alpha, int beta, int depth, bool maximizingPlayer);
 	extern void search_position(int depth);
 }
-#endif // !SEARCH_H

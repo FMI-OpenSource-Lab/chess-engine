@@ -1,12 +1,11 @@
-#ifndef SCORE_H
-#define SCORE_H
+#pragma once
 
 #include "movegen.h"
 #include "defs.h"
 
 #include<array>
 
-namespace ChessEngine
+namespace KhaosChess
 {
 	/*
 		Material score
@@ -159,7 +158,5 @@ namespace ChessEngine
 	{
 		int simple_evaluation(const Position& pos, Color c);
 		Value evaluate(const Position& pos);
-	} // namesoace Eval
-} // namespace ChessEngine
-
-#endif // !SCORE_H
+	} // namespace Eval
+} // namespace KhaosChess

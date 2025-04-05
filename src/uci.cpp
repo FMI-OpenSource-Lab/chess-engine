@@ -8,7 +8,7 @@
 #include <iostream>
 #include <stdlib.h>
 
-namespace ChessEngine
+namespace KhaosChess
 {
 	Move parse_move(std::string move_string, const Position& pos)
 	{
@@ -124,7 +124,7 @@ namespace ChessEngine
 	*/
 	void uci_loop()
 	{
-		constexpr auto INPUT_BUFFER = 10000;;
+		constexpr auto INPUT_BUFFER = 10000;
 
 		// rest stdin & stdout buffers
 		std::setvbuf(stdin, NULL, _IONBF, 0);
@@ -133,8 +133,8 @@ namespace ChessEngine
 		// def user/GUI inout buffer
 		char input_buffer[INPUT_BUFFER];
 
-		std::cout << "id name ChessEngine\n";
-		std::cout << "id author Iulian Dashev\n";
+		std::cout << "id name " << NAME << "\n";
+		std::cout << "id author " << AUTHOR << "\n";
 		std::cout << "uciok\n";
 
 		InfoListPtr infos(new std::deque<MoveInfo>(1));
@@ -182,8 +182,8 @@ namespace ChessEngine
 			// parse UCI "uci" command
 			else if (strncmp(input_buffer, "uci", 3) == 0)
 			{
-				std::cout << "\nid name ChessEngine\n";
-				std::cout << "id author Iulian Dashev\n";
+				std::cout << "\nid name " << NAME << "\n";
+				std::cout << "id author "<< AUTHOR << "\n";
 				std::cout << "uciok\n";
 			}
 

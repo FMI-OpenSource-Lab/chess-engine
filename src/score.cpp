@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <memory>
 
-namespace ChessEngine
+namespace KhaosChess
 {
 	int Eval::simple_evaluation(const Position& pos, Color c)
 	{

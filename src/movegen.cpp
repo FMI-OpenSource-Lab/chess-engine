@@ -6,7 +6,7 @@
 #include "move.h"
 #include "bitboard.h"
 
-namespace ChessEngine
+namespace KhaosChess
 {
 	namespace
 	{
