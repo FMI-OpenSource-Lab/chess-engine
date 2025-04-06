@@ -1,4 +1,4 @@
-# Chess Engine
+# KhaosChess
 This project was created as a diploma thesis for the completion of my Bachelor's degree in Computer Science.
 
 ---

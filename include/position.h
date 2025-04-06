@@ -8,6 +8,7 @@
 #include "defs.h"
 #include "move.h"
 #include "movegen.h"
+#include "consts.h"
 
 namespace KhaosChess
 {
@@ -45,22 +46,20 @@ namespace KhaosChess
 
 	// char unicode_pieces[12] = { '♙','♘','♗','♖','♕','♔','♟','♞','♝','♜','♛','♚' };
 
-	using BITBOARD = U64;
-
 	// Info structure stores information needed to restore a position
 	// to its previous state when a move is taken back
 	struct MoveInfo
 	{
 		// Copied when making a move
-		CastlingRights	castling_rights;
-		Square			en_passant;
-		PLY_TYPE		fifty_move; // halfmove clock
-		Value			material[BOTH]; // Material value
-		Piece			captured_piece;
+		CastlingRights castling_rights;
+		Square en_passant;
+		PLY_TYPE fifty_move;  // halfmove clock
+		Value material[BOTH]; // Material value
+		Piece captured_piece;
 
 		// Not copied
-		MoveInfo* next;
-		MoveInfo* prev;
+		MoveInfo *next;
+		MoveInfo *prev;
 	};
 
 	// List to keep track of position states along the setup
@@ -72,20 +71,20 @@ namespace KhaosChess
 	class Position
 	{
 	public:
-		//static void init();
+		// static void init();
 
 		Position() = default;
 		// Delete the copy constructor
-		Position(const Position&) = delete;
+		Position(const Position &) = delete;
 		// Delete the copy assignment operator
-		Position& operator=(const Position&) = delete;
+		Position &operator=(const Position &) = delete;
 
 		// FEN i/o
-		Position& set(const std::string& fen, MoveInfo* mi);
+		Position &set(const std::string &fen, MoveInfo *mi);
 		std::string get_fen() const;
 
 		// Squares
-		template<PieceType pt>
+		template <PieceType pt>
 		Square square(Color c) const { return get_ls1b(get_pieces_bb(pt, c)); }
 		Square ep_square() const { return move_info->en_passant; }
 		Square castling_rook_square(CastlingRights cr) const;
@@ -100,15 +99,15 @@ namespace KhaosChess
 		inline BITBOARD get_all_pieces_bb() const { return occupancies[BOTH]; }
 		inline BITBOARD get_all_empty_squares_bb() const { return ~occupancies[BOTH]; }
 
-		inline BITBOARD	get_attackers_to(Square s) const;
-		inline BITBOARD	get_attackers_to(Square s, BITBOARD occ) const;
+		inline BITBOARD get_attackers_to(Square s) const;
+		inline BITBOARD get_attackers_to(Square s, BITBOARD occ) const;
 
-		template<PieceType pt>
-		inline BITBOARD	get_attacks_by(Color c) const;
-		inline BITBOARD	get_checked_squares(PieceType pt) const;
-		inline BITBOARD	get_threats(PieceType pt) const { return threats[pt]; }
-		inline BITBOARD	get_king_blockers(Color c) const { return blocking_pieces[c]; }
-		inline BITBOARD	get_pinners(Color c) const { return pinning_pieces[c]; }
+		template <PieceType pt>
+		inline BITBOARD get_attacks_by(Color c) const;
+		inline BITBOARD get_checked_squares(PieceType pt) const;
+		inline BITBOARD get_threats(PieceType pt) const { return threats[pt]; }
+		inline BITBOARD get_king_blockers(Color c) const { return blocking_pieces[c]; }
+		inline BITBOARD get_pinners(Color c) const { return pinning_pieces[c]; }
 
 		// Booleans
 		bool is_empty(Square s) const { return get_piece_on(s) == NO_PIECE; }
@@ -132,14 +131,16 @@ namespace KhaosChess
 		Value see(Move m) const;
 		Value material_value(Color c) const { return move_info->material[c]; }
 		Value material_value() const { return material_value(WHITE) + material_value(BLACK); }
+		Value pst_value(Color c) const;
 
 		// Piece count
-		template<PieceType pt>
+		template <PieceType pt>
 		int count(Color c) const;
+		int game_phase() const;
 
 		// Doing and undoing moves
-		void do_move(const Move& m, MoveInfo& new_info);
-		void undo_move(const Move& m);
+		void do_move(const Move &m, MoveInfo &new_info);
+		void undo_move(const Move &m);
 
 		void update_blocks_and_pins(Color c);
 		void remove_piece(Square s);
@@ -153,40 +154,102 @@ namespace KhaosChess
 		Color side_to_move() const { return side; }
 
 		// Overrides
-		friend std::ostream& operator<<(std::ostream& os, const Position& position);
+		friend std::ostream &operator<<(std::ostream &os, const Position &position);
+
 	private:
-		template<bool Do>
-		void do_castle(Color us, Square source, Square& target, Square& r_source, Square& r_target);
+		template <bool Do>
+		void do_castle(Color us, Square source, Square &target, Square &r_source, Square &r_target);
 		void set_castling_rights(Color c, Square r_source);
 		void move_piece(Square source, Square target);
 
-		BITBOARD get_least_valuable_piece(BITBOARD attacks, Color by_side, PieceType& pt) const;
+		BITBOARD get_least_valuable_piece(BITBOARD attacks, Color by_side, PieceType &pt) const;
 
 		// Data
-		BITBOARD occupancies[BOTH + 1]{};				// All pieces of the side to move
-		BITBOARD type[PIECE_TYPE_NB]{};					// All the piece types
-		BITBOARD castling_path[CASTLING_RIGHT_NB]{};	// Castling path depending on the castling side
-		BITBOARD threats[PIECE_TYPE_NB]{};				// Piece type threads
-		BITBOARD pinning_pieces[BOTH]{};				// Pieces that are pinning
-		BITBOARD blocking_pieces[BOTH]{};				// Pieces that are blocking
+		BITBOARD occupancies[BOTH + 1]{};			 // All pieces of the side to move
+		BITBOARD type[PIECE_TYPE_NB]{};				 // All the piece types
+		BITBOARD castling_path[CASTLING_RIGHT_NB]{}; // Castling path depending on the castling side
+		BITBOARD threats[PIECE_TYPE_NB]{};			 // Piece type threads
+		BITBOARD pinning_pieces[BOTH]{};			 // Pieces that are pinning
+		BITBOARD blocking_pieces[BOTH]{};			 // Pieces that are blocking
 
-		Piece	 piece_board[SQUARE_TOTAL]{};			// Board of pieces
-		Piece	 captured{};							// Captured piece
+		Piece piece_board[SQUARE_TOTAL]{}; // Board of pieces
+		Piece captured{};				   // Captured piece
 
-		Square	 rook_source_sq[CASTLING_RIGHT_NB]{};
+		Square rook_source_sq[CASTLING_RIGHT_NB]{};
 
-		Color	 side{};
+		Value pst_scores[PHASE_NB][BOTH]{}; // Piece square table score
+
+		Color side{};
 
 		PLY_TYPE fullmove_number{};
 		PLY_TYPE repetition{};
 
-		int		 piece_count[PIECE_NB]{};				// Piece count
+		int piece_count[PIECE_NB]{}; // Piece count
 
-		// State info 
-		MoveInfo* move_info{};
+		// State info
+		MoveInfo *move_info{};
 	};
 
-	template<PieceType pt>
+	// Calculate game phase (0-24, where 24 is opening, 0 is endgame)
+	inline int Position::game_phase() const
+	{
+		return std::min(MAX_PHASE_SCORE,
+						count<KNIGHT>(WHITE) + count<KNIGHT>(BLACK) +
+							count<BISHOP>(WHITE) + count<BISHOP>(BLACK) +
+							2 * (count<ROOK>(WHITE) + count<ROOK>(BLACK)) +
+							4 * (count<QUEEN>(WHITE) + count<QUEEN>(BLACK)));
+	}
+
+	/*
+		Interpolation of the phase score to get a value between 0 and 256
+		Opening weights dominate (256) -> scaled_phase (192) -> 	Transition point
+		Middlegame weights dominate (128) -> scaled_phase (64) -> 	Transition to endgame
+		Pure endgame weights (0) -> scaled_phase (0)
+
+		Example:
+		Opening weights dominate (256) -> scaled_phase (256) -> 	Opening weights dominate
+					 24   -> scaled_phase (256) -> 	Opening weights dominate
+					 18   -> scaled_phase (192) -> 	Transition point
+					 12   -> scaled_phase (128) ->	Middlegame weights dominate
+					 6    -> scaled_phase (64)  -> 	Transition to endgame
+					 0    -> scaled_phase (0)   -> 	Pure endgame weights
+	*/
+
+	inline Value Position::pst_value(Color c) const
+	{
+		int phase = game_phase();
+
+		// Scale phase to 0-256 range (0 = endgame, 256 = opening)
+		int scaled_phase = (phase * 256) / MAX_PHASE_SCORE;
+
+		// Handle all three phases with smooth interpolation
+		if (scaled_phase > 192)
+		{
+			// Opening to middlegame (192-256)
+			// Calculate weights (opening_weight = scaled_phase, middlegame_weight = 256-scaled_phase)
+			return Value(
+				(pst_scores[PHASE_OPENING][c] * scaled_phase +
+				 pst_scores[PHASE_MIDDLEGAME][c] * (256 - scaled_phase)) /
+				256);
+		}
+		else if (scaled_phase > 64)
+		{
+			// Middlegame phase (64-192)
+			// Rescale to 0-128 range for middlegame
+			int mg_phase = scaled_phase - 64;
+			return Value((pst_scores[PHASE_MIDDLEGAME][c] * mg_phase +
+						  pst_scores[PHASE_ENDGAME][c] * (128 - mg_phase)) /
+						 128);
+		}
+
+		// Endgame phase (0-64)
+		// Calculate weights for late endgame
+		return Value((pst_scores[PHASE_ENDGAME][c] * scaled_phase +
+					  pst_scores[PHASE_ENDGAME][c] * (64 - scaled_phase)) /
+					 64);
+	}
+
+	template <PieceType pt>
 	inline int Position::count(Color c) const { return piece_count[get_piece(c, pt)]; }
 
 	inline bool Position::is_square_attacked(Square s, Color us) const
@@ -194,8 +257,8 @@ namespace KhaosChess
 		BITBOARD all = get_all_pieces_bb();
 
 		bool is_pawn_attack = us == WHITE
-			? pawn_attacks_bb(BLACK, s) & get_pieces_bb(PAWN, WHITE)
-			: pawn_attacks_bb(WHITE, s) & get_pieces_bb(PAWN, BLACK);
+								  ? pawn_attacks_bb(BLACK, s) & get_pieces_bb(PAWN, WHITE)
+								  : pawn_attacks_bb(WHITE, s) & get_pieces_bb(PAWN, BLACK);
 
 		bool is_knight_attack = attacks_bb_by<KNIGHT>(s) & get_pieces_bb(KNIGHT, us);
 		bool is_bishop_attack = attacks_bb_by<BISHOP>(s, all) & get_pieces_bb(BISHOP, us);
@@ -203,10 +266,10 @@ namespace KhaosChess
 		bool is_queen_attack = attacks_bb_by<QUEEN>(s, all) & get_pieces_bb(QUEEN, us);
 
 		return is_pawn_attack ||
-			is_knight_attack ||
-			is_bishop_attack ||
-			is_rook_attack ||
-			is_queen_attack;
+			   is_knight_attack ||
+			   is_bishop_attack ||
+			   is_rook_attack ||
+			   is_queen_attack;
 	}
 
 	inline bool Position::is_square_attacked(Square s) const
@@ -258,18 +321,39 @@ namespace KhaosChess
 
 		piece_count[p]++;
 		piece_count[get_piece(get_piece_color(p), ALL_PIECES)]++;
+
+		// Update PST score
+		Color c = get_piece_color(p);
+		PieceType pt = type_of_piece(p);
+		Square rel_sq = sq_relative_to_side(s, c);
+
+		pst_scores[PHASE_OPENING][c] += PST[PHASE_OPENING][pt][rel_sq];
+		pst_scores[PHASE_MIDDLEGAME][c] += PST[PHASE_MIDDLEGAME][pt][rel_sq];
+		pst_scores[PHASE_ENDGAME][c] += PST[PHASE_ENDGAME][pt][rel_sq];
 	}
 
 	inline void Position::remove_piece(Square s)
 	{
 		Piece p = piece_board[s];
 
+		// Update PST score
+		Color c = get_piece_color(p);
+		PieceType pt = type_of_piece(p);
+		Square rel_sq = sq_relative_to_side(s, c);
+
+		pst_scores[PHASE_OPENING][c] -= PST[PHASE_OPENING][pt][rel_sq];
+		pst_scores[PHASE_MIDDLEGAME][c] -= PST[PHASE_MIDDLEGAME][pt][rel_sq];
+		pst_scores[PHASE_ENDGAME][c] -= PST[PHASE_ENDGAME][pt][rel_sq];
+
+		// Update bitboards
 		rm_bit(type[type_of_piece(p)], s);
 		rm_bit(occupancies[get_piece_color(p)], s);
 		rm_bit(occupancies[BOTH], s);
 
+		// Clear piece
 		piece_board[s] = NO_PIECE;
 
+		// Update piece counts
 		piece_count[p]--;
 		piece_count[get_piece(get_piece_color(p), ALL_PIECES)]--;
 	}
@@ -277,14 +361,27 @@ namespace KhaosChess
 	inline void Position::move_piece(Square source, Square target)
 	{
 		Piece p = piece_board[source];
+		PieceType pt = type_of_piece(p);
+		Color c = get_piece_color(p);
+		Square src_rel = sq_relative_to_side(source, c);
+		Square tgt_rel = sq_relative_to_side(target, c);
+
+		// Update pst score
+		pst_scores[PHASE_OPENING][c] -= PST[PHASE_OPENING][pt][src_rel];
+		pst_scores[PHASE_OPENING][c] += PST[PHASE_OPENING][pt][tgt_rel];
+
+		pst_scores[PHASE_MIDDLEGAME][c] -= PST[PHASE_MIDDLEGAME][pt][src_rel];
+		pst_scores[PHASE_MIDDLEGAME][c] += PST[PHASE_MIDDLEGAME][pt][tgt_rel];
+
+		pst_scores[PHASE_ENDGAME][c] -= PST[PHASE_ENDGAME][pt][src_rel];
+		pst_scores[PHASE_ENDGAME][c] += PST[PHASE_ENDGAME][pt][tgt_rel];
+
+		// Update bitboards
 		BITBOARD dest = square_to_BB(source) | square_to_BB(target);
 
-		// remove source and target
-		type[type_of_piece(p)] ^= dest;
-		// remove occupanices of this colour
-		occupancies[get_piece_color(p)] ^= dest;
-		// remove the source and add the target 
-		occupancies[BOTH] ^= dest;
+		type[type_of_piece(p)] ^= dest;			 // remove source and target
+		occupancies[get_piece_color(p)] ^= dest; // remove occupanices of this colour
+		occupancies[BOTH] ^= dest;				 // remove the source and add the target
 
 		piece_board[source] = NO_PIECE;
 		piece_board[target] = p;

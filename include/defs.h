@@ -2,7 +2,8 @@
 #pragma once
 
 // Engine details
-#define NAME "KhaosChess 2.1.1"
+#define NAME "KhaosChess"
+#define VERSION "2.1.2"
 #define AUTHOR "Iulian Dashev"
 
 #if defined(_WIN64) && defined(_MSC_VER)  // No Makefile used
@@ -18,7 +19,7 @@
 #endif
 
 // define bitboard data type
-#define U64 unsigned long long
+typedef unsigned long long BITBOARD;
 
 #ifdef _WIN64
 #include<windows.h>
@@ -223,6 +224,7 @@ typedef unsigned short PLY_TYPE; // 16 bit
 
 constexpr int MAX_MOVES = 256;
 constexpr int MAX_PLY = 246;
+constexpr int MAX_PHASE_SCORE = 24;
 
 typedef int Value; // 32 bit
 

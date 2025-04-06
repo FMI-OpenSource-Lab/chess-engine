@@ -133,7 +133,7 @@ namespace KhaosChess
 		// def user/GUI inout buffer
 		char input_buffer[INPUT_BUFFER];
 
-		std::cout << "id name " << NAME << "\n";
+		std::cout << "id name " << NAME << " " << VERSION << "\n";
 		std::cout << "id author " << AUTHOR << "\n";
 		std::cout << "uciok\n";
 
@@ -182,7 +182,7 @@ namespace KhaosChess
 			// parse UCI "uci" command
 			else if (strncmp(input_buffer, "uci", 3) == 0)
 			{
-				std::cout << "\nid name " << NAME << "\n";
+				std::cout << "\nid name " << NAME << " " << VERSION << "\n";
 				std::cout << "id author "<< AUTHOR << "\n";
 				std::cout << "uciok\n";
 			}

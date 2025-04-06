@@ -11,7 +11,7 @@
 
 namespace KhaosChess
 {
-	static U64 get_time_ms()
+	static BITBOARD get_time_ms()
 	{
 #ifdef _WIN64
 		return GetTickCount64();
@@ -22,18 +22,18 @@ namespace KhaosChess
 #endif // _WIN64
 	}
 
-	inline U64 perft_driver(Position& pos, int depth)
+	inline BITBOARD perft_driver(Position& pos, int depth)
 	{
 		if (depth == 0) return 1ULL;
 
-		U64 nodes = 0;
+		BITBOARD nodes = 0;
 
 		for (const auto& m : MoveList<GT_LEGAL>(pos))
 		{
 			MoveInfo move_info;
 			pos.do_move(m, move_info);
 
-			U64 count = perft_driver(pos, depth - 1);
+			BITBOARD count = perft_driver(pos, depth - 1);
 
 			nodes += count;
 
@@ -45,15 +45,15 @@ namespace KhaosChess
 
 	inline void perft_debug(Position& pos, int depth)
 	{
-		U64 nodes = 0;
-		U64 start_time = get_time_ms();
+		BITBOARD nodes = 0;
+		BITBOARD start_time = get_time_ms();
 
 		for (const auto& m : MoveList<GT_LEGAL>(pos))
 		{
 			MoveInfo move_info;
 			pos.do_move(m, move_info);
 
-			U64 count = perft_driver(pos, depth - 1);
+			BITBOARD count = perft_driver(pos, depth - 1);
 
 			pos.undo_move(m);
 
@@ -80,7 +80,7 @@ namespace KhaosChess
 
 		for (int i = 0; i <= depth; i++)
 		{
-			U64 start_time = get_time_ms();
+			BITBOARD start_time = get_time_ms();
 			
 			std::cout << i << std::setw(24) << perft_driver(pos, i);
 			std::cout << std::setw(10) << get_time_ms() - start_time << " ms\n";

@@ -10,25 +10,25 @@ namespace KhaosChess
 	unsigned short square_distance[SQUARE_TOTAL][SQUARE_TOTAL];
 
 	// squares between 2 points
-	U64 between_points_bb[SQUARE_TOTAL][SQUARE_TOTAL];
+	BITBOARD between_points_bb[SQUARE_TOTAL][SQUARE_TOTAL];
 
 	// pseudo legal attacks
-	U64 pseudo_attacks[PIECE_TYPE_NB][SQUARE_TOTAL];
+	BITBOARD pseudo_attacks[PIECE_TYPE_NB][SQUARE_TOTAL];
 
 	// pawn attacks, also pseudo legal
-	U64 pawn_attacks[BOTH][SQUARE_TOTAL];
+	BITBOARD pawn_attacks[BOTH][SQUARE_TOTAL];
 
 	// Magic rook and bishop tables
 	SMagic bishop_magic_tbl[SQUARE_TOTAL];
 	SMagic rook_magic_tbl[SQUARE_TOTAL];
 
-	U64 mBishopAttacks[SQUARE_TOTAL][BISHOP_ATTACKS_SIZE]; // Bishop attacks
-	U64 mRookAttacks[SQUARE_TOTAL][ROOK_ATTACKS_SIZE]; // Rook attacks
+	BITBOARD mBishopAttacks[SQUARE_TOTAL][BISHOP_ATTACKS_SIZE]; // Bishop attacks
+	BITBOARD mRookAttacks[SQUARE_TOTAL][ROOK_ATTACKS_SIZE]; // Rook attacks
 
 	namespace {
 		// Masks for king and knight squares 
-		U64 knight_attacks_mask(const Square& square);
-		U64 king_attacks_mask(const Square& square);
+		BITBOARD knight_attacks_mask(const Square& square);
+		BITBOARD king_attacks_mask(const Square& square);
 	}
 
 	void Bitboards::init()
@@ -82,7 +82,7 @@ namespace KhaosChess
 	{
 		assert((pt == ROOK) || (pt == BISHOP));
 
-		U64 subset{}, magic_index{};
+		BITBOARD subset{}, magic_index{};
 
 		for (Square s = A8; s <= H1; ++s)
 		{
@@ -123,11 +123,11 @@ namespace KhaosChess
 		}
 	}
 
-	U64 sliding_attacks(PieceType pt, Square s, U64 occ)
+	BITBOARD sliding_attacks(PieceType pt, Square s, BITBOARD occ)
 	{
 		assert((pt == ROOK) || (pt == BISHOP));
 
-		U64 attacks = 0ULL;
+		BITBOARD attacks = 0ULL;
 		Direction rook_dirs[4] = { DOWN, LEFT, RIGHT, UP };
 		Direction bishop_dirs[4] = { DOWN_LEFT, DOWN_RIGHT, UP_LEFT, UP_RIGHT };
 
@@ -149,7 +149,7 @@ namespace KhaosChess
 
 	// Calculate the bishop magic attacks
 	// here fancy magic bitboard is used
-	U64 bishopAttacks(U64 occ, Square sq)
+	BITBOARD bishopAttacks(BITBOARD occ, Square sq)
 	{
 		occ &= bishop_magic_tbl[sq].mask;
 		occ *= bishop_magic_tbl[sq].magic;
@@ -158,7 +158,7 @@ namespace KhaosChess
 		return mBishopAttacks[sq][occ];
 	}
 
-	U64 rookAttacks(U64 occ, Square sq)
+	BITBOARD rookAttacks(BITBOARD occ, Square sq)
 	{
 		occ &= rook_magic_tbl[sq].mask;
 		occ *= rook_magic_tbl[sq].magic;
@@ -168,13 +168,13 @@ namespace KhaosChess
 	}
 
 	namespace {
-		U64 knight_attacks_mask(const Square& square)
+		BITBOARD knight_attacks_mask(const Square& square)
 		{
 			// result attacks
-			U64 attacks = 0ULL;
+			BITBOARD attacks = 0ULL;
 
 			// piece bitboard
-			U64 bitboard = 0ULL;
+			BITBOARD bitboard = 0ULL;
 
 			// set piece on board
 			set_bit(bitboard, square);
@@ -194,13 +194,13 @@ namespace KhaosChess
 			return attacks;
 		}
 
-		U64 king_attacks_mask(const Square& square)
+		BITBOARD king_attacks_mask(const Square& square)
 		{
 			// result attacks
-			U64 attacks = 0ULL;
+			BITBOARD attacks = 0ULL;
 
 			// piece bitboard
-			U64 bitboard = 0ULL;
+			BITBOARD bitboard = 0ULL;
 
 			// set piece on board
 			set_bit(bitboard, square);
