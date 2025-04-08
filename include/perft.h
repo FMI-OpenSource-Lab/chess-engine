@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <string>
 #include <fstream>
+#include <chrono>
 
 #include "defs.h"
 #include "position.h"
@@ -11,18 +12,7 @@
 
 namespace KhaosChess
 {
-	static BITBOARD get_time_ms()
-	{
-#ifdef _WIN64
-		return GetTickCount64();
-#else
-		struct timeval time_value;
-		gettimeofday(&time_value, NULL);
-		return time_value.tv_sec * 1000 + time_value.tv_usec / 1000;
-#endif // _WIN64
-	}
-
-	inline BITBOARD perft_driver(Position& pos, int depth)
+	inline uint64_t perft_driver(Position& pos, int depth)
 	{
 		if (depth == 0) return 1ULL;
 
@@ -46,7 +36,7 @@ namespace KhaosChess
 	inline void perft_debug(Position& pos, int depth)
 	{
 		BITBOARD nodes = 0;
-		BITBOARD start_time = get_time_ms();
+		BITBOARD start_time = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 
 		for (const auto& m : MoveList<GT_LEGAL>(pos))
 		{
@@ -64,7 +54,7 @@ namespace KhaosChess
 
 		std::cout << "\nNodes: " << nodes;
 		std::cout << "\nDepth: " << depth;
-		std::cout << "\nTime: " << (get_time_ms() - start_time) << "ms\n";
+		std::cout << "\nTime: " << (std::chrono::high_resolution_clock::now().time_since_epoch().count() - start_time) << "ms\n";
 	}
 
 	inline void print_perft_table(Position& pos)
@@ -80,10 +70,10 @@ namespace KhaosChess
 
 		for (int i = 0; i <= depth; i++)
 		{
-			BITBOARD start_time = get_time_ms();
+			BITBOARD start_time = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 			
 			std::cout << i << std::setw(24) << perft_driver(pos, i);
-			std::cout << std::setw(10) << get_time_ms() - start_time << " ms\n";
+			std::cout << std::setw(10) << std::chrono::high_resolution_clock::now().time_since_epoch().count() - start_time << " ms\n";
 		}
 	}
 }

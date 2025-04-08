@@ -11,9 +11,8 @@ using namespace KhaosChess;
 int main()
 {
 	Bitboards::init();
-	Eval::init();
 
-	bool debug = true;
+	bool debug = false;
 
 	if (debug)
 	{
