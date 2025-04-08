@@ -9,12 +9,22 @@
 
 namespace KhaosChess
 {
-	constexpr int piece_attack_weight[PIECE_TYPE_NB] = {0, 1, 3, 3, 5, 9, 0};
+	struct EvalInfo
+	{
+		int game_phase = 0; // Game phase
+		int passed_pawn_count = 0;
+		int piece_counts[BOTH][PIECE_TYPE_NB]{};
 
-	extern BITBOARD king_shield_mask[BOTH][SQUARE_TOTAL];
-	extern BITBOARD in_front_bb[BOTH][RANK_NB];
-	extern Value connected_bonus[RANK_NB];
-	extern Value passed_bonus[RANK_NB];
+		int total_king_ring_attacks[BOTH]{};
+	
+		Square king_squares[2]{};
+	
+		BITBOARD pawns[2]{};
+		BITBOARD pieces[2]{};
+		BITBOARD pawn_attacks[2]{};
+	
+		BITBOARD piece_relative_occupancies[2][6]{};
+	};
 
 	class Position;
 
@@ -23,25 +33,12 @@ namespace KhaosChess
 	// The evaluation is done using a combination of material and positional evaluation
 	namespace Eval
 	{
-		void init();
+		void init_eval_info(EvalInfo &ei, const Position &pos);
 
 		template <Color c>
 		Value simple_evaluation(const Position &);
 
-		template <Color c>
-		Value mobility(const Position &);
-
-		template <Color c>
-		Value king_safety(const Position &);
-
-		template <Color c>
-		Value pawn_structure(const Position &);
-
-		template <Color c>
-		Value piece_coordination(const Position &);
-
-		template <Color c>
-		Value threats(const Position &);
+		Value king_pawn(Color c, File file, EvalInfo &ei);
 
 		Value evaluate(const Position &);
 	} // namespace Eval
