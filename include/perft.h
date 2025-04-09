@@ -12,13 +12,14 @@
 
 namespace KhaosChess
 {
-	inline uint64_t perft_driver(Position& pos, int depth)
+	inline uint64_t perft_driver(Position &pos, int depth)
 	{
-		if (depth == 0) return 1ULL;
+		if (depth == 0)
+			return 1ULL;
 
 		BITBOARD nodes = 0;
 
-		for (const auto& m : MoveList<GT_LEGAL>(pos))
+		for (const auto &m : MoveList<GT_LEGAL>(pos))
 		{
 			MoveInfo move_info;
 			pos.do_move(m, move_info);
@@ -33,12 +34,12 @@ namespace KhaosChess
 		return nodes;
 	}
 
-	inline void perft_debug(Position& pos, int depth)
+	inline void perft_debug(Position &pos, int depth)
 	{
 		BITBOARD nodes = 0;
-		BITBOARD start_time = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+		auto start_time = std::chrono::high_resolution_clock::now();
 
-		for (const auto& m : MoveList<GT_LEGAL>(pos))
+		for (const auto &m : MoveList<GT_LEGAL>(pos))
 		{
 			MoveInfo move_info;
 			pos.do_move(m, move_info);
@@ -52,12 +53,14 @@ namespace KhaosChess
 			nodes += count;
 		}
 
+		auto end_time = std::chrono::high_resolution_clock::now();
+
 		std::cout << "\nNodes: " << nodes;
 		std::cout << "\nDepth: " << depth;
-		std::cout << "\nTime: " << (std::chrono::high_resolution_clock::now().time_since_epoch().count() - start_time) << "ms\n";
+		std::cout << "\nTime: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count() << "ms\n";
 	}
 
-	inline void print_perft_table(Position& pos)
+	inline void print_perft_table(Position &pos)
 	{
 		int depth;
 		std::cout << "Depth: ";
@@ -70,10 +73,15 @@ namespace KhaosChess
 
 		for (int i = 0; i <= depth; i++)
 		{
-			BITBOARD start_time = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-			
-			std::cout << i << std::setw(24) << perft_driver(pos, i);
-			std::cout << std::setw(10) << std::chrono::high_resolution_clock::now().time_since_epoch().count() - start_time << " ms\n";
+			auto start_time = std::chrono::high_resolution_clock::now();
+
+			uint64_t nodes = perft_driver(pos, i);
+
+			auto end_time = std::chrono::high_resolution_clock::now();
+			auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+
+			std::cout << i << std::setw(24) << nodes;
+			std::cout << std::setw(10) << elapsed_time << " ms\n";
 		}
 	}
 }

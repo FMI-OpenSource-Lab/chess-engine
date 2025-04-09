@@ -38,8 +38,8 @@ namespace KhaosChess
 	inline BITBOARD operator&(BITBOARD b, Square s) { return b & square_to_BB(s); }
 	inline BITBOARD operator|(BITBOARD b, Square s) { return b | square_to_BB(s); }
 	inline BITBOARD operator^(BITBOARD b, Square s) { return b ^ square_to_BB(s); }
-	inline BITBOARD& operator|=(BITBOARD& b, Square s) { return b |= square_to_BB(s); }
-	inline BITBOARD& operator^=(BITBOARD& b, Square s) { return b ^= square_to_BB(s); }
+	inline BITBOARD &operator|=(BITBOARD &b, Square s) { return b |= square_to_BB(s); }
+	inline BITBOARD &operator^=(BITBOARD &b, Square s) { return b ^= square_to_BB(s); }
 
 	inline BITBOARD operator&(Square s, BITBOARD b) { return b & s; }
 	inline BITBOARD operator|(Square s, BITBOARD b) { return b | s; }
@@ -48,17 +48,20 @@ namespace KhaosChess
 	inline BITBOARD operator|(Square s1, Square s2) { return square_to_BB(s1) | s2; }
 
 	// checks for available bit
-	inline BITBOARD get_bit(BITBOARD bitboard, Square square) {
+	inline BITBOARD get_bit(BITBOARD bitboard, Square square)
+	{
 		return bitboard & square;
 	}
 
 	// set piece to square
-	inline void set_bit(BITBOARD& bitboard, Square square) {
+	inline void set_bit(BITBOARD &bitboard, Square square)
+	{
 		bitboard |= square;
 	}
 
 	// if theres a 1 remove it, if 0 don't
-	inline void rm_bit(BITBOARD& bitboard, Square square) {
+	inline void rm_bit(BITBOARD &bitboard, Square square)
+	{
 		bitboard &= ~square_to_BB(square);
 	}
 
@@ -97,10 +100,10 @@ namespace KhaosChess
 	constexpr BITBOARD board_edges(Square s) { return ((Rank8_Bits | Rank1_Bits) & ~rank_bb(s)) | ((FileA_Bits | FileH_Bits) & ~file_bb(s)); }
 
 	// Not files
-	constexpr BITBOARD not_A = 18374403900871474942ULL;	// ~FileA_Bits bitboard value where the A file is set to zero
-	constexpr BITBOARD not_H = 9187201950435737471ULL;	// ~FileH_Bits bitboard value where the H file is set to zero
-	constexpr BITBOARD not_HG = 4557430888798830399ULL;	// ~FileH_Bits & ~FileG_Bits bitboard value where the HG files are set to zero
-	constexpr BITBOARD not_AB = 18229723555195321596ULL;	// ~FileA_Bits & ~FileB_Bits bitboard value where the HG files are set to zero
+	constexpr BITBOARD not_A = 18374403900871474942ULL;	 // ~FileA_Bits bitboard value where the A file is set to zero
+	constexpr BITBOARD not_H = 9187201950435737471ULL;	 // ~FileH_Bits bitboard value where the H file is set to zero
+	constexpr BITBOARD not_HG = 4557430888798830399ULL;	 // ~FileH_Bits & ~FileG_Bits bitboard value where the HG files are set to zero
+	constexpr BITBOARD not_AB = 18229723555195321596ULL; // ~FileA_Bits & ~FileB_Bits bitboard value where the HG files are set to zero
 
 	//// define magic bishop attack table [squares][occupancy]
 	extern BITBOARD mBishopAttacks[SQUARE_TOTAL][BISHOP_ATTACKS_SIZE];
@@ -119,11 +122,12 @@ namespace KhaosChess
 	// extern U64 bishop_attacks[];
 	// extern U64 rook_attacks[];
 
-	struct SMagic {
-		BITBOARD* attack;
-		BITBOARD mask;  // to mask relevant squares of both lines (no outer squares)
+	struct SMagic
+	{
+		BITBOARD *attack;
+		BITBOARD mask;	// to mask relevant squares of both lines (no outer squares)
 		BITBOARD magic; // magic 64-bit factor
-		int shift; // shift relevant bits
+		int shift;		// shift relevant bits
 	};
 
 	extern SMagic bishop_magic_tbl[SQUARE_TOTAL];
@@ -133,45 +137,45 @@ namespace KhaosChess
 	extern BITBOARD sliding_attacks(PieceType pt, Square s, BITBOARD occ);
 
 	// moves the bb one or two steps
-	template<Direction d>
+	template <Direction d>
 	constexpr BITBOARD move_to(BITBOARD b)
 	{
-		return d == DOWN ? b << 8
-			: d == UP ? b >> 8
-			: d == DOWN + DOWN ? b << 16
-			: d == UP + UP ? b >> 16
-			: d == LEFT ? (b & not_A) >> 1
-			: d == RIGHT ? (b & not_H) << 1
-			: d == DOWN_LEFT ? (b & not_A) << 7
-			: d == DOWN_RIGHT ? (b & not_H) << 9
-			: d == UP_LEFT ? (b & not_A) >> 9
-			: d == UP_RIGHT ? (b & not_H) >> 7
-			: 0;
+		return d == DOWN		  ? b << 8
+			   : d == UP		  ? b >> 8
+			   : d == DOWN + DOWN ? b << 16
+			   : d == UP + UP	  ? b >> 16
+			   : d == LEFT		  ? (b & not_A) >> 1
+			   : d == RIGHT		  ? (b & not_H) << 1
+			   : d == DOWN_LEFT	  ? (b & not_A) << 7
+			   : d == DOWN_RIGHT  ? (b & not_H) << 9
+			   : d == UP_LEFT	  ? (b & not_A) >> 9
+			   : d == UP_RIGHT	  ? (b & not_H) >> 7
+								  : 0;
 	}
 
-	template<Color c>
+	template <Color c>
 	constexpr BITBOARD pawn_attacks_bb(BITBOARD bb)
 	{
 		return c == WHITE
-			? move_to<UP_RIGHT>(bb) | move_to<UP_LEFT>(bb)
-			: move_to<DOWN_RIGHT>(bb) | move_to<DOWN_LEFT>(bb);
+				   ? move_to<UP_RIGHT>(bb) | move_to<UP_LEFT>(bb)
+				   : move_to<DOWN_RIGHT>(bb) | move_to<DOWN_LEFT>(bb);
 	}
 
 	constexpr BITBOARD pawn_attacks_bb(Color c, BITBOARD bb)
 	{
 		return c == WHITE
-			? pawn_attacks_bb<WHITE>(bb)
-			: pawn_attacks_bb<BLACK>(bb);
+				   ? pawn_attacks_bb<WHITE>(bb)
+				   : pawn_attacks_bb<BLACK>(bb);
 	}
 
 	constexpr BITBOARD pawn_attacks_bb(Color c, Square bb)
 	{
 		return c == WHITE
-			? pawn_attacks_bb<WHITE>(square_to_BB(bb))
-			: pawn_attacks_bb<BLACK>(square_to_BB(bb));
+				   ? pawn_attacks_bb<WHITE>(square_to_BB(bb))
+				   : pawn_attacks_bb<BLACK>(square_to_BB(bb));
 	}
 
-	template<PieceType pt>
+	template <PieceType pt>
 	inline BITBOARD attacks_bb_by(Square s, BITBOARD occ)
 	{
 		assert(is_square_ok(s) && pt != PAWN);
@@ -205,7 +209,7 @@ namespace KhaosChess
 	}
 
 	// For easier acces to knight and king attacks
-	template<PieceType pt>
+	template <PieceType pt>
 	inline BITBOARD attacks_bb_by(Square s)
 	{
 		assert(is_square_ok(s) && (pt != PAWN));
@@ -213,34 +217,87 @@ namespace KhaosChess
 		return pseudo_attacks[pt][s];
 	}
 
-	/*
-		Base-2 integer logarithm
-
-		Calculates the floor of the base-2 logarithm
-		which is equivalent to the index of the most significant bit
-	*/
-	constexpr int u64_log2(BITBOARD n)
-	{
-		// Function written in set notation:
-		// {2^(2^k) | 0 <= k <= 5}
-		// eg: {2^32, 2^16, 2^8, 2^4, 2^2, 2^1}
-		// And sums the exponents k of the subtracted values.
-#define S(k) if (n >= (uint64_t(1) << k)) { i += k; n >>= k; }
-
-		// returns -1 if input is 0, hence the bitboard is empty
-		int i = -(n == 0); 
-		S(32); S(16); S(8); S(4); S(2); S(1); return i;
-
-		// does log2 faster than cmaths log2 function
-#undef S
-	}
-
+	// Compiler specific functions, taken from Stockfish https://github.com/official-stockfish/Stockfish
+	// GCC, Clang, ICC
 	constexpr Square get_ls1b(BITBOARD bitboard)
 	{
-		// count trailing bits before LS1B
-		int lsb = u64_log2(bitboard & -bitboard);
+		if (!bitboard)
+			return NONE;
 
-		return lsb == -1 ? NONE : Square(lsb);
+#if defined(__GNUC__)
+
+		return Square(__builtin_ctzll(bitboard));
+
+#elif defined(_MSC_VER) // MSVC
+
+#ifdef _WIN64
+
+		unsigned long idx;
+		_BitScanForward64(&idx, bitboard);
+		return Square(idx);
+
+#else // MSVC, WIN32
+
+		unsigned long idx;
+
+		if (bitboard & 0xffffffff)
+		{
+			_BitScanForward(&idx, int32_t(bitboard));
+			return Square(idx);
+		}
+		else
+		{
+			_BitScanForward(&idx, int32_t(bitboard >> 32));
+			return Square(idx + 32);
+		}
+
+#endif
+
+#else // Compiler is neither GCC nor MSVC compatible
+
+#error "Compiler not supported."
+
+#endif
+	}
+
+	constexpr Square get_msb(BITBOARD bitboard)
+	{
+		if (!bitboard)
+			return NONE;
+
+#if defined(__GNUC__) // GCC, Clang, ICX
+
+		return Square(63 ^ __builtin_clzll(bitboard));
+
+#elif defined(_MSC_VER)
+
+#ifdef _WIN64 // MSVC, WIN64
+
+		unsigned long idx;
+		_BitScanReverse64(&idx, bitboard);
+		return Square(idx);
+
+#else // MSVC, WIN32
+
+		unsigned long idx;
+
+		if (bitboard >> 32)
+		{
+			_BitScanReverse(&idx, int32_t(bitboard >> 32));
+			return Square(idx + 32);
+		}
+		else
+		{
+			_BitScanReverse(&idx, int32_t(bitboard));
+			return Square(idx);
+		}
+#endif
+
+#else // Compiler is neither GCC nor MSVC compatible
+
+#error "Compiler not supported."
+
+#endif
 	}
 
 	// calculate the line that is formed between two points
@@ -252,18 +309,22 @@ namespace KhaosChess
 		// we can do [pt][source] & target or [pt][target] & source
 
 		// check if pseudo legal move exists in this diagonal
-		// and generate an attack thats going to serve as 
+		// and generate an attack thats going to serve as
 		// an inbetween squares excluding source and target
-		if (pseudo_attacks[BISHOP][source] & target) return (
-			attacks_bb_by(BISHOP, source, square_to_BB(target)) &
-			attacks_bb_by(BISHOP, target, square_to_BB(source))) | target;
+		if (pseudo_attacks[BISHOP][source] & target)
+			return (
+					   attacks_bb_by(BISHOP, source, square_to_BB(target)) &
+					   attacks_bb_by(BISHOP, target, square_to_BB(source))) |
+				   target;
 
 		// check if pseudo legal move exists in this line
 		// generate an attack thats going to serve as an inbetween squares
 		// excluding source and target
-		else if (pseudo_attacks[ROOK][source] & target) return (
-			attacks_bb_by(ROOK, source, square_to_BB(target)) &
-			attacks_bb_by(ROOK, target, square_to_BB(source))) | target;
+		else if (pseudo_attacks[ROOK][source] & target)
+			return (
+					   attacks_bb_by(ROOK, source, square_to_BB(target)) &
+					   attacks_bb_by(ROOK, target, square_to_BB(source))) |
+				   target;
 
 		// no inbetween squares will return the target square in case of knight attacks
 		return square_to_BB(target);
@@ -274,7 +335,7 @@ namespace KhaosChess
 	{
 		BITBOARD bb{};
 
-		for (auto& pt : { ROOK, BISHOP })
+		for (auto &pt : {ROOK, BISHOP})
 			if (pseudo_attacks[pt][source] & target)
 				bb |= (attacks_bb_by(pt, source, 0) & (attacks_bb_by(pt, target, 0)));
 
@@ -333,7 +394,7 @@ namespace KhaosChess
 		return bitboard & (bitboard - 1);
 	}
 
-	constexpr Square pop_ls1b(BITBOARD& bitboard)
+	constexpr Square pop_ls1b(BITBOARD &bitboard)
 	{
 		assert(bitboard);
 
@@ -343,22 +404,22 @@ namespace KhaosChess
 		return s;
 	}
 
-	const uint64_t m1 = 0x5555555555555555;  //binary: 0101...
-	const uint64_t m2 = 0x3333333333333333;  //binary: 00110011..
-	const uint64_t m4 = 0x0f0f0f0f0f0f0f0f;  //binary:  4 zeros,  4 ones ...
-	const uint64_t h01 = 0x0101010101010101; //the sum of 256 to the power of 0,1,2,3...
+	const uint64_t m1 = 0x5555555555555555;	 // binary: 0101...
+	const uint64_t m2 = 0x3333333333333333;	 // binary: 00110011..
+	const uint64_t m4 = 0x0f0f0f0f0f0f0f0f;	 // binary:  4 zeros,  4 ones ...
+	const uint64_t h01 = 0x0101010101010101; // the sum of 256 to the power of 0,1,2,3...
 
-	// Hamming weight algorithm for finding the count of the 1's 
+	// Hamming weight algorithm for finding the count of the 1's
 	constexpr int count_bits(BITBOARD bitboard)
 	{
-		//put count of each 2 bits into those 2 bits
+		// put count of each 2 bits into those 2 bits
 		bitboard -= (bitboard >> 1) & m1;
-		//put count of each 4 bits into those 4 bits 
+		// put count of each 4 bits into those 4 bits
 		bitboard = (bitboard & m2) + ((bitboard >> 2) & m2);
-		//put count of each 8 bits into those 8 bits 
+		// put count of each 8 bits into those 8 bits
 		bitboard = (bitboard + (bitboard >> 4)) & m4;
 
-		//returns left 8 bits of x + (x<<8) + (x<<16) + (x<<24) + ... 
+		// returns left 8 bits of x + (x<<8) + (x<<16) + (x<<24) + ...
 		return (bitboard * h01) >> 56;
 	}
 }

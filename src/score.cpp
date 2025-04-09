@@ -11,56 +11,13 @@
 
 namespace KhaosChess
 {
-	void Eval::init_eval_info(EvalInfo &ei, const Position &pos)
-	{
-		// Initialize the evaluation info structure
-		ei.game_phase = 0;
-
-		ei.total_king_ring_attacks[WHITE] = ei.total_king_ring_attacks[BLACK] = 0;
-
-		ei.king_squares[WHITE] = pos.square<KING>(WHITE);
-		ei.king_squares[BLACK] = pos.square<KING>(BLACK);
-
-		ei.pawns[WHITE] = pos.get_pieces_bb(PAWN, WHITE);
-		ei.pawns[BLACK] = pos.get_pieces_bb(PAWN, BLACK);
-
-		ei.pieces[WHITE] = pos.get_pieces_bb(WHITE);
-		ei.pieces[BLACK] = pos.get_pieces_bb(BLACK);
-
-		ei.pawn_attacks[WHITE] = pawn_attacks_bb<WHITE>(ei.pawns[WHITE]);
-		ei.pawn_attacks[BLACK] = pawn_attacks_bb<BLACK>(ei.pawns[BLACK]);
-
-		for(PieceType pt = PAWN; pt <= QUEEN; ++pt)
-		{
-			ei.piece_counts[WHITE][pt] = count_bits(pos.get_pieces_bb(pt, WHITE));
-			ei.piece_counts[BLACK][pt] = count_bits(pos.get_pieces_bb(pt, BLACK));
-
-			ei.piece_relative_occupancies[WHITE][pt] = pos.get_all_pieces_bb();
-			ei.piece_relative_occupancies[BLACK][pt] = pos.get_all_pieces_bb();
-		}
-
-		BITBOARD w_diagonal = pos.get_pieces_bb(BISHOP, WHITE) | pos.get_pieces_bb(QUEEN, WHITE);
-		BITBOARD b_diagonal = pos.get_pieces_bb(BISHOP, BLACK) | pos.get_pieces_bb(QUEEN, BLACK);
-
-		BITBOARD w_horizontal = pos.get_pieces_bb(ROOK, WHITE) | pos.get_pieces_bb(QUEEN, WHITE);
-		BITBOARD b_horizontal = pos.get_pieces_bb(ROOK, BLACK) | pos.get_pieces_bb(QUEEN, BLACK);
-
-		ei.piece_relative_occupancies[WHITE][BISHOP] ^= w_diagonal;
-		ei.piece_relative_occupancies[BLACK][BISHOP] ^= b_diagonal;
-		
-		ei.piece_relative_occupancies[WHITE][ROOK] ^= w_horizontal;
-		ei.piece_relative_occupancies[BLACK][ROOK] ^= b_horizontal;
-
-		ei.piece_relative_occupancies[WHITE][QUEEN] ^= w_diagonal | w_horizontal;
-		ei.piece_relative_occupancies[BLACK][QUEEN] ^= b_diagonal | b_horizontal;
-	}
-
 	// Calcuates the material score of the position depending on the side to move
-	template <Color Us>
 	Value Eval::simple_evaluation(const Position &pos)
 	{
+		Color Us = pos.side_to_move();
 		// Calculates only the material balance
-		return PAWN_VALUE * (pos.count<PAWN>(Us) - pos.count<PAWN>(~Us)) + (pos.material_value(Us) - pos.material_value(~Us));
+		return PAWN_VALUE * (pos.count<PAWN>(Us) - pos.count<PAWN>(~Us)) +
+			   (pos.material_value(Us) - pos.material_value(~Us));
 	}
 
 	// Evaluates the position using the material score and positional score
@@ -68,7 +25,7 @@ namespace KhaosChess
 	{
 		Color us = pos.side_to_move();
 
-		return simple_evaluation<WHITE>(pos) + pos.pst_value(us) - pos.pst_value(~us);
+		return 0; // for now
 	}
 
 	/*

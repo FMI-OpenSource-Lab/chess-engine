@@ -12,7 +12,7 @@ int main()
 {
 	Bitboards::init();
 
-	bool debug = false;
+	bool debug = true;
 
 	if (debug)
 	{
@@ -28,10 +28,6 @@ int main()
 		// std::cout << pos;
 
 		pos.set("r3k3/p1pp1p2/8/8/8/8/PPP2PPP/3RK2R w Kq - 0 1", &infos->back());
-		std::cout << pos << std::endl;
-		std::cout << "Game phase ((opening) 24 - 0 (endgame)): " << pos.game_phase() << std::endl;
-		std::cout << "PST white: " << pos.pst_value(WHITE) << std::endl;
-		std::cout << "PST black: " << pos.pst_value(BLACK) << std::endl;
 	}
 	else
 		uci_loop();
