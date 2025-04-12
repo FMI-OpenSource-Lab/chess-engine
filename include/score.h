@@ -81,22 +81,21 @@ namespace KhaosChess
 
 		constexpr Value all_pieces() const
 		{
-			return 2 * (8 * S(300, 370).eg +   // 8 PAWNS
-						2 * S(890, 880).eg +   // 2 KNIGHTS
-						2 * S(900, 950).eg +   // 2 BISHOPS
-						2 * S(1400, 1550).eg + // 2 ROOKS
-						1 * S(2900, 2800).eg); // 1 QUEEN
+			return 2 * (8 * piece_value[PAWN] +	  // 8 PAWNS
+						2 * piece_value[KNIGHT] + // 2 KNIGHTS
+						2 * piece_value[BISHOP] + // 2 BISHOPS
+						2 * piece_value[ROOK] +	  // 2 ROOKS
+						1 * piece_value[QUEEN])
+						   .eg; // 1 QUEEN
 		}
 	};
 
 	// Piece-specific bonuses and penalties
 	struct PieceBonus
 	{
+		// Bonuses
 		Score mobility[PIECE_TYPE_NB] = {
 			S(0, 0), S(5, 10), S(12, 24), S(18, 8), S(6, 24), S(4, 12), S(0, 10)};
-
-		Score pinned_penalty[PIECE_TYPE_NB] = {
-			S(0, 0), S(-20, -20), S(-10, -15), S(-10, -20), S(0, 0), S(0, 0), S(0, 0)};
 
 		Score bishop_pair = S(50, 60);
 		Score connected_rooks = S(20, 10);
@@ -108,20 +107,29 @@ namespace KhaosChess
 
 		Score rook_open_file = S(20, 40);
 		Score rook_semi_open_file = S(10, 11);
-		Score trapped_rook = S(-50, -10);
 
 		Score control_space[PIECE_TYPE_NB] = {
 			S(0, 0), S(20, 30), S(20, 0), S(10, 5), S(10, 10), S(10, 20), S(0, 0)};
+
+		// Penalties
+		Score trapped_rook = S(-50, -10);
+		
+		Score pinned_penalty[PIECE_TYPE_NB] = {
+			S(0, 0), S(-20, -20), S(-10, -15), S(-10, -20), S(0, 0), S(0, 0), S(0, 0)};
 	};
 
 	// Pawn structure bonuses and penalties
 	struct PawnStructure
 	{
+		// Bonuses
+		Value passed_rank_weight[RANK_NB] = {0, 1, 1, 2, 3, 6, 10, 0};
+		Value connected_bonus[RANK_NB] = {0, 0, 2, 5, 20, 40, 80, 0};
+
 		Score control_center = S(30, 30);
 		Score passed = S(20, 40);
-		Value passed_rank_weight[RANK_NB] = {0, 1, 1, 2, 3, 6, 10, 0};
+
+		// Penalties
 		Score doubled = S(-15, -45);
-		Value connected_bonus[RANK_NB] = {0, 0, 2, 5, 20, 40, 80, 0};
 		Score backward = S(-30, -100);
 		Score isolated = S(-20, -80);
 		Score pawn_island = S(-10, -20);
@@ -132,6 +140,8 @@ namespace KhaosChess
 	struct KingSafety
 	{
 		Score bonus = S(30, 0);
+
+		// Penalties
 		Score weak_diagonals = S(-5, 0);
 		Score weak_lines = S(-7, 0);
 		Score weak_backrank = S(-75, -100);
@@ -145,36 +155,40 @@ namespace KhaosChess
 	};
 
 	// Define the actual instances
-	constexpr Material B_MATERIAL;
-	constexpr PieceBonus B_PIECE;
-	constexpr PawnStructure B_PAWN;
-	constexpr KingSafety B_KING;
+	constexpr Material MATERIAL_SCORES;
+	constexpr PieceBonus PIECE_SCORES;
+	constexpr PawnStructure PAWN_STRUCTURE_SCORES;
+	constexpr KingSafety KING_SAFETY_SCORES;
 
-	// For backward compatibility (can be removed after updating evaluation function)
-	constexpr Score PIECE_VALUE[PIECE_TYPE_NB] = {
-		B_MATERIAL.piece_value[0], B_MATERIAL.piece_value[1], B_MATERIAL.piece_value[2],
-		B_MATERIAL.piece_value[3], B_MATERIAL.piece_value[4], B_MATERIAL.piece_value[5],
-		B_MATERIAL.piece_value[6]};
+	constexpr Value VALUE_ALL_PIECES = MATERIAL_SCORES.all_pieces();
 
-	constexpr Value VALUE_ALL_PIECES = B_MATERIAL.all_pieces();
 	constexpr Score MOBILITY_BONUS[PIECE_TYPE_NB] = {
-		B_PIECE.mobility[0], B_PIECE.mobility[1], B_PIECE.mobility[2],
-		B_PIECE.mobility[3], B_PIECE.mobility[4], B_PIECE.mobility[5],
-		B_PIECE.mobility[6]};
+		PIECE_SCORES.mobility[0], PIECE_SCORES.mobility[1], PIECE_SCORES.mobility[2],
+		PIECE_SCORES.mobility[3], PIECE_SCORES.mobility[4], PIECE_SCORES.mobility[5],
+		PIECE_SCORES.mobility[6]};
 
 	class Position;
 
-	// This namespace aims to improve the evaluation of the position
-	// by using a combination of material and positional evaluation
-	// The evaluation is done using a combination of material and positional evaluation
-	namespace Eval
+	enum ScoreComponent
 	{
-		Value simple_evaluation(const Position &);
+		SC_MATERIAL,		   // The material scores
+		SC_MOBILITY,		   // The mobility scores
+		SC_KING_SAFETY,		   // The king safety scores
+		SC_PAWN_STRUCTURE,	   // The pawn structure scores
+		SC_PIECE_COORDINATION, // The piece coordination scores
+		SC_ALL				   // Combined score
+	};
 
-		Value king_pawn(Color c, File file);
-		Value piece(Color c, Position &pos, PieceType pt, int &game_phase);
-		Value pieces(Position &pos, int &game_phase);
+	template <ScoreComponent>
+	Score total_scores(const Position &pos, Score &score);
 
-		Value evaluate(const Position &);
-	} // namespace Eval
+	template <ScoreComponent T>
+	struct Scorer
+	{
+		explicit Scorer(const Position &pos) : total(total_scores<T>(pos, score)) {}
+		void print_stats();
+
+	private:
+		Score total, score;
+	};
 } // namespace KhaosChess

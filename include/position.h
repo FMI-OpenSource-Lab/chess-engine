@@ -53,8 +53,7 @@ namespace KhaosChess
 		// Copied when making a move
 		CastlingRights castling_rights;
 		Square en_passant;
-		PLY_TYPE fifty_move;  // halfmove clock
-		Value material[BOTH]; // Material value
+		PLY_TYPE fifty_move; // halfmove clock
 		Piece captured_piece;
 
 		// Not copied
@@ -129,13 +128,11 @@ namespace KhaosChess
 
 		// Value
 		Value see(Move m) const;
-		Value material_value(Color c) const { return move_info->material[c]; }
-		Value material_value() const { return material_value(WHITE) + material_value(BLACK); }
-		Value pst_value(Color c) const;
 
 		// Piece count
 		template <PieceType pt>
 		int count(Color c) const;
+		int count(PieceType pt, Color c) const;
 		int game_phase() const;
 
 		// Doing and undoing moves
@@ -200,57 +197,19 @@ namespace KhaosChess
 							4 * (count<QUEEN>(WHITE) + count<QUEEN>(BLACK)));
 	}
 
-	/*
-		Interpolation of the phase score to get a value between 0 and 256
-		Opening weights dominate (256) -> scaled_phase (192) -> 	Transition point
-		Middlegame weights dominate (128) -> scaled_phase (64) -> 	Transition to endgame
-		Pure endgame weights (0) -> scaled_phase (0)
-
-		Example:
-		Opening weights dominate (256) -> scaled_phase (256) -> 	Opening weights dominate
-					 24   -> scaled_phase (256) -> 	Opening weights dominate
-					 18   -> scaled_phase (192) -> 	Transition point
-					 12   -> scaled_phase (128) ->	Middlegame weights dominate
-					 6    -> scaled_phase (64)  -> 	Transition to endgame
-					 0    -> scaled_phase (0)   -> 	Pure endgame weights
-	*/
-
-	inline Value Position::pst_value(Color c) const
-	{
-		int phase = game_phase();
-
-		// Scale phase to 0-256 range (0 = endgame, 256 = opening)
-		int scaled_phase = (phase * 256) / MAX_PHASE_SCORE;
-
-		// Handle all three phases with smooth interpolation
-		if (scaled_phase > 192)
-		{
-			// Opening to middlegame (192-256)
-			// Calculate weights (opening_weight = scaled_phase, middlegame_weight = 256-scaled_phase)
-			return Value(
-				(pst_scores[PHASE_OPENING][c] * scaled_phase +
-				 pst_scores[PHASE_MIDDLEGAME][c] * (256 - scaled_phase)) /
-				256);
-		}
-		else if (scaled_phase > 64)
-		{
-			// Middlegame phase (64-192)
-			// Rescale to 0-128 range for middlegame
-			int mg_phase = scaled_phase - 64;
-			return Value((pst_scores[PHASE_MIDDLEGAME][c] * mg_phase +
-						  pst_scores[PHASE_ENDGAME][c] * (128 - mg_phase)) /
-						 128);
-		}
-
-		// Endgame phase (0-64)
-		// Calculate weights for late endgame
-		return Value((pst_scores[PHASE_ENDGAME][c] * scaled_phase +
-					  pst_scores[PHASE_ENDGAME][c] * (64 - scaled_phase)) /
-					 64);
-	}
-
 	template <PieceType pt>
 	inline int Position::count(Color c) const { return piece_count[get_piece(c, pt)]; }
+
+	inline int Position::count(PieceType pt, Color c) const
+	{
+		return pt == PAWN	  ? count<PAWN>(c)
+			   : pt == KNIGHT ? count<KNIGHT>(c)
+			   : pt == BISHOP ? count<BISHOP>(c)
+			   : pt == ROOK	  ? count<ROOK>(c)
+			   : pt == QUEEN  ? count<QUEEN>(c)
+			   : pt == KING	  ? count<KING>(c)
+							  : 0;
+	}
 
 	inline bool Position::is_square_attacked(Square s, Color us) const
 	{
@@ -274,8 +233,9 @@ namespace KhaosChess
 
 	inline bool Position::is_square_attacked(Square s) const
 	{
+		assert(is_square_ok(s));
 		return is_square_attacked(s, side);
-	};
+	}
 
 	inline Piece Position::get_piece_on(Square s) const
 	{

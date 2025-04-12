@@ -9,6 +9,8 @@
 !src/**
 !include/
 !include/**
+!tools/
+!tools/**
 
 # Do not remove CMakeLists.txt file
 !CMakeLists.txt
@@ -21,6 +23,9 @@ CMakeFiles/
 CMakeCache.txt
 Makefile
 cmake_install.cmake
+
+# Allow README file
+!*.md
 
 # Ignore executable files
 *.exe

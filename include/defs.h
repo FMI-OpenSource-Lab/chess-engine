@@ -6,30 +6,30 @@
 #define VERSION "2.1.2"
 #define AUTHOR "Iulian Dashev"
 
-#if defined(_WIN64) && defined(_MSC_VER)  // No Makefile used
-#include <intrin.h>                   // Microsoft header for _BitScanForward64()
+#if defined(_WIN64) && defined(_MSC_VER) // No Makefile used
+#include <intrin.h>						 // Microsoft header for _BitScanForward64()
 #define IS_64BIT
 #endif
 
 #if defined(_MSC_VER)
-	// Disable some silly and noisy warnings from MSVC compiler
-#pragma warning(disable: 4127)  // Conditional expression is constant
-#pragma warning(disable: 4146)  // Unary minus operator applied to unsigned type
-#pragma warning(disable: 4800)  // Forcing value to bool 'true' or 'false'
+// Disable some silly and noisy warnings from MSVC compiler
+#pragma warning(disable : 4127) // Conditional expression is constant
+#pragma warning(disable : 4146) // Unary minus operator applied to unsigned type
+#pragma warning(disable : 4800) // Forcing value to bool 'true' or 'false'
 #endif
 
 // define bitboard data type
 typedef unsigned long long BITBOARD;
 
 #ifdef _WIN64
-#include<windows.h>
+#include <windows.h>
 #else
-#include<sys/time.h>
+#include <sys/time.h>
 #endif
 
 #ifdef IS_64BIT
 constexpr bool Is64Bit = true;
-#else 
+#else
 constexpr bool Is64Bit = false;
 #endif // IS_64BIT
 
@@ -50,7 +50,7 @@ enum Square : int {
 	SQUARE_TOTAL = 64
 };
 
-constexpr const char* squareToCoordinates[] = {
+constexpr const char *squareToCoordinates[] = {
 	"a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
 	"a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
 	"a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
@@ -58,10 +58,10 @@ constexpr const char* squareToCoordinates[] = {
 	"a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
 	"a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
 	"a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
-	"a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1"
-};
+	"a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1"};
 
-enum PieceType : int {
+enum PieceType : int
+{
 	NO_PIECE_TYPE,
 	PAWN,
 	KNIGHT,
@@ -73,7 +73,8 @@ enum PieceType : int {
 	PIECE_TYPE_NB = 8
 };
 
-enum Piece : int {
+enum Piece : int
+{
 	NO_PIECE,
 
 	WHITE_PAWN,
@@ -100,7 +101,8 @@ enum Color
 	BOTH
 };
 
-enum Direction : int {
+enum Direction : int
+{
 	DOWN = 8,
 	RIGHT = 1,
 	UP = -DOWN,
@@ -112,7 +114,8 @@ enum Direction : int {
 	DOWN_RIGHT = DOWN + RIGHT
 };
 
-enum File : int {
+enum File : int
+{
 	FILE_A,
 	FILE_B,
 	FILE_C,
@@ -124,7 +127,8 @@ enum File : int {
 	FILE_NB
 };
 
-enum Rank : int {
+enum Rank : int
+{
 	RANK_8,
 	RANK_7,
 	RANK_6,
@@ -136,7 +140,8 @@ enum Rank : int {
 	RANK_NB
 };
 
-enum CastlingRights : int {
+enum CastlingRights : int
+{
 	CASTLE_NB = 0,
 	WK = 1,
 	WQ = 2,
@@ -156,9 +161,9 @@ constexpr bool is_square_ok(Square s) { return s >= A8 && s <= H1; }
 
 // Castling Rights operator overloads
 inline CastlingRights operator&(Color c, CastlingRights cr) { return CastlingRights((c == WHITE ? WHITE_CASTLE : BLACK_CASTLE) & cr); }
-inline CastlingRights operator|(CastlingRights& c, CastlingRights a) { return CastlingRights(int(c) | int(a)); };
-inline CastlingRights operator&(CastlingRights& c, int d) { return CastlingRights(int(c) & int(d)); }
-inline CastlingRights& operator|=(CastlingRights& lhs, CastlingRights rhs) 
+inline CastlingRights operator|(CastlingRights &c, CastlingRights a) { return CastlingRights(int(c) | int(a)); };
+inline CastlingRights operator&(CastlingRights &c, int d) { return CastlingRights(int(c) & int(d)); }
+inline CastlingRights &operator|=(CastlingRights &lhs, CastlingRights rhs)
 {
 	lhs = static_cast<CastlingRights>(static_cast<int>(lhs) | static_cast<int>(rhs));
 	return lhs;
@@ -173,8 +178,8 @@ constexpr Square operator+(Square s, Direction d) { return Square(int(s) + int(d
 constexpr Square operator-(Square s, Direction d) { return Square(int(s) - int(d)); }
 constexpr Square operator-(Square s, int d) { return Square(int(s) - d); }
 constexpr Square operator+(Square s, int d) { return Square(int(s) + d); }
-inline Square& operator+=(Square& s, Direction d) { return s = s + d; }
-inline Square& operator-=(Square& s, Direction d) { return s = s - d; }
+inline Square &operator+=(Square &s, Direction d) { return s = s + d; }
+inline Square &operator-=(Square &s, Direction d) { return s = s - d; }
 
 inline Square operator|(Square s1, Square s2) { return Square(int(s1) | int(s2)); }
 inline Square operator|(Square s1, int n) { return Square(int(s1) | n); }
@@ -182,10 +187,10 @@ inline Square operator|(Square s1, int n) { return Square(int(s1) | n); }
 inline bool operator==(Square s1, Square s2) { return int(s1) == int(s2); }
 
 // Additional operators to increment the ranks by some value
-constexpr File operator+(File s, int d) { return File(int(s) + d); }
-constexpr File operator-(File s, int d) { return File(int(s) - d); }
+constexpr File operator+(File f, int d) { return File(int(f) + d); }
+constexpr File operator-(File f, int d) { return File(int(f) - d); }
 
-inline File& operator+=(File& f, int i) { return f = f + i; }
+inline File &operator+=(File &f, int i) { return f = f + i; }
 
 // Toggle the colour
 constexpr Color operator~(Color c) { return Color(c ^ 1); }
@@ -204,6 +209,12 @@ constexpr Square convert_to_square(Rank rank, File file) { return convert_to_squ
 constexpr Square make_square(File f, Rank r) { return Square((r << 3) + f); }
 constexpr Square sq_relative_to_side(Square s, Color c) { return Square(int(s) ^ (c * 56)); }
 
+constexpr int distance(Square source, Square target)
+{
+	return std::max(abs(int(rank_of(source)) - int(rank_of(target))),
+					abs(int(file_of(source)) - int(file_of(target))));
+}
+
 // Piece, PieceType and Color helper methods
 constexpr Piece get_piece(Color c, PieceType pt) { return Piece(pt + (c * 6)); }
 
@@ -220,7 +231,7 @@ constexpr Color get_piece_color(Piece p)
 
 constexpr int TOTAL_MAX_DEPTH = 512;
 
-typedef unsigned short PLY_TYPE; // 16 bit 
+typedef unsigned short PLY_TYPE; // 16 bit
 
 constexpr int MAX_MOVES = 256;
 constexpr int MAX_PLY = 246;
@@ -243,18 +254,17 @@ constexpr Value BISHOP_VALUE = 333;
 constexpr Value ROOK_VALUE = 563;
 constexpr Value QUEEN_VALUE = 950;
 
-constexpr Value PieceValue[PIECE_NB] // All pieces 
-{
-	// WHITE
-	VALUE_ZERO, PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE, ROOK_VALUE, QUEEN_VALUE, VALUE_ZERO,
-	// BLACK
-				PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE, ROOK_VALUE, QUEEN_VALUE, VALUE_ZERO, VALUE_ZERO
-};
+constexpr Value PieceValue[PIECE_NB] // All pieces
+	{
+		// WHITE
+		VALUE_ZERO, PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE, ROOK_VALUE, QUEEN_VALUE, VALUE_ZERO,
+		// BLACK
+		PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE, ROOK_VALUE, QUEEN_VALUE, VALUE_ZERO, VALUE_ZERO};
 
 // Allow to use ++File, --File, ++Rank, --Rank and etc.
-#define ENABLE_INCR_OPERATORS_ON(T) \
-		inline T& operator++(T& d) { return d = T(int(d) + 1); } \
-		inline T& operator--(T& d) { return d = T(int(d) - 1); } 
+#define ENABLE_INCR_OPERATORS_ON(T)                          \
+	inline T &operator++(T &d) { return d = T(int(d) + 1); } \
+	inline T &operator--(T &d) { return d = T(int(d) - 1); }
 
 // Enables increment by one operation
 ENABLE_INCR_OPERATORS_ON(Piece)

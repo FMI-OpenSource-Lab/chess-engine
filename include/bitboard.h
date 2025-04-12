@@ -14,9 +14,6 @@ namespace KhaosChess
 	constexpr auto BISHOP_ATTACKS_SIZE = 512;
 	constexpr auto ROOK_ATTACKS_SIZE = 4096;
 
-	// Declare prototypes
-	constexpr inline BITBOARD set_occupancy(int index, int bitsInMask, BITBOARD attackMask);
-
 	// extern void init_sliders_attacks(PieceType py);
 	extern void init_pseudo_attacks();
 
@@ -104,6 +101,17 @@ namespace KhaosChess
 	constexpr BITBOARD not_H = 9187201950435737471ULL;	 // ~FileH_Bits bitboard value where the H file is set to zero
 	constexpr BITBOARD not_HG = 4557430888798830399ULL;	 // ~FileH_Bits & ~FileG_Bits bitboard value where the HG files are set to zero
 	constexpr BITBOARD not_AB = 18229723555195321596ULL; // ~FileA_Bits & ~FileB_Bits bitboard value where the HG files are set to zero
+
+	constexpr BITBOARD neighbouring_files[FILE_NB] = {
+		FileB_Bits,				 // FILE_A
+		FileA_Bits | FileC_Bits, // FILE_B
+		FileB_Bits | FileD_Bits, // FILE_C
+		FileC_Bits | FileE_Bits, // FILE_D
+		FileD_Bits | FileF_Bits, // FILE_E
+		FileE_Bits | FileG_Bits, // FILE_F
+		FileF_Bits | FileH_Bits, // FILE_G
+		FileG_Bits,				 // FILE_H
+	};
 
 	//// define magic bishop attack table [squares][occupancy]
 	extern BITBOARD mBishopAttacks[SQUARE_TOTAL][BISHOP_ATTACKS_SIZE];
@@ -342,6 +350,21 @@ namespace KhaosChess
 		return (bb | source | target) & aligned_with;
 	}
 
+	template <Color c>
+	constexpr BITBOARD forward_ranks_bb(Square source)
+	{
+		assert(is_square_ok(source));
+		return c == WHITE ? ~Rank1_Bits >> 8 * (RANK_1 - rank_of(source))
+						  : ~Rank8_Bits << 8 * (rank_of(source) - RANK_8);
+	}
+
+	template <Color c>
+	constexpr BITBOARD passed_pawn_path(Square source)
+	{
+		assert(is_square_ok(source));
+		return forward_ranks_bb<c>(source) & neighbouring_files[file_of(source)] | file_bb(source);
+	}
+
 	inline void print_bitboard(BITBOARD bitboard)
 	{
 		std::cout << "\nBitboard representation:\n\n";
@@ -364,29 +387,6 @@ namespace KhaosChess
 
 		// print as udec value
 		std::cout << "\n Bitboard: " << bitboard << "\n\n";
-	}
-
-	constexpr inline BITBOARD set_occupancy(int index, int bitsInMask, BITBOARD attackMask)
-	{
-		// occupancy map
-		BITBOARD occupancy = 0ULL;
-
-		// loop on bits within attack mask
-		for (int count = 0; count < bitsInMask; count++)
-		{
-			// get the lsb square
-			Square square = get_ls1b(attackMask);
-
-			// remove LSB
-			rm_bit(attackMask, square);
-
-			// make occupancy on board
-			if (index & (1 << count))
-				// populate occupancy map
-				occupancy |= square_to_BB(square);
-		}
-
-		return occupancy;
 	}
 
 	constexpr bool has_bit_after_pop(BITBOARD bitboard)

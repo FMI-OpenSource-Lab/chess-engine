@@ -208,19 +208,9 @@ namespace KhaosChess
 		// handles also incorrect FEN's with fullmove = 0
 		fullmove_number = std::max(2 * (fullmove_number - 1), 0) + (side == BLACK);
 
-		// Calculate threats and material
+		// Calculate threats
 		calculate_threats();
-		move_info->material[WHITE] = move_info->material[BLACK] = VALUE_ZERO;
-
-		for (BITBOARD b = get_all_pieces_bb(); b;)
-		{
-			Piece p = get_piece_on(pop_ls1b(b));
-			PieceType pt = type_of_piece(p);
-
-			if (pt != KING && pt != PAWN)
-				move_info->material[get_piece_color(p)] += PieceValue[p];
-		}
-
+		
 		return *this;
 	}
 
@@ -490,8 +480,6 @@ namespace KhaosChess
 				assert(on_target == NO_PIECE);
 				assert(get_piece_on(capture_sq) == get_piece(them, PAWN));
 			}
-			else
-				move_info->material[them] -= PieceValue[captured]; // remove the captured piece value
 
 			remove_piece(capture_sq);
 			move_info->fifty_move = 0;
@@ -527,8 +515,6 @@ namespace KhaosChess
 				// erase the old piece and put the new one
 				remove_piece(target);
 				place_piece(promoted, target);
-
-				move_info->material[us] += PieceValue[promoted];
 			}
 
 			move_info->fifty_move = 0;

@@ -28,6 +28,9 @@ int main()
 		// std::cout << pos;
 
 		pos.set("r3k3/p1pp1p2/8/8/8/8/PPP2PPP/3RK2R w Kq - 0 1", &infos->back());
+
+		print_bitboard(forward_ranks_bb<WHITE>(E4));
+		print_bitboard(passed_pawn_path<WHITE>(E4));
 	}
 	else
 		uci_loop();
