@@ -34,6 +34,7 @@ constexpr bool Is64Bit = false;
 #endif // IS_64BIT
 
 #include <cassert>
+#include <algorithm> // For std::max
 
 enum Square : int {
 	A8, B8, C8, D8, E8, F8, G8, H8,
@@ -186,11 +187,19 @@ inline Square operator|(Square s1, int n) { return Square(int(s1) | n); }
 
 inline bool operator==(Square s1, Square s2) { return int(s1) == int(s2); }
 
-// Additional operators to increment the ranks by some value
+// Additional operators to increment the files by some value
 constexpr File operator+(File f, int d) { return File(int(f) + d); }
 constexpr File operator-(File f, int d) { return File(int(f) - d); }
+constexpr File operator+(File f, File d) { return File(f + int(d)); }
+constexpr File operator-(File f, File d) { return File(f - int(d)); }
 
 inline File &operator+=(File &f, int i) { return f = f + i; }
+
+// Additional operators to increment the files by some value
+constexpr Rank operator+(Rank f, int d) { return Rank(int(f) + d); }
+constexpr Rank operator-(Rank f, int d) { return Rank(int(f) - d); }
+constexpr Rank operator+(Rank f, Rank d) { return Rank(f + int(d)); }
+constexpr Rank operator-(Rank f, Rank d) { return Rank(f - int(d)); }
 
 // Toggle the colour
 constexpr Color operator~(Color c) { return Color(c ^ 1); }
@@ -208,12 +217,6 @@ constexpr Square convert_to_square(int rank, int file) { return Square(rank * 8 
 constexpr Square convert_to_square(Rank rank, File file) { return convert_to_square(int(rank), int(file)); }
 constexpr Square make_square(File f, Rank r) { return Square((r << 3) + f); }
 constexpr Square sq_relative_to_side(Square s, Color c) { return Square(int(s) ^ (c * 56)); }
-
-constexpr int distance(Square source, Square target)
-{
-	return std::max(abs(int(rank_of(source)) - int(rank_of(target))),
-					abs(int(file_of(source)) - int(file_of(target))));
-}
 
 // Piece, PieceType and Color helper methods
 constexpr Piece get_piece(Color c, PieceType pt) { return Piece(pt + (c * 6)); }

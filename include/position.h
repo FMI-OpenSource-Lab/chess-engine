@@ -89,6 +89,8 @@ namespace KhaosChess
 		Square castling_rook_square(CastlingRights cr) const;
 
 		// Bitboards
+		template <typename... PieceTypes>
+		inline BITBOARD get_pieces_bb(PieceType pt, PieceTypes... pts) const;
 		inline BITBOARD get_pieces_bb(PieceType pt) const;
 		inline BITBOARD get_pieces_bb(PieceType pt, Color c) const { return (type[pt] & occupancies[c]); }
 		inline BITBOARD get_pieces_bb(Color c) const { return occupancies[c]; }
@@ -250,6 +252,12 @@ namespace KhaosChess
 	}
 
 	inline BITBOARD Position::get_pieces_bb(PieceType pt) const { return type[pt]; }
+
+	template <typename... PieceTypes>
+	inline BITBOARD Position::get_pieces_bb(PieceType pt, PieceTypes... pts) const
+	{
+		return get_pieces_bb(pt) | get_pieces_bb(pts...);
+	}
 
 	inline BITBOARD Position::get_attackers_to(Square s, BITBOARD occ) const
 	{

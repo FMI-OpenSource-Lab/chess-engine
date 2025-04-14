@@ -69,7 +69,7 @@ namespace KhaosChess
 
 			// Return early if we only need material evaluation
 			if (Component == SC_MATERIAL || Component == SC_ALL)
-				score += MATERIAL_SCORES.piece_value[PAWN] * Value(count_bits(our_pawns));
+				score += MATERIAL_SCORES.piece_value[PAWN] * Value(pos.count<PAWN>(Us));
 
 			// Return early if we only need material evaluation
 			if (Component == SC_MATERIAL)
@@ -153,7 +153,7 @@ namespace KhaosChess
 			BITBOARD knights = pos.get_pieces_bb(KNIGHT, Us);
 
 			if (Component == SC_MATERIAL || Component == SC_ALL)
-				score += MATERIAL_SCORES.piece_value[KNIGHT] * Value(count_bits(knights));
+				score += MATERIAL_SCORES.piece_value[KNIGHT] * Value(pos.count<KNIGHT>(Us));
 
 			if (Component == SC_MATERIAL)
 				return score;
@@ -181,7 +181,7 @@ namespace KhaosChess
 
 					// If outpost exists and there is no pawn attacking the knight square
 					if (outpost && !(pawn_attacks_bb(Us, s) & pos.get_pieces_bb(PAWN, Them)))
-						score += PIECE_SCORES.knight_outpost * Value(count_bits(outpost));
+						score += PIECE_SCORES.outpost_knight * Value(count_bits(outpost));
 
 					// Control space bonus
 					score += PIECE_SCORES.control_space[KNIGHT] * Value(count_bits(attacking & opp_ranks));
@@ -218,7 +218,7 @@ namespace KhaosChess
 			BITBOARD bishops = pos.get_pieces_bb(BISHOP, Us);
 
 			if (Component == SC_MATERIAL || Component == SC_ALL)
-				score += MATERIAL_SCORES.piece_value[BISHOP] * Value(count_bits(bishops));
+				score += MATERIAL_SCORES.piece_value[BISHOP] * Value(pos.count<BISHOP>(Us));
 
 			if (Component == SC_MATERIAL)
 				return score;
@@ -243,7 +243,7 @@ namespace KhaosChess
 
 					// Get the square color of the bishop
 					Color sq_color = (int(rank_of(s)) + int(file_of(s))) & 1 ? WHITE : BLACK;
-					BITBOARD color_complex = (sq_color == WHITE) ? WhiteSquares : BlackSquares;
+					BITBOARD color_complex = (sq_color == WHITE) ? LightSquares : DarkSquares;
 
 					// Intersect our pawns with the color complex of the bishop
 					// This represents blocking the bishop's view
@@ -254,10 +254,13 @@ namespace KhaosChess
 
 				if (Component == SC_KING_SAFETY || Component == SC_ALL)
 				{
+					Square ours = pos.square<KING>(Us);
+					Square theirs = pos.square<KING>(Them);
+
 					// Bishops and knights should not be protecting the king
 					// If they do, at least it should not be from a mile away
-					score += KING_SAFETY_SCORES.protector_penalty[BISHOP] * Value(distance(pos.square<KING>(Us), s));
-					score += KING_SAFETY_SCORES.attacker_penalty[BISHOP] * Value(distance(pos.square<KING>(Them), s));
+					score += KING_SAFETY_SCORES.protector_penalty[BISHOP] * Value(square_distance[ours][s]);
+					score += KING_SAFETY_SCORES.attacker_penalty[BISHOP] * Value(square_distance[theirs][s]);
 				}
 
 				if (Component == SC_PIECE_COORDINATION || Component == SC_ALL)
@@ -267,7 +270,7 @@ namespace KhaosChess
 
 					// If outpost exists and there is no pawn attacking the bishop square
 					if (outpost && !(pawn_attacks_bb(Us, s) & pos.get_pieces_bb(PAWN, Them)))
-						score += PIECE_SCORES.bishop_outpost * Value(count_bits(outpost));
+						score += PIECE_SCORES.outpost_bishop * Value(count_bits(outpost));
 				}
 			}
 
@@ -284,7 +287,7 @@ namespace KhaosChess
 									 : Rank1_Bits | Rank2_Bits | Rank3_Bits | Rank4_Bits;
 
 			if (Component == SC_MATERIAL || Component == SC_ALL)
-				score += MATERIAL_SCORES.piece_value[ROOK] * Value(count_bits(rooks));
+				score += MATERIAL_SCORES.piece_value[ROOK] * Value(pos.count<ROOK>(Us));
 
 			if (Component == SC_MATERIAL)
 				return score;
@@ -346,6 +349,89 @@ namespace KhaosChess
 				}
 			}
 
+			return score;
+		}
+
+		template <ScoreComponent Component, Color Us>
+		Score score_queens(const Position &pos, Score &score)
+		{
+			constexpr Color Them = ~Us;
+			BITBOARD queens = pos.get_pieces_bb(QUEEN, Us);
+			BITBOARD opp_ranks = Us == WHITE
+									 ? Rank8_Bits | Rank7_Bits | Rank6_Bits | Rank5_Bits
+									 : Rank1_Bits | Rank2_Bits | Rank3_Bits | Rank4_Bits;
+
+			if (Component == SC_MATERIAL || Component == SC_ALL)
+				score += MATERIAL_SCORES.piece_value[QUEEN] * Value(pos.count<QUEEN>(Us));
+
+			if (Component == SC_MATERIAL)
+				return score;
+
+			while (queens)
+			{
+				Square s = pop_ls1b(queens);
+
+				if (Component == SC_MOBILITY || Component == SC_ALL)
+				{
+					// Bishop-like control
+					BITBOARD blockers = pos.get_all_pieces_bb() & ~(pos.get_pieces_bb(QUEEN, Us) | pos.get_pieces_bb(BISHOP, Us));
+					BITBOARD control = attacks_bb_by<BISHOP>(s, blockers);
+
+					score += PIECE_SCORES.control_space[QUEEN] * Value(count_bits(control & opp_ranks));
+
+					// Rook-like control
+					blockers = pos.get_all_pieces_bb() & ~(pos.get_pieces_bb(QUEEN, Us) | pos.get_pieces_bb(ROOK, Us));
+					control = attacks_bb_by<ROOK>(s, blockers);
+
+					score += PIECE_SCORES.control_space[QUEEN] * Value(count_bits(control & opp_ranks));
+
+					// Mobility bonus
+					BITBOARD attacking = attacks_bb_by<QUEEN>(s, pos.get_all_pieces_bb());
+					BITBOARD moves = get_real_possible_moves(Us, pos, s, attacking);
+					score += PIECE_SCORES.mobility[QUEEN] * Value(count_bits(moves));
+				}
+
+				// Queen safety/vulnerability scoring
+				if (Component == SC_PIECE_COORDINATION || Component == SC_ALL)
+				{
+					// From queens square fire up an attack
+					// Then intersect it with the oppnent snipers that are with less value than the queen
+					BITBOARD snipers = (attacks_bb_by<BISHOP>(s) & pos.get_pieces_bb(BISHOP, Them)) |
+									   (attacks_bb_by<ROOK>(s) & pos.get_pieces_bb(ROOK, Them));
+
+					// All pieces without the snipers and our queen
+					BITBOARD rest = pos.get_all_pieces_bb() ^ (snipers | s);
+
+					while (snipers)
+					{
+						Square sniper_sq = pop_ls1b(snipers);
+						BITBOARD btw = in_between_bb(s, sniper_sq) & rest;
+
+						// if there is space between the queen square and the slider
+						// and is still left space after removing a bit
+						// then there is greater than or equal to one blocker between them
+						if (btw && !has_bit_after_pop(btw))
+						{
+							score += PIECE_SCORES.vulnerable_queen;
+							break;
+						}
+					}
+				}
+			}
+
+			return score;
+		}
+
+		template <ScoreComponent Component, Color Us>
+		Score score_king(const Position &pos, Score &score)
+		{
+			constexpr Color Them = ~Us;
+			const Square ksq = pos.square<KING>(Us);
+			const CastlingRights kingside = Us & KINGSIDE;
+			const CastlingRights queenside = Us & QUEENSIDE;
+
+			auto compare_scores = [](Score a, Score b) {return a.mg < b.mg; };
+			
 			return score;
 		}
 	}

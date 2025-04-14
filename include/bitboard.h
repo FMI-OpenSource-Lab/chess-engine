@@ -125,7 +125,13 @@ namespace KhaosChess
 	extern BITBOARD pawn_attacks[2][64]; // 2 - sides to play, 64 - squares on a table
 
 	// distance in squares between square x and square y
-	extern unsigned short square_distance[SQUARE_TOTAL][SQUARE_TOTAL];
+	extern int square_distance[SQUARE_TOTAL][SQUARE_TOTAL];
+
+	// squares between 2 points
+	extern BITBOARD between_points_bb[SQUARE_TOTAL][SQUARE_TOTAL];
+
+	// line between 2 points from edge to edge
+	extern BITBOARD full_line_bb[SQUARE_TOTAL][SQUARE_TOTAL];
 
 	// extern U64 bishop_attacks[];
 	// extern U64 rook_attacks[];
@@ -143,6 +149,33 @@ namespace KhaosChess
 
 	extern void init_magics(PieceType pt, SMagic magics[]);
 	extern BITBOARD sliding_attacks(PieceType pt, Square s, BITBOARD occ);
+
+	// distance functions return the distance between x and y
+	template <typename T1 = Square>
+	inline int distance(Square x, Square z);
+
+	template <>
+	inline int distance<Rank>(Square x, Square y) // The distance between two squares in the same rank
+	{
+		return std::abs(rank_of(x) - rank_of(y));
+	}
+
+	template <>
+	inline int distance<File>(Square x, Square y) // The distance between two squares in the same file
+	{
+		return std::abs(file_of(x) - file_of(y));
+	}
+
+	template <>
+	inline int distance<Square>(Square x, Square y) // The distance between two squares
+	{
+		return square_distance[x][y];
+	}
+
+	inline int edge_distance(File f)
+	{
+		return std::min(f, File(FILE_H - f));
+	}
 
 	// moves the bb one or two steps
 	template <Direction d>
@@ -313,41 +346,21 @@ namespace KhaosChess
 	// or only the target square in case of knight attack
 	inline BITBOARD in_between_bb(Square source, Square target)
 	{
-		// source and target have commutative properties
-		// we can do [pt][source] & target or [pt][target] & source
-
-		// check if pseudo legal move exists in this diagonal
-		// and generate an attack thats going to serve as
-		// an inbetween squares excluding source and target
-		if (pseudo_attacks[BISHOP][source] & target)
-			return (
-					   attacks_bb_by(BISHOP, source, square_to_BB(target)) &
-					   attacks_bb_by(BISHOP, target, square_to_BB(source))) |
-				   target;
-
-		// check if pseudo legal move exists in this line
-		// generate an attack thats going to serve as an inbetween squares
-		// excluding source and target
-		else if (pseudo_attacks[ROOK][source] & target)
-			return (
-					   attacks_bb_by(ROOK, source, square_to_BB(target)) &
-					   attacks_bb_by(ROOK, target, square_to_BB(source))) |
-				   target;
-
-		// no inbetween squares will return the target square in case of knight attacks
-		return square_to_BB(target);
+		assert(is_square_ok(source) && is_square_ok(target));
+		return between_points_bb[source][target];
 	}
+
+	inline BITBOARD line_bb(Square x, Square y)
+	{
+		assert(is_square_ok(x) && is_square_ok(y));
+		return full_line_bb[x][y];
+	}
+
 
 	// Returns true if all 3 squares are aligned
 	inline bool are_squares_aligned(Square source, Square target, Square aligned_with)
 	{
-		BITBOARD bb{};
-
-		for (auto &pt : {ROOK, BISHOP})
-			if (pseudo_attacks[pt][source] & target)
-				bb |= (attacks_bb_by(pt, source, 0) & (attacks_bb_by(pt, target, 0)));
-
-		return (bb | source | target) & aligned_with;
+		return line_bb(source, target) & aligned_with;
 	}
 
 	template <Color c>
@@ -389,10 +402,7 @@ namespace KhaosChess
 		std::cout << "\n Bitboard: " << bitboard << "\n\n";
 	}
 
-	constexpr bool has_bit_after_pop(BITBOARD bitboard)
-	{
-		return bitboard & (bitboard - 1);
-	}
+	constexpr bool has_bit_after_pop(BITBOARD bitboard) { return bitboard & (bitboard - 1); }
 
 	constexpr Square pop_ls1b(BITBOARD &bitboard)
 	{

@@ -5,9 +5,9 @@
 #include "random.h"
 
 namespace KhaosChess
- {
+{
 	// Table measuring the distance between 2 coordinates
-	unsigned short square_distance[SQUARE_TOTAL][SQUARE_TOTAL];
+	int square_distance[SQUARE_TOTAL][SQUARE_TOTAL];
 
 	// squares between 2 points
 	BITBOARD between_points_bb[SQUARE_TOTAL][SQUARE_TOTAL];
@@ -18,17 +18,21 @@ namespace KhaosChess
 	// pawn attacks, also pseudo legal
 	BITBOARD pawn_attacks[BOTH][SQUARE_TOTAL];
 
+	// Line between 2 points from edge to edge
+	BITBOARD full_line_bb[SQUARE_TOTAL][SQUARE_TOTAL];
+
 	// Magic rook and bishop tables
 	SMagic bishop_magic_tbl[SQUARE_TOTAL];
 	SMagic rook_magic_tbl[SQUARE_TOTAL];
 
 	BITBOARD mBishopAttacks[SQUARE_TOTAL][BISHOP_ATTACKS_SIZE]; // Bishop attacks
-	BITBOARD mRookAttacks[SQUARE_TOTAL][ROOK_ATTACKS_SIZE]; // Rook attacks
+	BITBOARD mRookAttacks[SQUARE_TOTAL][ROOK_ATTACKS_SIZE];		// Rook attacks
 
-	namespace {
-		// Masks for king and knight squares 
-		BITBOARD knight_attacks_mask(const Square& square);
-		BITBOARD king_attacks_mask(const Square& square);
+	namespace
+	{
+		// Masks for king and knight squares
+		BITBOARD knight_attacks_mask(const Square &square);
+		BITBOARD king_attacks_mask(const Square &square);
 	}
 
 	void Bitboards::init()
@@ -36,9 +40,7 @@ namespace KhaosChess
 		// Calculate the square distance
 		for (Square x = A8; x <= H1; ++x)
 			for (Square y = A8; y <= H1; ++y)
-				square_distance[x][y] = std::max(
-					std::abs(file_of(x) - file_of(y)),
-					std::abs(rank_of(x) - rank_of(y)));
+				square_distance[x][y] = std::max(distance<File>(x, y), distance<Rank>(x, y));
 
 		// initiallize magic squares
 		init_magics(ROOK, rook_magic_tbl);
@@ -46,6 +48,20 @@ namespace KhaosChess
 
 		// initialize peseudo attacks
 		init_pseudo_attacks();
+
+		// Initialize line bitboards
+		for (Square x = A8; x <= H1; ++x)
+			for (PieceType pt : {BISHOP, ROOK})
+				for (Square y = A8; y <= H1; ++y)
+				{
+					if (pseudo_attacks[pt][x] & y)
+					{
+						full_line_bb[x][y] = (attacks_bb_by(pt, x, 0) & attacks_bb_by(pt, y, 0)) | x | y;
+						between_points_bb[x][y] = (attacks_bb_by(pt, x, square_to_BB(y)) & attacks_bb_by(pt, y, square_to_BB(x)));
+					}
+
+					between_points_bb[x][y] |= y;
+				}
 	}
 
 	void init_pseudo_attacks()
@@ -86,7 +102,7 @@ namespace KhaosChess
 
 		for (Square s = A8; s <= H1; ++s)
 		{
-			SMagic& sm = magics[s];
+			SMagic &sm = magics[s];
 
 			sm.mask = sliding_attacks(pt, s, 0) & ~board_edges(s);
 			sm.magic = pt == BISHOP ? BISHOP_MAGIC_NUMBERS[s] : ROOK_MAGIC_NUMBERS[s];
@@ -102,9 +118,8 @@ namespace KhaosChess
 
 				( // pick between rook or bishop tables
 					pt == BISHOP
-					? mBishopAttacks[s][magic_index]
-					: mRookAttacks[s][magic_index]
-					) = sliding_attacks(pt, s, subset);
+						? mBishopAttacks[s][magic_index]
+						: mRookAttacks[s][magic_index]) = sliding_attacks(pt, s, subset);
 
 				// Steps to derive the expression for enumerating the subsets in the set 'mask'
 				// First we set all 'unused' bits of the set OR-ing the one's complement of 'mask'
@@ -128,8 +143,8 @@ namespace KhaosChess
 		assert((pt == ROOK) || (pt == BISHOP));
 
 		BITBOARD attacks = 0ULL;
-		Direction rook_dirs[4] = { DOWN, LEFT, RIGHT, UP };
-		Direction bishop_dirs[4] = { DOWN_LEFT, DOWN_RIGHT, UP_LEFT, UP_RIGHT };
+		Direction rook_dirs[4] = {DOWN, LEFT, RIGHT, UP};
+		Direction bishop_dirs[4] = {DOWN_LEFT, DOWN_RIGHT, UP_LEFT, UP_RIGHT};
 
 		for (Direction d : (pt == ROOK ? rook_dirs : bishop_dirs))
 		{
@@ -140,7 +155,8 @@ namespace KhaosChess
 				source += d;
 				attacks |= source;
 
-				if (occ & source) break;
+				if (occ & source)
+					break;
 			}
 		}
 
@@ -167,8 +183,9 @@ namespace KhaosChess
 		return mRookAttacks[sq][occ];
 	}
 
-	namespace {
-		BITBOARD knight_attacks_mask(const Square& square)
+	namespace
+	{
+		BITBOARD knight_attacks_mask(const Square &square)
 		{
 			// result attacks
 			BITBOARD attacks = 0ULL;
@@ -180,21 +197,29 @@ namespace KhaosChess
 			set_bit(bitboard, square);
 
 			// generate attacks
-			if ((bitboard >> 17) & not_H)  attacks |= (bitboard >> 17); // up and left
-			if ((bitboard >> 15) & not_A)  attacks |= (bitboard >> 15); // up and right
-			if ((bitboard >> 10) & not_HG) attacks |= (bitboard >> 10); // left
-			if ((bitboard >> 6) & not_AB)  attacks |= (bitboard >> 6);  // right
+			if ((bitboard >> 17) & not_H)
+				attacks |= (bitboard >> 17); // up and left
+			if ((bitboard >> 15) & not_A)
+				attacks |= (bitboard >> 15); // up and right
+			if ((bitboard >> 10) & not_HG)
+				attacks |= (bitboard >> 10); // left
+			if ((bitboard >> 6) & not_AB)
+				attacks |= (bitboard >> 6); // right
 
 			// flip the offset
-			if ((bitboard << 17) & not_A)  attacks |= (bitboard << 17); // down and left
-			if ((bitboard << 15) & not_H)  attacks |= (bitboard << 15); // down and right
-			if ((bitboard << 10) & not_AB) attacks |= (bitboard << 10); // left
-			if ((bitboard << 6) & not_HG)   attacks |= (bitboard << 6); // right
+			if ((bitboard << 17) & not_A)
+				attacks |= (bitboard << 17); // down and left
+			if ((bitboard << 15) & not_H)
+				attacks |= (bitboard << 15); // down and right
+			if ((bitboard << 10) & not_AB)
+				attacks |= (bitboard << 10); // left
+			if ((bitboard << 6) & not_HG)
+				attacks |= (bitboard << 6); // right
 
 			return attacks;
 		}
 
-		BITBOARD king_attacks_mask(const Square& square)
+		BITBOARD king_attacks_mask(const Square &square)
 		{
 			// result attacks
 			BITBOARD attacks = 0ULL;
@@ -206,15 +231,23 @@ namespace KhaosChess
 			set_bit(bitboard, square);
 
 			// generate king attacks
-			if (bitboard >> 8)				attacks |= (bitboard >> 8); // upwards
-			if ((bitboard >> 9) & not_H)	attacks |= (bitboard >> 9); // up left
-			if ((bitboard >> 7) & not_A)	attacks |= (bitboard >> 7); // up right
-			if ((bitboard >> 1) & not_H)	attacks |= (bitboard >> 1); // direct left
+			if (bitboard >> 8)
+				attacks |= (bitboard >> 8); // upwards
+			if ((bitboard >> 9) & not_H)
+				attacks |= (bitboard >> 9); // up left
+			if ((bitboard >> 7) & not_A)
+				attacks |= (bitboard >> 7); // up right
+			if ((bitboard >> 1) & not_H)
+				attacks |= (bitboard >> 1); // direct left
 
-			if (bitboard << 8)				attacks |= (bitboard << 8); // upwards
-			if ((bitboard << 9) & not_A)	attacks |= (bitboard << 9); // up left
-			if ((bitboard << 7) & not_H)	attacks |= (bitboard << 7); // up right
-			if ((bitboard << 1) & not_A)	attacks |= (bitboard << 1); // direct left
+			if (bitboard << 8)
+				attacks |= (bitboard << 8); // upwards
+			if ((bitboard << 9) & not_A)
+				attacks |= (bitboard << 9); // up left
+			if ((bitboard << 7) & not_H)
+				attacks |= (bitboard << 7); // up right
+			if ((bitboard << 1) & not_A)
+				attacks |= (bitboard << 1); // direct left
 
 			return attacks;
 		}
