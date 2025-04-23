@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <iostream>
 
 namespace KhaosChess
 {
@@ -39,35 +40,22 @@ namespace KhaosChess
 			return moves;
 		}
 
-		// Game phase calculation based on piece material
-		int calculate_game_phase(const Position &pos)
-		{
-			int phase = 0;
-
-			// Count total material for both sides (excluding pawns and kings)
-			for (Color c : {WHITE, BLACK})
-				phase += (pos.count<KNIGHT>(c) + pos.count<BISHOP>(c) +
-						  2 * pos.count<ROOK>(c) +
-						  4 * pos.count<QUEEN>(c));
-
-			// Scale phase to 0-24 range (0 = opening, 24 = endgame)
-			// MaxPhase = 16 (all pieces on board)
-			const int MaxPhase = 16;
-			return (phase * MAX_PHASE_SCORE) / MaxPhase;
-		}
-
+		// Score the pawns by given component and color
+		// Returns the score for the given component and color
+		// Does not score pawn shield, this is left for the king safety scoring
 		template <ScoreComponent Component, Color Us>
-		Score score_pawns(const Position &pos, Score &score)
+		Score score_pawns(const Position &pos)
 		{
 			constexpr Color Them = ~Us;
 			constexpr Direction Up = pawn_push_direction(Us);
 			constexpr Direction Down = pawn_push_direction(Them);
 			constexpr int inc = Us == WHITE ? 1 : -1;
 
+			Score score = 0;
+
 			BITBOARD our_pawns = pos.get_pieces_bb(PAWN, Us);
 			BITBOARD opp_pawns = pos.get_pieces_bb(PAWN, Them);
 
-			// Return early if we only need material evaluation
 			if (Component == SC_MATERIAL || Component == SC_ALL)
 				score += MATERIAL_SCORES.piece_value[PAWN] * Value(pos.count<PAWN>(Us));
 
@@ -126,29 +114,21 @@ namespace KhaosChess
 					if (is_passed)
 						score += PAWN_STRUCTURE_SCORES.passed * PAWN_STRUCTURE_SCORES.passed_rank_weight[rel_r];
 				}
-
-				// King safety components (pawn shield)
-				if (Component == SC_KING_SAFETY || Component == SC_ALL)
-				{
-					Square ksq = pos.square<KING>(Us);
-
-					// Check for king shelter
-					BITBOARD pawns_in_kings_area = attacks_bb_by<KING>(ksq) & our_pawns;
-					score += Value(count_bits(pawns_in_kings_area)) * KING_SAFETY_SCORES.bonus;
-				}
 			}
 
 			return score;
 		}
 
 		template <ScoreComponent Component, Color Us>
-		Score score_knights(const Position &pos, Score &score)
+		Score score_knights(const Position &pos)
 		{
 			constexpr Color Them = ~Us;
 			constexpr BITBOARD center_bits = FileC_Bits | FileD_Bits | FileE_Bits | FileF_Bits;
 			constexpr BITBOARD opp_ranks = Us == WHITE
 											   ? Rank8_Bits | Rank7_Bits | Rank6_Bits | Rank5_Bits
 											   : Rank1_Bits | Rank2_Bits | Rank3_Bits | Rank4_Bits;
+
+			Score score = 0;
 
 			BITBOARD knights = pos.get_pieces_bb(KNIGHT, Us);
 
@@ -207,14 +187,14 @@ namespace KhaosChess
 		}
 
 		template <ScoreComponent Component, Color Us>
-		Score score_bishops(const Position &pos, Score &score)
+		Score score_bishops(const Position &pos)
 		{
 			constexpr Color Them = ~Us;
 			constexpr BITBOARD center_bits = FileC_Bits | FileD_Bits | FileE_Bits | FileF_Bits;
 			constexpr BITBOARD opp_ranks = Us == WHITE
 											   ? Rank8_Bits | Rank7_Bits | Rank6_Bits | Rank5_Bits
 											   : Rank1_Bits | Rank2_Bits | Rank3_Bits | Rank4_Bits;
-
+			Score score = 0;
 			BITBOARD bishops = pos.get_pieces_bb(BISHOP, Us);
 
 			if (Component == SC_MATERIAL || Component == SC_ALL)
@@ -242,8 +222,7 @@ namespace KhaosChess
 					score += PIECE_SCORES.mobility[BISHOP] * Value(count_bits(moves));
 
 					// Get the square color of the bishop
-					Color sq_color = (int(rank_of(s)) + int(file_of(s))) & 1 ? WHITE : BLACK;
-					BITBOARD color_complex = (sq_color == WHITE) ? LightSquares : DarkSquares;
+					BITBOARD color_complex = (square_color(s) == WHITE) ? LightSquares : DarkSquares;
 
 					// Intersect our pawns with the color complex of the bishop
 					// This represents blocking the bishop's view
@@ -278,13 +257,15 @@ namespace KhaosChess
 		}
 
 		template <ScoreComponent Component, Color Us>
-		Score score_rooks(const Position &pos, Score &score)
+		Score score_rooks(const Position &pos)
 		{
 			constexpr Color Them = ~Us;
 			BITBOARD rooks = pos.get_pieces_bb(ROOK, Us);
 			BITBOARD opp_ranks = Us == WHITE
 									 ? Rank8_Bits | Rank7_Bits | Rank6_Bits | Rank5_Bits
 									 : Rank1_Bits | Rank2_Bits | Rank3_Bits | Rank4_Bits;
+
+			Score score = 0;
 
 			if (Component == SC_MATERIAL || Component == SC_ALL)
 				score += MATERIAL_SCORES.piece_value[ROOK] * Value(pos.count<ROOK>(Us));
@@ -353,13 +334,14 @@ namespace KhaosChess
 		}
 
 		template <ScoreComponent Component, Color Us>
-		Score score_queens(const Position &pos, Score &score)
+		Score score_queens(const Position &pos)
 		{
 			constexpr Color Them = ~Us;
 			BITBOARD queens = pos.get_pieces_bb(QUEEN, Us);
 			BITBOARD opp_ranks = Us == WHITE
 									 ? Rank8_Bits | Rank7_Bits | Rank6_Bits | Rank5_Bits
 									 : Rank1_Bits | Rank2_Bits | Rank3_Bits | Rank4_Bits;
+			Score score = 0;
 
 			if (Component == SC_MATERIAL || Component == SC_ALL)
 				score += MATERIAL_SCORES.piece_value[QUEEN] * Value(pos.count<QUEEN>(Us));
@@ -422,19 +404,236 @@ namespace KhaosChess
 			return score;
 		}
 
-		template <ScoreComponent Component, Color Us>
-		Score score_king(const Position &pos, Score &score)
+		template <Color Us>
+		Score score_king_shelter(const Position &pos, Square ksq)
+		{
+			BITBOARD pawns_in_area = attacks_bb_by<KING>(ksq) & pos.get_pieces_bb(PAWN, Us);
+			return KING_SAFETY_SCORES.bonus * Value(count_bits(pawns_in_area));
+		}
+
+		template <Color Us>
+		Score score_king_safety(const Position &pos)
 		{
 			constexpr Color Them = ~Us;
 			const Square ksq = pos.square<KING>(Us);
-			const CastlingRights kingside = Us & KINGSIDE;
-			const CastlingRights queenside = Us & QUEENSIDE;
+			const CastlingRights kingside = Us & KINGSIDE;	 // Will return WK/BK for white/black
+			const CastlingRights queenside = Us & QUEENSIDE; // Will return WQ/BQ for white/black
 
-			auto compare_scores = [](Score a, Score b) {return a.mg < b.mg; };
-			
+			Score score = 0;
+
+			auto compare_scores = [](Score a, Score b)
+			{ return a.mg < b.mg; };
+
+			// If we can castle kingside check if there is a better shelter
+			if (pos.can_castle(kingside))
+			{
+				score += std::max(
+					score_king_shelter<Us>(pos, ksq),
+					score_king_shelter<Us>(pos, sq_relative_to_side(G1, Us)),
+					compare_scores); // if this returns true then std::max will return second value
+			}
+			// If we can castle queenside check if there is a better shelter
+			if (pos.can_castle(queenside))
+			{
+				score += std::max(
+					score,
+					score_king_shelter<Us>(pos, sq_relative_to_side(C1, Us)),
+					compare_scores);
+
+				score += std::max(
+					score,
+					score_king_shelter<Us>(pos, sq_relative_to_side(B1, Us)),
+					compare_scores);
+			}
+
+			// Apply penalty for distance from pawns in endgame
+			// Tries to bring king closer to the pawns
+			BITBOARD pawns = pos.get_pieces_bb(PAWN, Us);
+
+			while (pawns)
+				score += KING_SAFETY_SCORES.pawn_proximity_penalty * Value(distance(pop_ls1b(pawns), ksq));
+
 			return score;
 		}
+
+		template <ScoreComponent Component, Color Us>
+		Score score_king(const Position &pos)
+		{
+			const Color Them = ~Us;
+			const Square our_ksq = pos.square<KING>(Us);
+			const Square enemy_ksq = pos.square<KING>(Them);
+
+			Score score = 0;
+
+			// Account for mobility
+			if (Component == SC_MOBILITY || Component == SC_ALL)
+			{
+				BITBOARD moves = attacks_bb_by<KING>(our_ksq) & ~pos.get_attacked_squares(Them);
+				score += PIECE_SCORES.mobility[KING] * Value(count_bits(moves));
+			}
+
+			// King safety
+			if (Component == SC_KING_SAFETY || Component == SC_ALL)
+			{
+				score += score_king_safety<Us>(pos);
+
+				// Checking for backrank weakness
+				const Rank first_rank = rank_relative_to_side(Us, RANK_1);
+				const Rank second_rank = rank_relative_to_side(Us, RANK_2);
+				BITBOARD king_area = attacks_bb_by<KING>(our_ksq) | our_ksq;
+				BITBOARD their_rook_and_queen = pos.get_pieces_bb(ROOK, QUEEN) & pos.get_pieces_bb(Them);
+
+				if (rank_of(our_ksq) == first_rank && their_rook_and_queen)
+				{
+					// Check for backrank weakness
+					BITBOARD back_rank_area = king_area & rank_bb(second_rank);
+
+					// Get our pieces and combine them with the minor pieces attacks
+					// This is then combined with opponent's pawn attacks and king attacks from the enemy king
+					// Finally we get a bitboard containing our pieces, opposite king attacks,
+					// minor pieces attacks and opponent's pawn attacks.
+					// Meaning squares that are not available for our king to move to
+					BITBOARD blocked =
+						pos.get_pieces_bb(Us) |
+						(pos.get_attacks_by<KNIGHT>(Us) | pos.get_attacks_by<BISHOP>(Us) |
+						 pos.get_attacks_by<ROOK>(Us) | pos.get_attacks_by<QUEEN>(Us)) |
+						pos.get_attacks_by<PAWN>(Them) |
+						attacks_bb_by<KING>(enemy_ksq);
+
+					if ((back_rank_area & blocked) == back_rank_area)
+						score += KING_SAFETY_SCORES.weak_backrank;
+				}
+
+				// This approach will work becase as we evaluate for the both sides
+				// Penalties will cancel out at some point if position is equal
+
+				// We'll do this in two steps
+
+				// Step 1: Detect weak diagonals
+
+				// If opponent has a queen or a bishop is on the same color as our king
+				// Then apply weak diagonal penalty times the possible squares where a bishop could deliver check
+
+				// This will generate all the bishop squares that might cause check without the king blockers
+				BITBOARD snipers = attacks_bb_by<BISHOP>(our_ksq, pos.get_all_pieces_bb() ^ pos.get_king_blockers(Us));
+
+				// Get the square color of our king
+				BITBOARD color_complex = (square_color(our_ksq) == WHITE) ? LightSquares : DarkSquares;
+
+				// If opponent has a queen (which can change color complexes easily)
+				// or a bishop that is the same color as the king's square (the same color complex. Making it a weak diagonal)
+				if (pos.get_pieces_bb(QUEEN, Them) || (pos.get_pieces_bb(BISHOP, Them) & color_complex))
+					score += KING_SAFETY_SCORES.weak_diagonals * Value(count_bits(snipers));
+
+				// Step 2: Detect weak files and ranks
+
+				// If opponent has a queen or rook
+				// Apply weak king lines penalty times the possible squares where a rook could deliver check
+
+				// This will get the attacked squares by the rook without the king blockers
+				// meaning each bit represents a square when a piece lands there it should give a check
+				snipers = attacks_bb_by<ROOK>(our_ksq, pos.get_all_pieces_bb() ^ pos.get_king_blockers(Us));
+
+				if (pos.get_pieces_bb(QUEEN, Them) || pos.get_pieces_bb(ROOK, Them))
+					score += KING_SAFETY_SCORES.weak_lines * Value(count_bits(snipers));
+			}
+
+			return score;
+		}
+
+		// Generates all the material needed
+		template <ScoreComponent Component, Color Us>
+		Score score_all_material(const Position &pos)
+		{
+			Score score = 0;
+
+			score += score_pawns<Component, Us>(pos);
+			score += score_knights<Component, Us>(pos);
+			score += score_bishops<Component, Us>(pos);
+			score += score_rooks<Component, Us>(pos);
+			score += score_queens<Component, Us>(pos);
+			score += score_king<Component, Us>(pos);
+
+			return score;
+		}
+	} // namespace
+
+	// SC_MATERIAL 				- Gets the material score for the given side
+	// SC_MOBILITY 				- Gets the mobility score for the given side
+	// SC_KING_SAFETY 			- Gets the king safety score for the given side
+	// SC_PAWN_STRUCTURE 		- Gets the pawn structure score for the given side
+	// SC_PIECE_COORDINATION	- Gets the piece coordination score for the given side
+	// SC_ALL					- Gets the total score for the given side
+
+	template <ScoreComponent Component>
+	Score total_scores(const Position &pos)
+	{
+		return score_all_material<Component, WHITE>(pos) - score_all_material<Component, BLACK>(pos);
 	}
+
+	template <ScoreComponent T>
+	inline void Scorer<T>::print_stats()
+	{
+#define P(white, black) \
+	white << "|" << black << "|" << (white - black) << "|"
+
+		std::cout << pos << std::endl;
+
+		std::cout << std::showpoint << std::noshowpos << std::fixed
+				  << std::setprecision(2)
+				  << "+---------+--------------+--------------+--------------+"
+				  << std::endl
+				  << "|  TYPE   |     White    |     Black    |     Total    |"
+				  << std::endl
+				  << "|         |   Mg    Eg   |   Mg    Eg   |   Mg    Eg   |"
+				  << std::endl
+				  << "+---------+--------------+--------------+--------------+"
+				  << std::endl
+				  << "|   PAWNS |"
+				  << P((score_pawns<T, WHITE>(pos)), (score_pawns<T, BLACK>(pos)))
+				  << std::endl
+				  << "| KNIGHTS |"
+				  << P((score_knights<T, WHITE>(pos)), (score_knights<T, BLACK>(pos)))
+				  << std::endl
+				  << "| BISHOPS |"
+				  << P((score_bishops<T, WHITE>(pos)), (score_bishops<T, BLACK>(pos)))
+				  << std::endl
+				  << "|   ROOKS |"
+				  << P((score_rooks<T, WHITE>(pos)), (score_rooks<T, BLACK>(pos)))
+				  << std::endl
+				  << "|  QUEENS |"
+				  << P((score_queens<T, WHITE>(pos)), (score_queens<T, BLACK>(pos)))
+				  << std::endl
+				  << "|    KING |"
+				  << P((score_king<T, WHITE>(pos)), (score_king<T, BLACK>(pos)))
+				  << std::endl
+				  << "+---------+--------------+--------------+--------------+"
+				  << std::endl
+				  << "|   TOTAL |" << total_scores<T>(pos) << std::endl
+				  << "|  WEIGHT |" << Score(weight, MAX_PIECE_WEIGHTS) << std::endl
+				  << "+---------+--------------+--------------+--------------+"
+				  << std::endl;
+#undef P
+	}
+
+	template Score total_scores<SC_MATERIAL>(const Position &pos);
+	template Score total_scores<SC_MOBILITY>(const Position &pos);
+	template Score total_scores<SC_KING_SAFETY>(const Position &pos);
+	template Score total_scores<SC_PAWN_STRUCTURE>(const Position &pos);
+	template Score total_scores<SC_PIECE_COORDINATION>(const Position &pos);
+	template Score total_scores<SC_ALL>(const Position &pos);
+
+	template void Scorer<SC_MATERIAL>::print_stats();
+	template void Scorer<SC_MOBILITY>::print_stats();
+	template void Scorer<SC_KING_SAFETY>::print_stats();
+	template void Scorer<SC_PAWN_STRUCTURE>::print_stats();
+	template void Scorer<SC_PIECE_COORDINATION>::print_stats();
+	template void Scorer<SC_ALL>::print_stats();
+
+	/*
+		A likely cause of these abnormal values is that we are stacking the scores
+		and that's why the king gets 400 000 points in the middlegame for white
+	*/
 
 	/*
 	inline int score_move(int move)

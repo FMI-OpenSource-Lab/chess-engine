@@ -86,8 +86,8 @@ namespace KhaosChess
 	constexpr BITBOARD Diagonal_H1_A8 = 0x8040201008040201ULL;
 	constexpr BITBOARD Diagonal_A1_H8 = 0x0102040810204080ULL;
 
-	constexpr BITBOARD LightSquares = 0x55AA55AA55AA55AAULL;
-	constexpr BITBOARD DarkSquares = 0xAA55AA55AA55AA55ULL;
+	constexpr BITBOARD DarkSquares = 0x55AA55AA55AA55AAULL;
+	constexpr BITBOARD LightSquares = 0xAA55AA55AA55AA55ULL;
 
 	constexpr BITBOARD rank_bb(Square s) { return Rank8_Bits << (rank_of(s) << 3); }
 	constexpr BITBOARD rank_bb(Rank r) { return Rank8_Bits << (8 * r); }

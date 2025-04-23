@@ -232,6 +232,8 @@ constexpr Color get_piece_color(Piece p)
 	return Color(p / 7);
 }
 
+constexpr Color square_color(Square s) { return (int(rank_of(s)) + int(file_of(s))) & 1 ? BLACK : WHITE; }
+
 constexpr int TOTAL_MAX_DEPTH = 512;
 
 typedef unsigned short PLY_TYPE; // 16 bit

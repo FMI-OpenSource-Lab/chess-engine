@@ -208,7 +208,7 @@ namespace KhaosChess
 
 		// Calculate threats
 		calculate_threats();
-		
+
 		return *this;
 	}
 
@@ -264,23 +264,6 @@ namespace KhaosChess
 		   << 1 + (fullmove_number - (side == BLACK)) / 2; // Current move count
 
 		return ss.str();
-	}
-
-	template <PieceType pt>
-	inline BITBOARD Position::get_attacks_by(Color c) const
-	{
-		if (pt == PAWN)
-			return c == WHITE
-					   ? pawn_attacks_bb<WHITE>(get_pieces_bb(PAWN, WHITE))
-					   : pawn_attacks_bb<BLACK>(get_pieces_bb(PAWN, BLACK));
-
-		BITBOARD attacks = 0ULL;
-		BITBOARD attackers = get_pieces_bb(pt, c);
-
-		while (attackers)
-			attacks |= attacks_bb_by<pt>(pop_ls1b(attackers), get_all_pieces_bb());
-
-		return attacks;
 	}
 
 	void Position::print_attacked_squares(Color c) const
@@ -805,15 +788,12 @@ namespace KhaosChess
 
 		Square ksq = square<KING>(c);
 
-		BITBOARD rooks = get_pieces_bb(ROOK);
-		BITBOARD bishops = get_pieces_bb(BISHOP);
-		BITBOARD queens = get_pieces_bb(QUEEN);
 		BITBOARD color_pieces = get_pieces_bb(c);
 
 		// snipers are calculated such that there are no pieces on the board
 		// to get the line between the king and the slider
-		BITBOARD snipers = ((attacks_bb_by<ROOK>(ksq) & (rooks | queens)) |
-							(attacks_bb_by<BISHOP>(ksq) & (bishops | queens))) &
+		BITBOARD snipers = ((attacks_bb_by<ROOK>(ksq) & get_pieces_bb(ROOK, QUEEN)) |
+							(attacks_bb_by<BISHOP>(ksq) & get_pieces_bb(BISHOP, QUEEN))) &
 						   get_pieces_bb(~c);
 
 		// All pieces without the snipers

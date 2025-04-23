@@ -10,17 +10,6 @@
 
 namespace KhaosChess
 {
-	// Evaluation weights for different components
-	struct EvalWeights
-	{
-		Value material = 100;	   // Base weight for material
-		Value position = 80;	   // PST scores
-		Value mobility = 60;	   // Piece mobility
-		Value king_safety = 100;   // King safety factor
-		Value pawn_structure = 50; // Pawn structure importance
-		Value connectivity = 40;   // Piece coordination/connectivity
-	};
-
 	struct Score
 	{
 		Value mg; // Middlegame score
@@ -46,6 +35,7 @@ namespace KhaosChess
 
 		// Subtraction operators
 		constexpr Score operator-(const Score &other) const { return Score(mg - other.mg, eg - other.eg); }
+		constexpr Score operator-() const { return Score(-mg, -eg); }
 		constexpr Score &operator-=(const Score &other)
 		{
 			mg -= other.mg;
@@ -58,9 +48,6 @@ namespace KhaosChess
 
 		// Division operators
 		constexpr Score operator/(const Score &other) const { return Score(mg / other.mg, eg / other.eg); }
-
-		// Get interpolated score based on game phase
-		constexpr Value interpolate(int phase) const { return ((mg * (MAX_PHASE_SCORE - phase)) + (eg * phase)) / MAX_PHASE_SCORE; }
 	};
 
 	constexpr Score operator*(const Value &value, const Score &other) { return Score(other.mg * value, other.eg * value); }
@@ -113,7 +100,7 @@ namespace KhaosChess
 
 		// Penalties
 		Score trapped_rook = S(-50, -10);
-		
+
 		Score pinned_penalty[PIECE_TYPE_NB] = {
 			S(0, 0), S(-20, -20), S(-10, -15), S(-10, -20), S(0, 0), S(0, 0), S(0, 0)};
 	};
@@ -160,12 +147,13 @@ namespace KhaosChess
 	constexpr PawnStructure PAWN_STRUCTURE_SCORES;
 	constexpr KingSafety KING_SAFETY_SCORES;
 
-	constexpr Value VALUE_ALL_PIECES = MATERIAL_SCORES.all_pieces();
+	const Value PIECE_WEIGHTS[PIECE_TYPE_NB] = {0, 0, 1, 1, 2, 4, 0};
 
-	constexpr Score MOBILITY_BONUS[PIECE_TYPE_NB] = {
-		PIECE_SCORES.mobility[0], PIECE_SCORES.mobility[1], PIECE_SCORES.mobility[2],
-		PIECE_SCORES.mobility[3], PIECE_SCORES.mobility[4], PIECE_SCORES.mobility[5],
-		PIECE_SCORES.mobility[6]};
+	// 2 * ((2 * knights + 2 * bishops + 2 * rooks) + 1 * queen)
+	// double the number of knights, bishops, rooks and queens for a side
+	const Value MAX_PIECE_WEIGHTS =
+		4 * (PIECE_WEIGHTS[KNIGHT] + PIECE_WEIGHTS[BISHOP] + PIECE_WEIGHTS[ROOK]) +
+		2 * PIECE_WEIGHTS[QUEEN];
 
 	class Position;
 
@@ -180,15 +168,54 @@ namespace KhaosChess
 	};
 
 	template <ScoreComponent>
-	Score total_scores(const Position &pos, Score &score);
+	Score total_scores(const Position &pos);
 
 	template <ScoreComponent T>
 	struct Scorer
 	{
-		explicit Scorer(const Position &pos) : total(total_scores<T>(pos, score)) {}
+		explicit Scorer(const Position &p)
+			: pos(p)
+		{
+			score = total_scores<T>(p);
+			weight = game_phase_weights(p);
+		}
+
+		explicit Scorer() = default;
+
+		Value get_score(const Position &pos)
+		{
+			score = total_scores<T>(pos);
+			weight = game_phase_weights(pos);
+
+			Value value = combine(score, weight);
+
+			return pos.side_to_move() == WHITE ? value : -value;
+		}
+
+		Value get_weight() { return weight; }
 		void print_stats();
 
 	private:
-		Score total, score;
+		Score score;
+		Value weight;
+		const Position &pos = *((const Position *)nullptr); // Default initialization with safeguard
+
+		Value game_phase_weights(const Position &pos)
+		{
+			Value w = 0;
+
+			w += (pos.count<KNIGHT>(WHITE) + pos.count<KNIGHT>(BLACK)) * PIECE_WEIGHTS[KNIGHT];
+			w += (pos.count<BISHOP>(WHITE) + pos.count<BISHOP>(BLACK)) * PIECE_WEIGHTS[BISHOP];
+			w += (pos.count<ROOK>(WHITE) + pos.count<ROOK>(BLACK)) * PIECE_WEIGHTS[ROOK];
+			w += (pos.count<QUEEN>(WHITE) + pos.count<QUEEN>(BLACK)) * PIECE_WEIGHTS[QUEEN];
+
+			return std::min(w, MAX_PIECE_WEIGHTS);
+		}
+
+		Value combine(const Score &score, const Value &weight)
+		{
+			assert(0 <= weight && weight <= MAX_PIECE_WEIGHTS);
+			return (score.mg * weight + score.eg * (MAX_PIECE_WEIGHTS - weight)) / MAX_PIECE_WEIGHTS;
+		}
 	};
 } // namespace KhaosChess

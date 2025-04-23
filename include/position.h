@@ -102,9 +102,9 @@ namespace KhaosChess
 
 		inline BITBOARD get_attackers_to(Square s) const;
 		inline BITBOARD get_attackers_to(Square s, BITBOARD occ) const;
-
 		template <PieceType pt>
 		inline BITBOARD get_attacks_by(Color c) const;
+		inline BITBOARD get_attacked_squares(Color side) const;
 		inline BITBOARD get_checked_squares(PieceType pt) const;
 		inline BITBOARD get_threats(PieceType pt) const { return threats[pt]; }
 		inline BITBOARD get_king_blockers(Color c) const { return blocking_pieces[c]; }
@@ -134,7 +134,10 @@ namespace KhaosChess
 		// Piece count
 		template <PieceType pt>
 		int count(Color c) const;
-		int count(PieceType pt, Color c) const;
+		int count(Color c, PieceType pt) const;
+		template <typename... PieceTypes>
+		int count(Color c, PieceType pt, PieceTypes... pts) const;
+		
 		int game_phase() const;
 
 		// Doing and undoing moves
@@ -202,7 +205,7 @@ namespace KhaosChess
 	template <PieceType pt>
 	inline int Position::count(Color c) const { return piece_count[get_piece(c, pt)]; }
 
-	inline int Position::count(PieceType pt, Color c) const
+	inline int Position::count(Color c, PieceType pt) const
 	{
 		return pt == PAWN	  ? count<PAWN>(c)
 			   : pt == KNIGHT ? count<KNIGHT>(c)
@@ -211,6 +214,12 @@ namespace KhaosChess
 			   : pt == QUEEN  ? count<QUEEN>(c)
 			   : pt == KING	  ? count<KING>(c)
 							  : 0;
+	}
+
+	template <typename... PieceTypes>
+	inline int Position::count(Color c, PieceType pt, PieceTypes... pts) const
+	{
+		return count(c, pt) + count(c, pts...);
 	}
 
 	inline bool Position::is_square_attacked(Square s, Color us) const
@@ -365,5 +374,37 @@ namespace KhaosChess
 	{
 		assert(cr == WK || cr == WQ || cr == BK || cr == BQ);
 		return rook_source_sq[cr];
+	}
+
+	template <PieceType pt>
+	inline BITBOARD Position::get_attacks_by(Color c) const
+	{
+		if (pt == PAWN)
+			return c == WHITE
+					   ? pawn_attacks_bb<WHITE>(get_pieces_bb(PAWN, WHITE))
+					   : pawn_attacks_bb<BLACK>(get_pieces_bb(PAWN, BLACK));
+
+		BITBOARD attacks = 0ULL;
+		BITBOARD attackers = get_pieces_bb(pt, c);
+
+		while (attackers)
+			attacks |= attacks_bb_by<pt>(pop_ls1b(attackers), get_all_pieces_bb());
+
+		return attacks;
+	}
+
+	// Computes the attacks and returns a bitboard of all the attacked squares
+	BITBOARD Position::get_attacked_squares(Color side) const
+	{
+		BITBOARD attacks = 0ULL;
+
+		attacks |= get_attacks_by<PAWN>(~side);
+		attacks |= get_attacks_by<KNIGHT>(~side);
+		attacks |= get_attacks_by<BISHOP>(~side);
+		attacks |= get_attacks_by<ROOK>(~side);
+		attacks |= get_attacks_by<QUEEN>(~side);
+		attacks |= get_attacks_by<KING>(~side);
+
+		return attacks;
 	}
 }

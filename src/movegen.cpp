@@ -1,4 +1,4 @@
-#include<iostream>
+#include <iostream>
 
 #include "movegen.h"
 #include "consts.h"
@@ -10,20 +10,20 @@ namespace KhaosChess
 {
 	namespace
 	{
-		template<Direction D>
-		ScoredMoves* make_promotions(ScoredMoves* move_list, Square target)
+		template <Direction D>
+		ScoredMoves *make_promotions(ScoredMoves *move_list, Square target)
 		{
-			*move_list++ = Move{ target - D, target, MT_PROMOTION, PROMOTE_QUEEN };
+			*move_list++ = Move{target - D, target, MT_PROMOTION, PROMOTE_QUEEN};
 
-			*move_list++ = Move{ target - D, target, MT_PROMOTION, PROMOTE_KNIGHT };
-			*move_list++ = Move{ target - D, target, MT_PROMOTION, PROMOTE_BISHOP };
-			*move_list++ = Move{ target - D, target, MT_PROMOTION, PROMOTE_ROOK };
+			*move_list++ = Move{target - D, target, MT_PROMOTION, PROMOTE_KNIGHT};
+			*move_list++ = Move{target - D, target, MT_PROMOTION, PROMOTE_BISHOP};
+			*move_list++ = Move{target - D, target, MT_PROMOTION, PROMOTE_ROOK};
 
 			return move_list;
 		}
 
-		template<Color Us, GenerationTypes Type>
-		ScoredMoves* generate_pawn_moves(const Position& pos, ScoredMoves* move_list, BITBOARD& block)
+		template <Color Us, GenerationTypes Type>
+		ScoredMoves *generate_pawn_moves(const Position &pos, ScoredMoves *move_list, BITBOARD &block)
 		{
 			constexpr Color them = ~Us;
 			constexpr Direction up = pawn_push_direction(Us);
@@ -49,13 +49,13 @@ namespace KhaosChess
 				while (pushed_pawns)
 				{
 					Square target = pop_ls1b(pushed_pawns);
-					*move_list++ = Move{ target - up, target };
+					*move_list++ = Move{target - up, target};
 				}
 
 				while (d_pushed_pawns)
 				{
 					Square target = pop_ls1b(d_pushed_pawns);
-					*move_list++ = Move{ target - up - up, target };
+					*move_list++ = Move{target - up - up, target};
 				}
 			}
 
@@ -85,7 +85,7 @@ namespace KhaosChess
 					if (promotion_rank & source) // in case of promotions
 						move_list = make_promotions<up_left>(move_list, target);
 					else
-						*move_list++ = Move{ source, target };
+						*move_list++ = Move{source, target};
 				}
 
 				while (right_attacks)
@@ -96,7 +96,7 @@ namespace KhaosChess
 					if (promotion_rank & source) // in case of promotions
 						move_list = make_promotions<up_right>(move_list, target);
 					else
-						*move_list++ = Move{ source, target };
+						*move_list++ = Move{source, target};
 				}
 
 				while (promote)
@@ -116,18 +116,18 @@ namespace KhaosChess
 					// Every pawn that is not promoting and can be captured via ep
 					BITBOARD ep_pawns = (pawns & ~promotion_rank) & pawn_attacks_bb(them, ep_square);
 
-					assert(ep_pawns); // ensure that there exist ep attack 
+					assert(ep_pawns); // ensure that there exist ep attack
 
 					while (ep_pawns)
-						*move_list++ = Move{ pop_ls1b(ep_pawns), ep_square, MT_EN_PASSANT };
+						*move_list++ = Move{pop_ls1b(ep_pawns), ep_square, MT_EN_PASSANT};
 				}
 			}
 
 			return move_list;
 		}
 
-		template<Color Us, PieceType Pt>
-		ScoredMoves* generate_piece_moves(const Position& pos, ScoredMoves* move_list, BITBOARD& block_or_cap)
+		template <Color Us, PieceType Pt>
+		ScoredMoves *generate_piece_moves(const Position &pos, ScoredMoves *move_list, BITBOARD &block_or_cap)
 		{
 			static_assert(Pt != PAWN && Pt != KING, "Unsupported piece type in generate_piece_moves()");
 
@@ -139,14 +139,15 @@ namespace KhaosChess
 				Square source = pop_ls1b(bb);
 				BITBOARD attacks = attacks_bb_by<Pt>(source, all) & block_or_cap;
 
-				while (attacks) *move_list++ = Move{ source, pop_ls1b(attacks) };
+				while (attacks)
+					*move_list++ = Move{source, pop_ls1b(attacks)};
 			}
 
 			return move_list;
 		}
 
-		template<Color Us, GenerationTypes Type>
-		ScoredMoves* generate_all_pseudo_legal(const Position& pos, ScoredMoves* move_list)
+		template <Color Us, GenerationTypes Type>
+		ScoredMoves *generate_all_pseudo_legal(const Position &pos, ScoredMoves *move_list)
 		{
 			const Square ksq = pos.square<KING>(Us);
 
@@ -155,37 +156,49 @@ namespace KhaosChess
 
 			BITBOARD block = 0ULL;
 
-			if (Type == GT_EVADE) block =
-				has_bit_after_pop(checkers) ? 0ULL : in_between_bb(ksq, get_ls1b(checkers));
-			else
+			// Skip to generating king moves if there's a double check
+			if (Type != GT_EVADE || !has_bit_after_pop(checkers))
 			{
-				switch (Type)
+				if (Type == GT_EVADE)
+					block =
+						has_bit_after_pop(checkers) ? 0ULL : in_between_bb(ksq, get_ls1b(checkers));
+				else
 				{
-				case GT_CAPTURE:	block = pos.get_opponent_pieces_bb(); break;
-				case GT_QUIET:		block = pos.get_all_empty_squares_bb(); break;
-				case GT_ALL:		block = ~pos.get_our_pieces_bb(); break;
+					switch (Type)
+					{
+					case GT_CAPTURE:
+						block = pos.get_opponent_pieces_bb();
+						break;
+					case GT_QUIET:
+						block = pos.get_all_empty_squares_bb();
+						break;
+					case GT_ALL:
+						block = ~pos.get_our_pieces_bb();
+						break;
+					}
 				}
+
+				move_list = generate_pawn_moves<Us, Type>(pos, move_list, block);
+
+				move_list = generate_piece_moves<Us, KNIGHT>(pos, move_list, block);
+				move_list = generate_piece_moves<Us, BISHOP>(pos, move_list, block);
+				move_list = generate_piece_moves<Us, ROOK>(pos, move_list, block);
+				move_list = generate_piece_moves<Us, QUEEN>(pos, move_list, block);
 			}
-
-			move_list = generate_pawn_moves<Us, Type>(pos, move_list, block);
-
-			move_list = generate_piece_moves<Us, KNIGHT>(pos, move_list, block);
-			move_list = generate_piece_moves<Us, BISHOP>(pos, move_list, block);
-			move_list = generate_piece_moves<Us, ROOK>(pos, move_list, block);
-			move_list = generate_piece_moves<Us, QUEEN>(pos, move_list, block);
 
 			// capture enemy or move to other square that is not occupied by us
 			BITBOARD k_bb = attacks_bb_by<KING>(ksq) &
-				(Type == GT_EVADE ? ~pos.get_our_pieces_bb() : block);
+							(Type == GT_EVADE ? ~pos.get_our_pieces_bb() : block);
 
-			while (k_bb) *move_list++ = Move{ ksq, pop_ls1b(k_bb) };
+			while (k_bb)
+				*move_list++ = Move{ksq, pop_ls1b(k_bb)};
 
 			// Gives WK and/or WQ if white
 			// and BK and/or BQ if black
 			if ((Type == GT_QUIET || Type == GT_ALL) && !pos.is_square_attacked(ksq, ~Us) && pos.can_castle(Us & ANY))
-				for (CastlingRights cr : { Us& KINGSIDE, Us& QUEENSIDE })
+				for (CastlingRights cr : {Us & KINGSIDE, Us & QUEENSIDE})
 					if (pos.can_castle(cr) && !pos.is_castling_interrupted(cr))
-						*move_list++ = Move{ ksq, pos.castling_rook_square(cr), MT_CASTLING };
+						*move_list++ = Move{ksq, pos.castling_rook_square(cr), MT_CASTLING};
 
 			return move_list;
 		}
@@ -193,14 +206,14 @@ namespace KhaosChess
 	} // namespace
 
 	// returns a pointer at the end of the list
-	template<GenerationTypes Type>
-	ScoredMoves* generate_moves(const Position& pos, ScoredMoves* move_list)
+	template <GenerationTypes Type>
+	ScoredMoves *generate_moves(const Position &pos, ScoredMoves *move_list)
 	{
 		Color us = pos.side_to_move();
 
 		return us == WHITE
-			? generate_all_pseudo_legal<WHITE, Type>(pos, move_list)
-			: generate_all_pseudo_legal<BLACK, Type>(pos, move_list);
+				   ? generate_all_pseudo_legal<WHITE, Type>(pos, move_list)
+				   : generate_all_pseudo_legal<BLACK, Type>(pos, move_list);
 	}
 
 	// <GT_ALL>			generates all pseudo-legal captures, quiets and evasions
@@ -208,13 +221,13 @@ namespace KhaosChess
 	// <GT_QUIET>		generates all pseudo-legal quiet moves
 	// <GT_EVADE>		generates all pseudo-legal check blocks or checkers captures
 
-	template ScoredMoves* generate_moves<GT_ALL>(const Position&, ScoredMoves*);
-	template ScoredMoves* generate_moves<GT_CAPTURE>(const Position&, ScoredMoves*);
-	template ScoredMoves* generate_moves<GT_QUIET>(const Position&, ScoredMoves*);
-	template ScoredMoves* generate_moves<GT_EVADE>(const Position&, ScoredMoves*);
+	template ScoredMoves *generate_moves<GT_ALL>(const Position &, ScoredMoves *);
+	template ScoredMoves *generate_moves<GT_CAPTURE>(const Position &, ScoredMoves *);
+	template ScoredMoves *generate_moves<GT_QUIET>(const Position &, ScoredMoves *);
+	template ScoredMoves *generate_moves<GT_EVADE>(const Position &, ScoredMoves *);
 
-	template<>
-	ScoredMoves* generate_moves<GT_LEGAL>(const Position& pos, ScoredMoves* move_list)
+	template <>
+	ScoredMoves *generate_moves<GT_LEGAL>(const Position &pos, ScoredMoves *move_list)
 	{
 		Color us = pos.side_to_move();
 		Square ksq = pos.square<KING>(us);
@@ -223,22 +236,22 @@ namespace KhaosChess
 
 		bool is_in_check = pos.get_attackers_to(ksq) & pos.get_opponent_pieces_bb();
 
-		ScoredMoves* legal_move_list = move_list;
+		ScoredMoves *legal_move_list = move_list;
 		ScoredMoves pseudo_legal_moves[MAX_MOVES];
 
 		// Checking if king is in check
 		// If it is, then we need to generate the evasions (since they are the only moves that are legal)
 		// else we will generate each move and check its legality
-		ScoredMoves* end_moves = is_in_check
-			? generate_moves<GT_EVADE>(pos, pseudo_legal_moves)
-			: generate_moves<GT_ALL>(pos, pseudo_legal_moves);
+		ScoredMoves *end_moves = is_in_check
+									 ? generate_moves<GT_EVADE>(pos, pseudo_legal_moves)
+									 : generate_moves<GT_ALL>(pos, pseudo_legal_moves);
 
-		for (ScoredMoves* move = pseudo_legal_moves; move != end_moves; ++move)
+		for (ScoredMoves *move = pseudo_legal_moves; move != end_moves; ++move)
 		{
 			// Some checks that might be a precondition to an illegal move
-			bool is_pinned = pinned & move->source_square(); // if pinned piece is moving
-			bool is_king_move = move->source_square() == ksq;// if king is moving
-			bool is_ep = move->move_type() == MT_EN_PASSANT; // if en passant is made
+			bool is_pinned = pinned & move->source_square();  // if pinned piece is moving
+			bool is_king_move = move->source_square() == ksq; // if king is moving
+			bool is_ep = move->move_type() == MT_EN_PASSANT;  // if en passant is made
 
 			// Assuming other moves are legal
 			// if the preconditions pass we might be dealing with an illegal move
