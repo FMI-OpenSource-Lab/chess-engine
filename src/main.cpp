@@ -1,4 +1,5 @@
 ﻿#include <iostream>
+#include <numeric>
 
 #include "position.h"
 #include "bitboard.h"
@@ -50,8 +51,8 @@ int main()
 		// Scorer<SC_ALL>().print_stats(pos);
 
 		pos.set(slightly_better_for_black, &infos->back());
-		Scorer<SC_ALL>(pos).print_stats();
-		std::cout << "Score: " << Scorer<SC_ALL>().get_score(pos) << "\n";
+		// Scorer<SC_ALL>(pos).print_stats();
+		// std::cout << "Score: " << Scorer<SC_ALL>().get_score(pos) << "\n";
 	}
 	else
 		uci_loop();

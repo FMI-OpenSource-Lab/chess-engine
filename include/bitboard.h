@@ -172,9 +172,38 @@ namespace KhaosChess
 		return square_distance[x][y];
 	}
 
-	inline int edge_distance(File f)
+	/// @brief Distance to the nearest edge of the board, order matters
+	/// @param f given file
+	/// @return minimum of given file and difference between the given file and the last file
+	inline int nearest_edge_distance(File f)
 	{
 		return std::min(f, File(FILE_H - f));
+	}
+
+	/// @brief Distance to the nearest edge of the board, order matters
+	/// @param r given rank
+	/// @return minimum of given rank and difference between the given rank and the last rank
+	inline int nearest_edge_distance(Rank r)
+	{
+		return std::min(r, Rank(RANK_1 - r));
+	}
+
+	/// @brief Distance between two files, order does not matter
+	/// @param f1 start file
+	/// @param f2 end file
+	/// @return Difference between the two files
+	inline int edge_distance(File f1, File f2)
+	{
+		return std::abs(f1 - f2);
+	}
+
+	/// @brief Distance between two ranks, order does not matter
+	/// @param r1 start rank
+	/// @param r2 end rank
+	/// @return Difference between the two ranks
+	inline int edge_distance(Rank r1, Rank r2)
+	{
+		return std::abs(r1 - r2);
 	}
 
 	// moves the bb one or two steps
@@ -355,7 +384,6 @@ namespace KhaosChess
 		assert(is_square_ok(x) && is_square_ok(y));
 		return full_line_bb[x][y];
 	}
-
 
 	// Returns true if all 3 squares are aligned
 	inline bool are_squares_aligned(Square source, Square target, Square aligned_with)

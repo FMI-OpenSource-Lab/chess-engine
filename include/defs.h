@@ -36,6 +36,8 @@ constexpr bool Is64Bit = false;
 #include <cassert>
 #include <algorithm> // For std::max
 
+// clang-format off
+
 enum Square : int {
 	A8, B8, C8, D8, E8, F8, G8, H8,
 	A7, B7, C7, D7, E7, F7, G7, H7,
@@ -60,6 +62,8 @@ constexpr const char *squareToCoordinates[] = {
 	"a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
 	"a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
 	"a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1"};
+
+// clang-format on
 
 enum PieceType : int
 {
@@ -217,6 +221,7 @@ constexpr Square convert_to_square(int rank, int file) { return Square(rank * 8 
 constexpr Square convert_to_square(Rank rank, File file) { return convert_to_square(int(rank), int(file)); }
 constexpr Square make_square(File f, Rank r) { return Square((r << 3) + f); }
 constexpr Square sq_relative_to_side(Square s, Color c) { return Square(int(s) ^ (c * 56)); }
+constexpr Square flip_rankwise(Square s) { return make_square(file_of(s), Rank(RANK_1 - rank_of(s))); } // Flips the rank of the square
 
 // Piece, PieceType and Color helper methods
 constexpr Piece get_piece(Color c, PieceType pt) { return Piece(pt + (c * 6)); }
@@ -246,11 +251,8 @@ typedef int Value; // 32 bit
 
 constexpr Value VALUE_ZERO = 0;
 constexpr Value VALUE_DRAW = 0;
-constexpr Value VALUE_NONE = 32002;
-constexpr Value VALUE_INFINITE = 32001;
-
-constexpr Value VALUE_MATE = 32001;
-constexpr Value VALUE_MATE_IN_MAX_PLY = VALUE_MATE - MAX_PLY;
+constexpr Value VALUE_POSITIVE_DRAW = 10;
+constexpr Value VALUE_NONE = 640'002;
 
 // Piece values estimated by AlphaZero
 constexpr Value PAWN_VALUE = 100;
@@ -265,6 +267,59 @@ constexpr Value PieceValue[PIECE_NB] // All pieces
 		VALUE_ZERO, PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE, ROOK_VALUE, QUEEN_VALUE, VALUE_ZERO,
 		// BLACK
 		PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE, ROOK_VALUE, QUEEN_VALUE, VALUE_ZERO, VALUE_ZERO};
+
+/* PCV
+		Each 4 bits represent a single piece count
+		10 pieces * 4 bits per piece count = 40 bits used
+		From least significant bit to most significant bit
+		Like in Piece enum
+		First 4 bits represent NO_PIECE
+*/
+
+using PCV = unsigned long long; // 64 bit
+
+#define C(x) static_cast<unsigned long long>((x))
+
+// Encoding the pcv values
+constexpr PCV encode_pcv(int wp, int wn, int wb, int wr, int wq,
+						 int bp, int bn, int bb, int br, int bq)
+{
+	// Casting is important because data is lost if we use only int
+	return (C(wp) << 4LL | C(wn) << 8LL | C(wb) << 12LL | C(wr) << 16LL | C(wq) << 20LL |
+			C(bp) << 28LL | C(bn) << 32LL | C(bb) << 36LL | C(br) << 40LL | C(bq) << 44LL);
+}
+
+// Assuming already encoded
+template <Piece piece>
+constexpr int get_count_pcv(PCV pcv)
+{
+	assert(piece != NO_PIECE);
+	return int(pcv >> C(4 * int(piece)) & 0xF);
+}
+
+template <Piece piece>
+constexpr PCV modify_pcv(PCV pcv, int c)
+{
+	return (pcv & ~(C(0xF) << C(4 * int(piece)))) | (C(c) << C(4 * int(piece)));
+}
+
+#undef C
+
+/*
+		Bits  0-3:  Unused
+		Bits  4-7:  White pawns
+		Bits  8-11: White knights
+		Bits 12-15: White bishops
+		Bits 16-19: White rooks
+		Bits 20-23: White queens
+		Bits 24-27: Unused
+		Bits 28-31: Black pawns
+		Bits 32-35: Black knights
+		Bits 36-39: Black bishops
+		Bits 40-43: Black rooks
+		Bits 44-47: Black queens
+		Bits 48-63: Unused
+*/
 
 // Allow to use ++File, --File, ++Rank, --Rank and etc.
 #define ENABLE_INCR_OPERATORS_ON(T)                          \

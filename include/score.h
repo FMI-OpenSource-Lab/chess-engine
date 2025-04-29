@@ -155,6 +155,10 @@ namespace KhaosChess
 		4 * (PIECE_WEIGHTS[KNIGHT] + PIECE_WEIGHTS[BISHOP] + PIECE_WEIGHTS[ROOK]) +
 		2 * PIECE_WEIGHTS[QUEEN];
 
+	constexpr Value VALUE_INFINITE = 640'001;
+	constexpr Value VALUE_MATE = 640'002;
+	constexpr Value VALUE_KNOWN_WIN = 640'001 - 8 * MAX_PLY - 8 * MATERIAL_SCORES.all_pieces();
+
 	class Position;
 
 	enum ScoreComponent

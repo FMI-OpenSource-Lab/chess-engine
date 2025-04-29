@@ -137,8 +137,11 @@ namespace KhaosChess
 		int count(Color c, PieceType pt) const;
 		template <typename... PieceTypes>
 		int count(Color c, PieceType pt, PieceTypes... pts) const;
-		
+
 		int game_phase() const;
+
+		// Piece Count Vector
+		PCV get_pcv() const;
 
 		// Doing and undoing moves
 		void do_move(const Move &m, MoveInfo &new_info);
@@ -179,8 +182,6 @@ namespace KhaosChess
 
 		Square rook_source_sq[CASTLING_RIGHT_NB]{};
 
-		Value pst_scores[PHASE_NB][BOTH]{}; // Piece square table score
-
 		Color side{};
 
 		PLY_TYPE fullmove_number{};
@@ -220,6 +221,12 @@ namespace KhaosChess
 	inline int Position::count(Color c, PieceType pt, PieceTypes... pts) const
 	{
 		return count(c, pt) + count(c, pts...);
+	}
+
+	inline PCV Position::get_pcv() const
+	{
+		return encode_pcv(count<PAWN>(WHITE), count<KNIGHT>(WHITE), count<BISHOP>(WHITE), count<ROOK>(WHITE), count<QUEEN>(WHITE),
+						  count<PAWN>(BLACK), count<KNIGHT>(BLACK), count<BISHOP>(BLACK), count<ROOK>(BLACK), count<QUEEN>(BLACK));
 	}
 
 	inline bool Position::is_square_attacked(Square s, Color us) const
@@ -298,29 +305,11 @@ namespace KhaosChess
 
 		piece_count[p]++;
 		piece_count[get_piece(get_piece_color(p), ALL_PIECES)]++;
-
-		// Update PST score
-		Color c = get_piece_color(p);
-		PieceType pt = type_of_piece(p);
-		Square rel_sq = sq_relative_to_side(s, c);
-
-		pst_scores[PHASE_OPENING][c] += PST[PHASE_OPENING][pt][rel_sq];
-		pst_scores[PHASE_MIDDLEGAME][c] += PST[PHASE_MIDDLEGAME][pt][rel_sq];
-		pst_scores[PHASE_ENDGAME][c] += PST[PHASE_ENDGAME][pt][rel_sq];
 	}
 
 	inline void Position::remove_piece(Square s)
 	{
 		Piece p = piece_board[s];
-
-		// Update PST score
-		Color c = get_piece_color(p);
-		PieceType pt = type_of_piece(p);
-		Square rel_sq = sq_relative_to_side(s, c);
-
-		pst_scores[PHASE_OPENING][c] -= PST[PHASE_OPENING][pt][rel_sq];
-		pst_scores[PHASE_MIDDLEGAME][c] -= PST[PHASE_MIDDLEGAME][pt][rel_sq];
-		pst_scores[PHASE_ENDGAME][c] -= PST[PHASE_ENDGAME][pt][rel_sq];
 
 		// Update bitboards
 		rm_bit(type[type_of_piece(p)], s);
@@ -338,20 +327,6 @@ namespace KhaosChess
 	inline void Position::move_piece(Square source, Square target)
 	{
 		Piece p = piece_board[source];
-		PieceType pt = type_of_piece(p);
-		Color c = get_piece_color(p);
-		Square src_rel = sq_relative_to_side(source, c);
-		Square tgt_rel = sq_relative_to_side(target, c);
-
-		// Update pst score
-		pst_scores[PHASE_OPENING][c] -= PST[PHASE_OPENING][pt][src_rel];
-		pst_scores[PHASE_OPENING][c] += PST[PHASE_OPENING][pt][tgt_rel];
-
-		pst_scores[PHASE_MIDDLEGAME][c] -= PST[PHASE_MIDDLEGAME][pt][src_rel];
-		pst_scores[PHASE_MIDDLEGAME][c] += PST[PHASE_MIDDLEGAME][pt][tgt_rel];
-
-		pst_scores[PHASE_ENDGAME][c] -= PST[PHASE_ENDGAME][pt][src_rel];
-		pst_scores[PHASE_ENDGAME][c] += PST[PHASE_ENDGAME][pt][tgt_rel];
 
 		// Update bitboards
 		BITBOARD dest = square_to_BB(source) | square_to_BB(target);
