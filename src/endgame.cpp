@@ -1,10 +1,11 @@
 #include "endgame.h"
 
 #include <numeric>
+#include <memory>
 
 namespace KhaosChess
 {
-    namespace Endgame
+    namespace Endgames
     {
         enum EndgameType : uint8_t
         {
@@ -207,18 +208,6 @@ namespace KhaosChess
             }
 
             template <>
-            bool Endgame<ET_KPsK>::is_applicable(const Position &pos) const
-            {
-                int nonpawns_count = pos.count(strong_side, KNIGHT, BISHOP, ROOK, QUEEN);
-                int strong_pawns_count = pos.count(strong_side, PAWN);
-
-                // Certain condition must be met in order for the King and pawns vs king [KPsK] endgame to be applicable
-                return nonpawns_count == 0 &&                                              // No other pieces, except pawns
-                       strong_pawns_count >= 2 &&                                          // Pawns must be more than one
-                       pos.get_pieces_bb(weak_side) == pos.get_pieces_bb(KING, weak_side); // Get only the weak king
-            }
-
-            template <>
             Value Endgame<ET_KPsK>::strong_side_score(const Position &pos) const
             {
                 const BITBOARD pawns = pos.get_pieces_bb(PAWN, strong_side);
@@ -272,13 +261,6 @@ namespace KhaosChess
             }
 
             template <>
-            bool Endgame<ET_KXK>::is_applicable(const Position &pos) const
-            {
-                // Using count_bits() and not count(Color, PieceTypes...) becase the weak side bitboard is mostly zeros
-                return count_bits(pos.get_pieces_bb(weak_side)) == 1; // Only the weak king is present on the board
-            }
-
-            template <>
             Value Endgame<ET_KXK>::strong_side_score(const Position &pos) const
             {
                 Square weak_ksq = pos.square<KING>(weak_side);
@@ -308,21 +290,6 @@ namespace KhaosChess
             {
                 Square weak_ksq = pos.square<KING>(weak_side);
                 return Value(VALUE_POSITIVE_DRAW + PUSH_TO_EDGE_BONUS[weak_ksq]);
-            }
-
-            template <>
-            bool Endgame<ET_KRBKR>::is_applicable(const Position &pos) const
-            {
-                return pos.get_pcv() == SandboxPCV<ET_KRBKR>::pcv[strong_side];
-            }
-
-            template <>
-            bool Endgame<ET_KBPsK>::is_applicable(const Position &pos) const
-            {
-                return pos.count<BISHOP>(strong_side) == 1 &&                              // Only one string bishop
-                       pos.count(strong_side, KNIGHT, ROOK, QUEEN) == 0 &&                 // No other pieces, except the bishop
-                       pos.count<PAWN>(strong_side) > 0 &&                                 // At least one pawn
-                       pos.get_pieces_bb(weak_side) == pos.get_pieces_bb(KING, weak_side); // Get only the weak king
             }
 
             template <>
@@ -399,16 +366,6 @@ namespace KhaosChess
                             PUSH_CLOSER[distance<Rank>(k2, weak_ksq)] +
                             6 * Value(rank_of(pawn_sq))) +
                        PUSH_TO_EDGE_BONUS[weak_ksq];
-            }
-
-            template <>
-            bool Endgame<ET_KBPsKB>::is_applicable(const Position &pos) const
-            {
-                return pos.count<BISHOP>(strong_side) == 1 &&                // Only one string bishop
-                       pos.count<BISHOP>(weak_side) == 1 &&                  // Only one weak bishop
-                       pos.count<PAWN>(strong_side) >= 1 &&                  // At least one pawn
-                       pos.count(strong_side, KNIGHT, ROOK, QUEEN) == 0 &&   // No other strong pieces
-                       pos.count(weak_side, PAWN, KNIGHT, ROOK, QUEEN) == 0; // No weak pieces or pawns
             }
 
             template <>
@@ -493,7 +450,174 @@ namespace KhaosChess
                 return pos.count<PAWN>(strong_side) * MATERIAL_SCORES.piece_value[PAWN].eg + 10 * Value(rank_of(furthest_pawn_sq));
             }
 
+            template <>
+            Value Endgame<ET_KRKB>::strong_side_score(const Position &pos) const
+            {
+                const Square weak_ksq = sq_relative_to_side(pos.square<KING>(weak_side), strong_side);
+                return VALUE_POSITIVE_DRAW + PUSH_TO_EDGE_BONUS[weak_ksq];
+            }
+
+            template <>
+            Value Endgame<ET_KRKN>::strong_side_score(const Position &pos) const
+            {
+                const Square weak_ksq = sq_relative_to_side(pos.square<KING>(weak_side), strong_side);
+                const Square strong_ksq = sq_relative_to_side(pos.square<KING>(strong_side), strong_side);
+
+                return VALUE_POSITIVE_DRAW + PUSH_TO_EDGE_BONUS[weak_ksq] + 10 * distance(strong_ksq, weak_ksq);
+            }
+
+            template <>
+            Value Endgame<ET_KQKRPs>::strong_side_score(const Position &pos) const
+            {
+                const BITBOARD pawns = pos.get_pieces_bb(PAWN, weak_side);
+                const Square weak_ksq = pos.square<KING>(weak_side);
+                const Square rook_sq = pos.square<ROOK>(weak_side); // Only one rook is present, so square<> will retrieve the only rook
+
+                // Pawns defends the rook and king defends some pawns
+                if ((pawn_attacks_bb(weak_side, pawns) & rook_sq) && attacks_bb_by<KING>(weak_ksq) & pawns)
+                    return VALUE_POSITIVE_DRAW + 10 * Value(rank_of(sq_relative_to_side(first_pawn_square(pawns, weak_side), strong_side)));
+
+                return (MATERIAL_SCORES.piece_value[QUEEN] - MATERIAL_SCORES.piece_value[ROOK]).eg -
+                       pos.count<PAWN>(weak_side) * MATERIAL_SCORES.piece_value[PAWN].eg;
+            }
+
+            template <>
+            Value Endgame<ET_KmmKm>::strong_side_score(const Position &pos) const
+            {
+                if (!(pos.count<BISHOP>(strong_side) == 2 && pos.count<KNIGHT>(weak_side) == 1))
+                    return VALUE_POSITIVE_DRAW; // Theoretical draw
+
+                BITBOARD bishops = pos.get_pieces_bb(BISHOP, strong_side);
+
+                const Square b1 = pop_ls1b(bishops);
+                const Square b2 = pop_ls1b(bishops);
+                const bool same_color = square_color(b1) == square_color(b2);
+
+                // If the bishops are on the same color, then it is a theoretical draw
+                // and the expression becomes 1 * POSITIVE_DRAW + 0 * Value(...)
+
+                // If the bishops are on different colors
+                // then the expression will become 0 * POSITIVE_DRAW + 1 * Value(...)
+                return same_color * VALUE_POSITIVE_DRAW +
+                       (1 - same_color) * Value(2 * (MATERIAL_SCORES.piece_value[BISHOP] + MATERIAL_SCORES.piece_value[KNIGHT]).eg);
+            }
+
+            template <>
+            bool Endgame<ET_KXK>::is_applicable(const Position &pos) const
+            {
+                // Using count_bits() and not count(Color, PieceTypes...) becase the weak side bitboard is mostly zeros
+                return count_bits(pos.get_pieces_bb(weak_side)) == 1; // Only the weak king is present on the board
+            }
+
+            template <>
+            bool Endgame<ET_KPsK>::is_applicable(const Position &pos) const
+            {
+                int nonpawns_count = pos.count(strong_side, KNIGHT, BISHOP, ROOK, QUEEN);
+                int strong_pawns_count = pos.count(strong_side, PAWN);
+
+                // Certain condition must be met in order for the King and pawns vs king [KPsK] endgame to be applicable
+                return nonpawns_count == 0 &&                                              // No other pieces, except pawns
+                       strong_pawns_count >= 2 &&                                          // Pawns must be more than one
+                       pos.get_pieces_bb(weak_side) == pos.get_pieces_bb(KING, weak_side); // Get only the weak king
+            }
+
+            template <>
+            bool Endgame<ET_KRBKR>::is_applicable(const Position &pos) const
+            {
+                return pos.get_pcv() == SandboxPCV<ET_KRBKR>::pcv[strong_side];
+            }
+
+            template <>
+            bool Endgame<ET_KBPsK>::is_applicable(const Position &pos) const
+            {
+                return pos.count<BISHOP>(strong_side) == 1 &&                              // Only one string bishop
+                       pos.count(strong_side, KNIGHT, ROOK, QUEEN) == 0 &&                 // No other pieces, except the bishop
+                       pos.count<PAWN>(strong_side) > 0 &&                                 // At least one pawn
+                       pos.get_pieces_bb(weak_side) == pos.get_pieces_bb(KING, weak_side); // Get only the weak king
+            }
+
+            template <>
+            bool Endgame<ET_KBPsKB>::is_applicable(const Position &pos) const
+            {
+                return pos.count<BISHOP>(strong_side) == 1 &&                // Only one string bishop
+                       pos.count<BISHOP>(weak_side) == 1 &&                  // Only one weak bishop
+                       pos.count<PAWN>(strong_side) >= 1 &&                  // At least one pawn
+                       pos.count(strong_side, KNIGHT, ROOK, QUEEN) == 0 &&   // No other strong pieces
+                       pos.count(weak_side, PAWN, KNIGHT, ROOK, QUEEN) == 0; // No weak pieces or pawns
+            }
+
+            template <>
+            bool Endgame<ET_KQKRPs>::is_applicable(const Position &pos) const
+            {
+                // For position to be applicable, it must have the following conditions:
+                // 1. One queen on the strong side
+                // 2. No other pieces on the strong side (except the king)
+                // 3. One rook on the weak side
+                // 4. At least one pawn on the weak side
+                // 5. No other pieces on the weak side (except the king and rook)
+
+                return pos.count<QUEEN>(strong_side) == 1 &&
+                       pos.count(strong_side, PAWN, KNIGHT, BISHOP) == 0 &&
+                       pos.count(weak_side, KNIGHT, BISHOP) == 0 &&
+                       pos.count<ROOK>(weak_side) == 1 &&
+                       pos.count<PAWN>(weak_side) >= 1;
+            }
+
+            template <>
+            bool Endgame<ET_KmmKm>::is_applicable(const Position &pos) const
+            {
+                const int strong_minors_count = pos.count(strong_side, KNIGHT, BISHOP);
+                const int weak_minors_count = pos.count(weak_side, KNIGHT, BISHOP);
+
+                return strong_minors_count == 2 &&                 // Exactly two two minor pieces on the strong side
+                       weak_minors_count == 1 &&                   // Exactly one minor piece on the weak side
+                       !pos.get_pieces_bb(PAWN) &&                 // No pawns on the board
+                       pos.count(strong_side, ROOK, QUEEN) == 0 && // No other pieces on the strong side
+                       pos.count(weak_side, ROOK, QUEEN) == 0;     // No other pieces on the weak side
+            }
         }; // namespace
 
-    } // namespace Endgame
+        using EndgameBasePtr = std::unique_ptr<EndgameBase>;
+        std::vector<EndgameBasePtr> endgames;
+
+        template <EndgameType ET>
+        void add()
+        {
+            endgames.push_back(std::unique_ptr<EndgameBase>(new Endgame<ET>(WHITE)));
+            endgames.push_back(std::unique_ptr<EndgameBase>(new Endgame<ET>(BLACK)));
+        }
+
+        void init()
+        {
+            add<ET_KPK>();
+            add<ET_KPsK>();
+            add<ET_KRKB>();
+            add<ET_KRKN>();
+            add<ET_KNNK>();
+            add<ET_KNNKP>();
+            add<ET_KQKR>();
+            add<ET_KNBK>();
+            add<ET_KRNKR>();
+            add<ET_KRBKR>();
+            add<ET_KBPsK>();
+            add<ET_KBPsKB>();
+            add<ET_KRKP>();
+            add<ET_KQKP>();
+            add<ET_KQKRPs>();
+            add<ET_KmmKm>();
+
+            // And it should be last
+            add<ET_KXK>();
+        }
+
+        Value score(const Position &pos)
+        {
+            for (const EndgameBasePtr &e : endgames)
+                if (e->is_applicable(pos))
+                    return e->score(pos);
+
+            return VALUE_NONE;
+        }
+
+    } // namespace Endgames
 } // namespace KhaosChess

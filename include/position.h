@@ -206,16 +206,7 @@ namespace KhaosChess
 	template <PieceType pt>
 	inline int Position::count(Color c) const { return piece_count[get_piece(c, pt)]; }
 
-	inline int Position::count(Color c, PieceType pt) const
-	{
-		return pt == PAWN	  ? count<PAWN>(c)
-			   : pt == KNIGHT ? count<KNIGHT>(c)
-			   : pt == BISHOP ? count<BISHOP>(c)
-			   : pt == ROOK	  ? count<ROOK>(c)
-			   : pt == QUEEN  ? count<QUEEN>(c)
-			   : pt == KING	  ? count<KING>(c)
-							  : 0;
-	}
+	inline int Position::count(Color c, PieceType pt) const { return piece_count[get_piece(c, pt)]; }
 
 	template <typename... PieceTypes>
 	inline int Position::count(Color c, PieceType pt, PieceTypes... pts) const

@@ -4,6 +4,7 @@
 #include "defs.h"
 #include "consts.h"
 #include "position.h"
+#include "endgame.h"
 
 #include <array>
 #include <iomanip>
@@ -177,17 +178,15 @@ namespace KhaosChess
 	template <ScoreComponent T>
 	struct Scorer
 	{
-		explicit Scorer(const Position &p)
-			: pos(p)
-		{
-			score = total_scores<T>(p);
-			weight = game_phase_weights(p);
-		}
-
 		explicit Scorer() = default;
-
+		
 		Value get_score(const Position &pos)
 		{
+			Value endgame_value = Endgames::score(pos);
+
+			if (endgame_value != VALUE_NONE)
+				return endgame_value;
+
 			score = total_scores<T>(pos);
 			weight = game_phase_weights(pos);
 
@@ -197,12 +196,11 @@ namespace KhaosChess
 		}
 
 		Value get_weight() { return weight; }
-		void print_stats();
+		void print_stats(const Position& pos);
 
 	private:
 		Score score;
 		Value weight;
-		const Position &pos = *((const Position *)nullptr); // Default initialization with safeguard
 
 		Value game_phase_weights(const Position &pos)
 		{

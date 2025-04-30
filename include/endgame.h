@@ -15,7 +15,7 @@ namespace KhaosChess
         void normalize(Color strong_side, Color &side, Square &strong_king, Square &string_pawn, Square &weak_king);
     } // namespace BitBase
 
-    namespace Endgame
+    namespace Endgames
     {
         class EndgameBase
         {
@@ -46,6 +46,6 @@ namespace KhaosChess
         void init();
         Value score(const Position &pos);
 
-    } // namespace Endgame
+    } // namespace Endgames
 
 } // namespace KhaosChess

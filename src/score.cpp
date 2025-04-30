@@ -572,7 +572,7 @@ namespace KhaosChess
 	}
 
 	template <ScoreComponent T>
-	inline void Scorer<T>::print_stats()
+	inline void Scorer<T>::print_stats(const Position &pos)
 	{
 #define P(white, black) \
 	white << "|" << black << "|" << (white - black) << "|"
@@ -623,12 +623,12 @@ namespace KhaosChess
 	template Score total_scores<SC_PIECE_COORDINATION>(const Position &pos);
 	template Score total_scores<SC_ALL>(const Position &pos);
 
-	template void Scorer<SC_MATERIAL>::print_stats();
-	template void Scorer<SC_MOBILITY>::print_stats();
-	template void Scorer<SC_KING_SAFETY>::print_stats();
-	template void Scorer<SC_PAWN_STRUCTURE>::print_stats();
-	template void Scorer<SC_PIECE_COORDINATION>::print_stats();
-	template void Scorer<SC_ALL>::print_stats();
+	template void Scorer<SC_MATERIAL>::print_stats(const Position &);
+	template void Scorer<SC_MOBILITY>::print_stats(const Position &);
+	template void Scorer<SC_KING_SAFETY>::print_stats(const Position &);
+	template void Scorer<SC_PAWN_STRUCTURE>::print_stats(const Position &);
+	template void Scorer<SC_PIECE_COORDINATION>::print_stats(const Position &);
+	template void Scorer<SC_ALL>::print_stats(const Position &);
 
 	/*
 		A likely cause of these abnormal values is that we are stacking the scores
