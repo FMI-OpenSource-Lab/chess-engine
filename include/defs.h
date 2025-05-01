@@ -222,6 +222,7 @@ constexpr Square convert_to_square(Rank rank, File file) { return convert_to_squ
 constexpr Square make_square(File f, Rank r) { return Square((r << 3) + f); }
 constexpr Square sq_relative_to_side(Square s, Color c) { return Square(int(s) ^ (c * 56)); }
 constexpr Square flip_rankwise(Square s) { return make_square(file_of(s), Rank(RANK_1 - rank_of(s))); } // Flips the rank of the square
+constexpr Square flip_filewise(Square s) { return make_square(File(FILE_H - file_of(s)), rank_of(s)); } // Flips the file of the square
 
 // Piece, PieceType and Color helper methods
 constexpr Piece get_piece(Color c, PieceType pt) { return Piece(pt + (c * 6)); }

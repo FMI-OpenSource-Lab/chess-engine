@@ -14,6 +14,13 @@ namespace KhaosChess
 {
 	namespace
 	{
+		constexpr BITBOARD opponent_ranks_for(Color c)
+		{
+			return c == WHITE
+					   ? Rank8_Bits | Rank7_Bits | Rank6_Bits | Rank5_Bits
+					   : Rank1_Bits | Rank2_Bits | Rank3_Bits | Rank4_Bits;
+		}
+
 		BITBOARD get_real_possible_moves(const Color c, const Position &pos, Square s, BITBOARD moves)
 		{
 			const Square ksq = pos.square<KING>(c);
@@ -124,9 +131,7 @@ namespace KhaosChess
 		{
 			constexpr Color Them = ~Us;
 			constexpr BITBOARD center_bits = FileC_Bits | FileD_Bits | FileE_Bits | FileF_Bits;
-			constexpr BITBOARD opp_ranks = Us == WHITE
-											   ? Rank8_Bits | Rank7_Bits | Rank6_Bits | Rank5_Bits
-											   : Rank1_Bits | Rank2_Bits | Rank3_Bits | Rank4_Bits;
+			constexpr BITBOARD opp_ranks = opponent_ranks_for(Us);
 
 			Score score = 0;
 
@@ -191,10 +196,10 @@ namespace KhaosChess
 		{
 			constexpr Color Them = ~Us;
 			constexpr BITBOARD center_bits = FileC_Bits | FileD_Bits | FileE_Bits | FileF_Bits;
-			constexpr BITBOARD opp_ranks = Us == WHITE
-											   ? Rank8_Bits | Rank7_Bits | Rank6_Bits | Rank5_Bits
-											   : Rank1_Bits | Rank2_Bits | Rank3_Bits | Rank4_Bits;
+			constexpr BITBOARD opp_ranks = opponent_ranks_for(Us);
+
 			Score score = 0;
+
 			BITBOARD bishops = pos.get_pieces_bb(BISHOP, Us);
 
 			if (Component == SC_MATERIAL || Component == SC_ALL)
@@ -260,12 +265,10 @@ namespace KhaosChess
 		Score score_rooks(const Position &pos)
 		{
 			constexpr Color Them = ~Us;
-			BITBOARD rooks = pos.get_pieces_bb(ROOK, Us);
-			BITBOARD opp_ranks = Us == WHITE
-									 ? Rank8_Bits | Rank7_Bits | Rank6_Bits | Rank5_Bits
-									 : Rank1_Bits | Rank2_Bits | Rank3_Bits | Rank4_Bits;
-
 			Score score = 0;
+
+			BITBOARD rooks = pos.get_pieces_bb(ROOK, Us);
+			BITBOARD opp_ranks = opponent_ranks_for(Us);
 
 			if (Component == SC_MATERIAL || Component == SC_ALL)
 				score += MATERIAL_SCORES.piece_value[ROOK] * Value(pos.count<ROOK>(Us));
@@ -337,11 +340,10 @@ namespace KhaosChess
 		Score score_queens(const Position &pos)
 		{
 			constexpr Color Them = ~Us;
-			BITBOARD queens = pos.get_pieces_bb(QUEEN, Us);
-			BITBOARD opp_ranks = Us == WHITE
-									 ? Rank8_Bits | Rank7_Bits | Rank6_Bits | Rank5_Bits
-									 : Rank1_Bits | Rank2_Bits | Rank3_Bits | Rank4_Bits;
 			Score score = 0;
+
+			BITBOARD queens = pos.get_pieces_bb(QUEEN, Us);
+			BITBOARD opp_ranks = opponent_ranks_for(Us);
 
 			if (Component == SC_MATERIAL || Component == SC_ALL)
 				score += MATERIAL_SCORES.piece_value[QUEEN] * Value(pos.count<QUEEN>(Us));
@@ -556,6 +558,27 @@ namespace KhaosChess
 
 			return score;
 		}
+
+		std::string component_type(ScoreComponent c)
+		{
+			switch (c)
+			{
+			case SC_MATERIAL:
+				return "Material";
+			case SC_MOBILITY:
+				return "Mobility";
+			case SC_KING_SAFETY:
+				return "King Safety";
+			case SC_PAWN_STRUCTURE:
+				return "Pawn Structure";
+			case SC_PIECE_COORDINATION:
+				return "Piece Coordination";
+			case SC_ALL:
+				return "All";
+			}
+
+			return "";
+		}
 	} // namespace
 
 	// SC_MATERIAL 				- Gets the material score for the given side
@@ -572,6 +595,27 @@ namespace KhaosChess
 	}
 
 	template <ScoreComponent T>
+	inline Value Scorer<T>::get_score(const Position &pos)
+	{
+		// Get the endgame scores
+		Value endgame = Endgames::score(pos);
+
+		if (endgame != VALUE_NONE)
+			return endgame;
+
+		// Get the game phase weights
+		weight = game_phase_weights(pos);
+
+		// Get the score for the given component
+		score = total_scores<T>(pos);
+
+		// Combine the score with the weight
+		Value v = combine(score, weight);
+
+		return pos.side_to_move() == WHITE ? v : -v;
+	}
+
+	template <ScoreComponent T>
 	inline void Scorer<T>::print_stats(const Position &pos)
 	{
 #define P(white, black) \
@@ -581,6 +625,12 @@ namespace KhaosChess
 
 		std::cout << std::showpoint << std::noshowpos << std::fixed
 				  << std::setprecision(2)
+				  << "+---------+--------------+--------------+--------------+"
+				  << std::endl
+				  << "| Scoring by: " << component_type(T)
+				  << std::endl
+				  << "| Total score: " << get_score(pos)
+				  << std::endl
 				  << "+---------+--------------+--------------+--------------+"
 				  << std::endl
 				  << "|  TYPE   |     White    |     Black    |     Total    |"
@@ -609,8 +659,8 @@ namespace KhaosChess
 				  << std::endl
 				  << "+---------+--------------+--------------+--------------+"
 				  << std::endl
-				  << "|   TOTAL |" << total_scores<T>(pos) << std::endl
-				  << "|  WEIGHT |" << Score(weight, MAX_PIECE_WEIGHTS) << std::endl
+				  << "|   TOTAL |" << score << std::endl
+				  << "|  WEIGHT |" << Score(game_phase_weights(pos), MAX_PIECE_WEIGHTS) << std::endl
 				  << "+---------+--------------+--------------+--------------+"
 				  << std::endl;
 #undef P

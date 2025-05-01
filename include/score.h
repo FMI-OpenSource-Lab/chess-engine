@@ -162,7 +162,7 @@ namespace KhaosChess
 
 	class Position;
 
-	enum ScoreComponent
+	enum ScoreComponent : uint8_t
 	{
 		SC_MATERIAL,		   // The material scores
 		SC_MOBILITY,		   // The mobility scores
@@ -178,25 +178,11 @@ namespace KhaosChess
 	template <ScoreComponent T>
 	struct Scorer
 	{
-		explicit Scorer() = default;
-		
-		Value get_score(const Position &pos)
-		{
-			Value endgame_value = Endgames::score(pos);
+		explicit Scorer() : score(0), weight(0) {};
 
-			if (endgame_value != VALUE_NONE)
-				return endgame_value;
-
-			score = total_scores<T>(pos);
-			weight = game_phase_weights(pos);
-
-			Value value = combine(score, weight);
-
-			return pos.side_to_move() == WHITE ? value : -value;
-		}
-
+		Value get_score(const Position &pos);
 		Value get_weight() { return weight; }
-		void print_stats(const Position& pos);
+		void print_stats(const Position &pos);
 
 	private:
 		Score score;

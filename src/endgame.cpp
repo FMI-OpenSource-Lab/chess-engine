@@ -1,10 +1,198 @@
-#include "endgame.h"
-
 #include <numeric>
 #include <memory>
+#include <stdio.h>
+#include <vector>
+
+#include "endgame.h"
 
 namespace KhaosChess
 {
+    namespace BitBase
+    {
+        enum Result : uint8_t
+        {
+            R_INVALID,
+            R_UNKNOWN,
+            R_WIN,
+            R_DRAW
+        };
+
+        constexpr int MAX_INDEX = 2 * 24 * 64 * 64;
+        unsigned BITBASE[MAX_INDEX / 32];
+
+        // index bits:
+        // 0-5       : white king square [0-63]
+        // 6-11      : black king square [0-63]
+        // 12        : color             [0-1]
+        // 13-14     : pawn file         [0-3] Only to file D
+        // 15-17     : pawn rank         [1-6] Without Rank 1 and 8
+        unsigned encode_index(Color side, Square w_king, Square w_pawn, Square b_king)
+        {
+            assert(file_of(w_pawn) <= FILE_D);
+            assert(rank_of(w_pawn) != RANK_1 && rank_of(w_pawn) != RANK_8);
+
+            unsigned index = w_king + (b_king << 6) + (side << 12) + (file_of(w_pawn) << 13) +
+                             ((rank_of(w_pawn) - RANK_7) << 15); // -RANK_7 because we don't want to include it
+
+            assert(index < MAX_INDEX);
+
+            return index;
+        }
+
+        void parse_index(unsigned index, Color &side, Square &w_king, Square &w_pawn, Square &b_king)
+        {
+            assert(index < MAX_INDEX);
+
+            w_king = Square(index & 0x3F);
+            b_king = Square((index >> 6) & 0x3F);
+            side = Color((index >> 12) & 0x1);
+            w_pawn = make_square(File((index >> 13) & 0x3), Rank(((index >> 15) & 0x7) + RANK_7));
+        }
+
+        bool check(Color side, Square w_ksq, Square w_pawn, Square b_ksq)
+        {
+            unsigned index = encode_index(side, w_ksq, w_pawn, b_ksq); // get the index
+            return BITBASE[index / 32] & (1 << (index & 0x1F));        // check if the bit is set
+        }
+
+        Result initial_score(unsigned index)
+        {
+            Color side;
+            Square w_ksq, w_pawn, b_ksq;
+            parse_index(index, side, w_ksq, w_pawn, b_ksq); // get the index
+
+            bool is_black_in_check = bool(pawn_attacks_bb<WHITE>(w_pawn) & b_ksq);
+
+            // Kings cannot be in neighboring squares
+            // Pawns cannot be in the same squares as the kings
+            // If it's white to move, black cannot be in check
+            if (distance(w_ksq, b_ksq) <= 1 || w_ksq == w_pawn || b_ksq == w_pawn || (side == WHITE && is_black_in_check))
+                return R_INVALID;
+
+            BITBOARD black_king_moves = attacks_bb_by<KING>(b_ksq) &  // Get the black king moves
+                                        ~attacks_bb_by<KING>(w_ksq) & // Intersect with all the squares except the white king attacks
+                                        ~attacks_bb_by<PAWN>(w_pawn); // Intersect with all the squares except the white pawn attacks
+
+            // If it's black's turn and there are no legal moves
+            if (side == BLACK && !black_king_moves)
+                return R_DRAW;
+
+            Square next_psq = w_pawn + UP;
+
+            if (side == WHITE && rank_of(w_pawn) == RANK_7 && w_ksq != next_psq && b_ksq != next_psq && bool(black_king_moves & next_psq))
+                return R_WIN;
+
+            // If it's black to move and amongs black king moves is a white pawn
+            // This means that the black king can capture the white pawn
+            if (side == BLACK && bool(black_king_moves & w_pawn))
+                return R_DRAW;
+
+            return R_UNKNOWN;
+        }
+
+        Result update_score(const std::vector<Result> &results, unsigned idx)
+        {
+            Color side;
+            Square w_ksq, w_pawn, b_ksq;
+            parse_index(idx, side, w_ksq, w_pawn, b_ksq); // get the index
+
+            Result better = side == WHITE ? R_WIN : R_DRAW;
+            Result worse = side == WHITE ? R_DRAW : R_WIN;
+
+            Square our_ksq = side == WHITE ? w_ksq : b_ksq;
+
+            bool is_unknown;
+
+            BITBOARD k_moves = attacks_bb_by<KING>(our_ksq);
+            while (k_moves)
+            {
+                Square sq = pop_ls1b(k_moves);
+                unsigned index = encode_index(~side,
+                                              side == WHITE ? sq : w_ksq,
+                                              w_pawn,
+                                              side == WHITE ? b_ksq : sq);
+
+                if (results[index] == better)
+                    return better;
+
+                is_unknown |= (results[index] == R_UNKNOWN);
+            }
+
+            // If white's side, check pawn moves
+            if (side == WHITE && ~Rank7_Bits & w_pawn)
+            {
+                // single push
+                Square next_psq = w_pawn + UP; // Next pawn square; - because of Rank enum ordering
+                unsigned index = encode_index(BLACK, w_ksq, next_psq, b_ksq);
+
+                is_unknown |= (results[index] == R_UNKNOWN);
+
+                // double push if pawn is on rank 2
+                if (Rank2_Bits & w_pawn)
+                {
+                    next_psq += UP; // Already pushed once
+                    index = encode_index(BLACK, w_ksq, next_psq, b_ksq);
+                }
+
+                if (results[index] == better)
+                    return better;
+
+                is_unknown |= (results[index] == R_UNKNOWN);
+            }
+
+            return is_unknown ? R_UNKNOWN : worse;
+        }
+
+        void init()
+        {
+            memset(BITBASE, 0, sizeof(BITBASE));
+            std::vector<Result> results(MAX_INDEX, R_UNKNOWN);
+
+            for (unsigned idx = 0; idx < MAX_INDEX; ++idx)
+                results[idx] = initial_score(idx);
+
+            bool repeat = true;
+            while (repeat)
+            {
+                repeat = false;
+                for (unsigned idx = 0; idx < MAX_INDEX; ++idx)
+                {
+                    if (results[idx] == R_UNKNOWN)
+                    {
+                        results[idx] = update_score(results, idx);
+                        repeat |= (results[idx] != R_UNKNOWN);
+                    }
+                }
+            }
+
+            for (unsigned idx = 0; idx < MAX_INDEX; ++idx)
+                if (results[idx] == R_WIN)
+                    BITBASE[idx / 32] |= (1 << (idx & 0x1F));
+        }
+
+        void normalize(Color strong_side, Color &side, Square &strong_king, Square &strong_pawn, Square &weak_king)
+        {
+            // Flip everything so the pawns are on files A to D
+            if (file_of(strong_pawn) > FILE_D)
+            {
+                strong_king = flip_filewise(strong_king);
+                strong_pawn = flip_filewise(strong_pawn);
+                weak_king = flip_filewise(weak_king);
+            }
+
+            // Flip everything such that the strong side is always white
+            if (strong_side == BLACK)
+            {
+                strong_king = flip_rankwise(strong_king);
+                strong_pawn = flip_rankwise(strong_pawn);
+                weak_king = flip_rankwise(weak_king);
+
+                side = ~side;
+            }
+        }
+
+    }; // namespace BitBase
+
     namespace Endgames
     {
         enum EndgameType : uint8_t
@@ -65,9 +253,9 @@ namespace KhaosChess
             // Weights to have both kings close to each other
             std::array<int, RANK_NB> PUSH_CLOSER = {0, 7, 6, 5, 4, 3, 2, 1};
 
-            // Bitboard when represented bitwaise is displayed revered
-            // Because of this the first pawn is always the last significant bit set in the bitboard
-            // and the last pawn is always the most significant bit set in the bitboard
+            // Bitboard when represented bitwise are displayed reversed
+            // Because of this the first pawn is always the last significant bit set in the bitboard (for WHITE)
+            // and the last pawn is always the most significant bit set in the bitboard              (for BLACK)
             Square first_pawn_square(BITBOARD pawns, Color side) { return (side == WHITE) ? get_ls1b(pawns) : get_msb(pawns); }
 
             template <EndgameType ET>
@@ -192,8 +380,8 @@ namespace KhaosChess
             template <>
             Value Endgame<ET_KPK>::strong_side_score(const Position &pos) const
             {
-                assert(is_applicable(pos));
 
+                assert(is_applicable(pos));
                 Color side = pos.side_to_move();
                 Square strong_king_sq = pos.square<KING>(strong_side);
                 Square weak_king_sq = pos.square<KING>(~strong_side);
@@ -252,10 +440,9 @@ namespace KhaosChess
                 Square weak_ksq = pos.square<KING>(weak_side);
                 Square strong_ksq = pos.square<KING>(strong_side);
 
-                Value v = MATERIAL_SCORES.piece_value[QUEEN].eg -
-                          MATERIAL_SCORES.piece_value[ROOK].eg +
+                Value v = (MATERIAL_SCORES.piece_value[QUEEN] - MATERIAL_SCORES.piece_value[ROOK]).eg +
                           PUSH_TO_EDGE_BONUS[weak_ksq] +
-                          PUSH_CLOSER[distance<Rank>(strong_ksq, weak_ksq)]; // Because PUSH_CLOSER is with size RANK_NB = 8ULL
+                          PUSH_CLOSER[distance(strong_ksq, weak_ksq)];
 
                 return Value(std::min(int64_t(VALUE_KNOWN_WIN + v), int64_t(VALUE_MATE - 1)));
             }
@@ -273,7 +460,7 @@ namespace KhaosChess
                     v += MATERIAL_SCORES.piece_value[pt].eg * pos.count(strong_side, pt);
 
                 v += PUSH_TO_EDGE_BONUS[weak_ksq] +
-                     PUSH_CLOSER[distance<Rank>(strong_ksq, weak_ksq)]; // Because PUSH_CLOSER is with size RANK_NB = 8ULL
+                     PUSH_CLOSER[distance(strong_ksq, weak_ksq)]; // Because PUSH_CLOSER is with size RANK_NB = 8ULL
 
                 return Value(std::min(int64_t(VALUE_KNOWN_WIN + v), int64_t(VALUE_MATE - 1)));
             }
@@ -323,6 +510,24 @@ namespace KhaosChess
             }
 
             template <>
+            Value Endgame<ET_KQKP>::strong_side_score(const Position &pos) const
+            {
+                const Square weak_ksq = pos.square<KING>(weak_side);
+                const Square strong_ksq = pos.square<KING>(strong_side);
+                const Square pawn_sq = pos.square<PAWN>(strong_side);
+                const Square promotion_sq = make_square(file_of(pawn_sq), RANK_8); // Promotion square
+
+                if (Rank2_Bits & pawn_sq &&
+                    (pos.get_pieces_bb(PAWN, weak_side) & (FileA_Bits | FileC_Bits | FileF_Bits | FileH_Bits)) &&
+                    distance(weak_ksq, promotion_sq) <= 1)
+                {
+                    return VALUE_POSITIVE_DRAW + PUSH_CLOSER[distance(strong_ksq, pawn_sq)];
+                }
+
+                return VALUE_KNOWN_WIN + PUSH_CLOSER[distance(strong_ksq, pawn_sq)];
+            }
+
+            template <>
             Value Endgame<ET_KRKP>::strong_side_score(const Position &pos) const
             {
                 const Square weak_ksq = sq_relative_to_side(pos.square<KING>(weak_side), strong_side);
@@ -331,15 +536,15 @@ namespace KhaosChess
                 const Square promotion_sq = make_square(file_of(pawn_sq), RANK_8); // Promotion square
 
                 // if strong king is directly in front of the pawn
-                if (strong_ksq < pawn_sq && distance<File>(strong_ksq, pawn_sq) <= 1)
-                    return VALUE_KNOWN_WIN + PUSH_CLOSER[distance<Rank>(strong_ksq, weak_ksq)];
+                if (strong_ksq < pawn_sq && distance(strong_ksq, pawn_sq) <= 1)
+                    return VALUE_KNOWN_WIN + PUSH_CLOSER[distance(strong_ksq, weak_ksq)];
 
                 // If pawn is advanced and supported by the king while the strong king is far away
                 if (rank_of(pawn_sq) < RANK_5 && distance(weak_ksq, pawn_sq) <= 1 && distance(strong_ksq, pawn_sq) > 2)
                     return VALUE_POSITIVE_DRAW + Value(rank_of(pawn_sq));
 
                 return (MATERIAL_SCORES.piece_value[ROOK] - MATERIAL_SCORES.piece_value[PAWN]).eg -
-                       PUSH_CLOSER[distance<Rank>(pawn_sq, promotion_sq)];
+                       PUSH_CLOSER[distance(pawn_sq, promotion_sq)];
             }
 
             template <>
@@ -361,9 +566,9 @@ namespace KhaosChess
                 // Keep strong pieces (king and knights) close to the weak king
 
                 return MATERIAL_SCORES.piece_value[PAWN].eg +
-                       5 * (PUSH_CLOSER[distance<Rank>(strong_ksq, weak_ksq)] +
-                            PUSH_CLOSER[distance<Rank>(k1, weak_ksq)] +
-                            PUSH_CLOSER[distance<Rank>(k2, weak_ksq)] +
+                       5 * (PUSH_CLOSER[distance(strong_ksq, weak_ksq)] +
+                            PUSH_CLOSER[distance(k1, weak_ksq)] +
+                            PUSH_CLOSER[distance(k2, weak_ksq)] +
                             6 * Value(rank_of(pawn_sq))) +
                        PUSH_TO_EDGE_BONUS[weak_ksq];
             }
@@ -531,7 +736,7 @@ namespace KhaosChess
             bool Endgame<ET_KBPsK>::is_applicable(const Position &pos) const
             {
                 return pos.count<BISHOP>(strong_side) == 1 &&                              // Only one string bishop
-                       pos.count(strong_side, KNIGHT, ROOK, QUEEN) == 0 &&                 // No other pieces, except the bishop
+                       !pos.count(strong_side, KNIGHT, ROOK, QUEEN) &&                     // No other pieces, except the bishop
                        pos.count<PAWN>(strong_side) > 0 &&                                 // At least one pawn
                        pos.get_pieces_bb(weak_side) == pos.get_pieces_bb(KING, weak_side); // Get only the weak king
             }
@@ -539,11 +744,11 @@ namespace KhaosChess
             template <>
             bool Endgame<ET_KBPsKB>::is_applicable(const Position &pos) const
             {
-                return pos.count<BISHOP>(strong_side) == 1 &&                // Only one string bishop
-                       pos.count<BISHOP>(weak_side) == 1 &&                  // Only one weak bishop
-                       pos.count<PAWN>(strong_side) >= 1 &&                  // At least one pawn
-                       pos.count(strong_side, KNIGHT, ROOK, QUEEN) == 0 &&   // No other strong pieces
-                       pos.count(weak_side, PAWN, KNIGHT, ROOK, QUEEN) == 0; // No weak pieces or pawns
+                return pos.count<BISHOP>(strong_side) == 1 &&            // Only one string bishop
+                       pos.count<BISHOP>(weak_side) == 1 &&              // Only one weak bishop
+                       pos.count<PAWN>(strong_side) >= 1 &&              // At least one pawn
+                       !pos.count(strong_side, KNIGHT, ROOK, QUEEN) &&   // No other strong pieces
+                       !pos.count(weak_side, PAWN, KNIGHT, ROOK, QUEEN); // No weak pieces or pawns
             }
 
             template <>
@@ -557,8 +762,8 @@ namespace KhaosChess
                 // 5. No other pieces on the weak side (except the king and rook)
 
                 return pos.count<QUEEN>(strong_side) == 1 &&
-                       pos.count(strong_side, PAWN, KNIGHT, BISHOP) == 0 &&
-                       pos.count(weak_side, KNIGHT, BISHOP) == 0 &&
+                       !pos.count(strong_side, PAWN, KNIGHT, BISHOP) &&
+                       !pos.count(weak_side, KNIGHT, BISHOP) &&
                        pos.count<ROOK>(weak_side) == 1 &&
                        pos.count<PAWN>(weak_side) >= 1;
             }
@@ -569,11 +774,11 @@ namespace KhaosChess
                 const int strong_minors_count = pos.count(strong_side, KNIGHT, BISHOP);
                 const int weak_minors_count = pos.count(weak_side, KNIGHT, BISHOP);
 
-                return strong_minors_count == 2 &&                 // Exactly two two minor pieces on the strong side
-                       weak_minors_count == 1 &&                   // Exactly one minor piece on the weak side
-                       !pos.get_pieces_bb(PAWN) &&                 // No pawns on the board
-                       pos.count(strong_side, ROOK, QUEEN) == 0 && // No other pieces on the strong side
-                       pos.count(weak_side, ROOK, QUEEN) == 0;     // No other pieces on the weak side
+                return strong_minors_count == 2 &&             // Exactly two two minor pieces on the strong side
+                       weak_minors_count == 1 &&               // Exactly one minor piece on the weak side
+                       !pos.get_pieces_bb(PAWN) &&             // No pawns on the board
+                       !pos.count(strong_side, ROOK, QUEEN) && // No other pieces on the strong side
+                       !pos.count(weak_side, ROOK, QUEEN);     // No other pieces on the weak side
             }
         }; // namespace
 
@@ -614,7 +819,10 @@ namespace KhaosChess
         {
             for (const EndgameBasePtr &e : endgames)
                 if (e->is_applicable(pos))
+                {
+                    std::cout << "[Endgame] : ";
                     return e->score(pos);
+                }
 
             return VALUE_NONE;
         }
