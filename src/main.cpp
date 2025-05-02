@@ -5,8 +5,8 @@
 #include "bitboard.h"
 #include "perft.h"
 #include "uci.h"
-#include "score.h"
 #include "endgame.h"
+#include "score.h"
 
 using namespace KhaosChess;
 
@@ -16,9 +16,7 @@ int main()
 	BitBase::init();
 	Endgames::init();
 
-	bool debug = true;
-
-	if (debug)
+	if (0)
 	{
 		std::cout << "Debugging\n"
 				  << std::endl;
@@ -33,7 +31,7 @@ int main()
 
 		pos.set(kq_vs_kr, &infos->back());
 
-		Scorer<SC_ALL>().print_stats(pos);
+		std::cout << Scorer<SC_ALL>().get_score(pos) << std::endl;
 	}
 	else
 		uci_loop();

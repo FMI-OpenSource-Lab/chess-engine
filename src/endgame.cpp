@@ -820,7 +820,7 @@ namespace KhaosChess
             for (const EndgameBasePtr &e : endgames)
                 if (e->is_applicable(pos))
                 {
-                    std::cout << "[Endgame] : ";
+                    // std::cout << "[Endgame] : ";
                     return e->score(pos);
                 }
 

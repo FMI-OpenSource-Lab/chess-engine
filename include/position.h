@@ -220,6 +220,7 @@ namespace KhaosChess
 						  count<PAWN>(BLACK), count<KNIGHT>(BLACK), count<BISHOP>(BLACK), count<ROOK>(BLACK), count<QUEEN>(BLACK));
 	}
 
+	// Is square attacked by OPPONENT
 	inline bool Position::is_square_attacked(Square s, Color us) const
 	{
 		BITBOARD all = get_all_pieces_bb();
@@ -239,7 +240,8 @@ namespace KhaosChess
 			   is_rook_attack ||
 			   is_queen_attack;
 	}
-
+	
+	// Is square attacked by US
 	inline bool Position::is_square_attacked(Square s) const
 	{
 		assert(is_square_ok(s));

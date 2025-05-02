@@ -1,158 +1,98 @@
-#include "search.h"
+#include "search_engine.h"
 
-#include "score.h"
-#include "move.h"
 #include "movegen.h"
-#include "perft.h"
-#include "position.h"
+#include "score.h"
 
 #include <iostream>
-#include <limits>
-#include <math.h>
+#include <algorithm>
 
 namespace KhaosChess
 {
-	/*
-	int ply = 0;
-	int best_move = 0;
+	// Visibility is only for this .cpp file
+	static PLY_TYPE ply = 0;
+	static Move best_move = NO_MOVE;
+	static uint64_t nodes = 0;
 
-	int quiescence(int alpha, int beta)
+	inline Value quiescence(Value alpha, Value beta, Position &pos)
 	{
-		// increment nodes
 		nodes++;
 
-		// evaluate pos
-		int current_eval = evaluate();
+		Value current_score = Scorer<SC_ALL>().get_score(pos);
 
-		// fail hard beta proning
-		if (current_eval >= beta)
-			// node (move) fails high
+		// fail hard beta pruning
+		if (current_score >= beta)
 			return beta;
 
-		// better move
-		if (current_eval > alpha)
+		if (current_score > alpha)
+			alpha = current_score;
+
+		for (const auto &m : MoveList<GT_LEGAL>(pos))
 		{
-			// PV node (move)
-			alpha = current_eval;
-		}
+			MoveInfo move_info;
+			pos.do_move(m, move_info);
 
-		// create and generate moves
-		moves move_list[1];
-		generate_moves(move_list);
-
-		// loop over the moves
-		for (int mc = 0; mc < move_list->count; mc++)
-		{
-			// preserve state
-			copy_board();
-
-			// increase ply
 			ply++;
 
-			// only legal moves
-			if (make_move(move_list->moves[mc], GT_CAPTURE) == 0)
-			{
-				ply--;
-				continue; // skip to next move
-			}
+			Value score = -quiescence(-beta, -alpha, pos);
 
-			// score current move
-			int score = -quiescence(-beta, -alpha);
-
-			// reduce the ply
 			ply--;
 
-			// undo move
-			restore_board();
+			pos.undo_move(m);
 
-			// fail hard beta-cutoff
 			if (score >= beta)
-				// node (move) fails high
 				return beta;
 
-			// better move
 			if (score > alpha)
-				// PV node (move)
 				alpha = score;
 		}
 
 		return alpha;
 	}
 
-	int negamax(int alpha, int beta, int depth)
+	inline Value negamax(Value alpha, Value beta, int depth, Position &pos)
 	{
-		// base case for recursion
 		if (depth == 0)
-			return quiescence(alpha, beta);
+			return quiescence(alpha, beta, pos);
 
-		// increment nodes
 		nodes++;
 
-		Square king_square = getLS1B_square(!side ? bitboards[WHITE_KING] : bitboards[BLACK_KING]);
-		int in_check = is_square_attacked(king_square, ~side);
+		Color c = pos.side_to_move();
+		Square ksq = pos.square<KING>(c);
+		bool is_in_check = pos.is_square_attacked(ksq, ~c);
 
-		// incerase depth if king is exposed to check
-		if (in_check) depth++;
+		if (is_in_check)
+			depth++;
 
-		int legal_moves = 0; // legal moves counter
+		Move current_best = NO_MOVE;
+		Value old_alpha = alpha;
 
-		// to store the current best
-		int current_best = 0;
-		// to store the old alpha
-		int old_alpha = alpha;
-
-		// create and generate moves
-		moves move_list[1];
-		generate_moves(move_list);
-
-		// loop over the moves
-		for (int mc = 0; mc < move_list->count; mc++)
+		for (const auto &m : MoveList<GT_LEGAL>(pos))
 		{
-			// preserve state
-			copy_board();
+			MoveInfo move_info;
+			pos.do_move(m, move_info);
 
-			// increase ply
 			ply++;
 
-			// only legal moves
-			if (make_move(move_list->moves[mc], MT_NORMAL) == 0)
-			{
-				ply--;
-				continue; // skip to next move
-			}
+			Value score = -negamax(-beta, -alpha, depth - 1, pos);
 
-			// inc legal moves counter
-			legal_moves++;
-
-			// score current move
-			int score = -negamax(-beta, -alpha, depth - 1);
-
-			// reduce the ply
 			ply--;
 
-			// undo move
-			restore_board();
+			pos.undo_move(m);
 
-			// fail hard beta-cutoff
 			if (score >= beta)
-				// node (move) fails high
 				return beta;
 
-			// better move
 			if (score > alpha)
 			{
-				// PV node (move)
 				alpha = score;
 
-				// if root
 				if (ply == 0)
-					// best move with the best score
-					current_best = move_list->moves[mc];
+					current_best = m;
 			}
 		}
 
-		// dont have any legal moves in current position
-		if (legal_moves == 0)
+		// No legal moves
+		if (MoveList<GT_LEGAL>(pos).size() == 0)
 		{
 			// 2 cases are present at this time
 			// a: king is in check
@@ -164,136 +104,34 @@ namespace KhaosChess
 			// If the both paths have the same score the engine cannot be sure which path to take since its the same for it.
 			// by adding + ply value (which gets bigger the deeper it searches)
 			// we ensure that the mate that requires less moves moves alrays has the biggest score, hence its prefered as the better path
-			if (in_check) return -4900 + ply; // + ply is important
-			return 0; // b -> stalemate score
+
+			return (-4900 + ply) * is_in_check;
 		}
 
-		// better move appeared
 		if (old_alpha != alpha)
-			// init best move
 			best_move = current_best;
 
-		// node (move) fails low
 		return alpha;
 	}
 
-	void search_position(int depth)
+	void search_position(int depth, Position &pos)
 	{
-		// find best move within a given position
-		// int score = negamax(-50000, 50000, depth);
-		bool maximPlayer = (side == WHITE) ? true : false;
+		Color side = pos.side_to_move();
+		std::cout << "Move: " << best_move << "\n";
 
-		int score = minimax(-VALUE_INFINITE, VALUE_INFINITE, depth, maximPlayer);
-		// std::cout << "Minimax eval: " << score << "\n";
-		// std::cout << "nodes: " << nodes << "\n";
-		if (best_move)
+		Value score = negamax(-VALUE_INFINITE, VALUE_INFINITE, depth, pos);
+
+		std::cout << "Negamax: " << score << "\n";
+
+		if (best_move != NO_MOVE)
 		{
 			std::cout << "info score cp " << score
-				<< " depth " << depth
-				<< " nodes " << nodes
-				<< " side " << side << "\n";
+					  << " depth " << depth
+					  << " nodes " << nodes
+					  << " side " << (side == WHITE ? "WHITE" : "BLACK") << "\n";
 
-			std::cout << "bestmove ";
-			print_move(best_move);
-			std::cout << "\n";
+			std::cout << "bestmove " << best_move << "\n";
 		}
 	}
 
-	// Alpha beta pruning
-	int minimax(int alpha, int beta, int depth, bool maximizingPlayer)
-	{
-		// if depth is 0 or game is over
-		if (depth == 0) return quiescence(alpha, beta);
-
-		Square king_square = getLS1B_square(!side ? bitboards[WHITE_KING] : bitboards[BLACK_KING]);
-		int in_check = is_square_attacked(king_square, ~side);
-
-		// incerase depth if king is exposed to check
-		if (in_check) depth++;
-
-		// if playing with white
-		if (maximizingPlayer)
-		{
-			int maxEval = INT_MIN;
-
-			// create and generate moves
-			moves move_list[1];
-			generate_moves(move_list);
-
-			for (auto& mv : move_list->moves)
-			{
-				// do move
-				copy_board();
-
-				ply++;
-
-				// only legal moves
-				if (!make_move(mv, MT_NORMAL))
-				{
-					ply--;
-					continue;
-				}
-
-				print_board();
-				std::cin.get();
-
-				int eval = minimax(depth - 1, alpha, beta, false);
-
-				// undo move
-				restore_board();
-
-				maxEval = max(maxEval, eval);
-				alpha = max(alpha, eval);
-
-				if (beta <= alpha)
-				{
-					best_move = mv;
-					break;
-				}
-			}
-
-			return maxEval;
-		}
-		// playing with black
-		else
-		{
-			int minEval = INT_MAX;
-
-			// create and generate moves
-			moves move_list[1];
-			generate_moves(move_list);
-
-			for (auto& mv : move_list->moves)
-			{
-				// do move
-				copy_board();
-
-				ply++;
-
-				// only legal moves
-				if (make_move(mv, MT_NORMAL) == 0)
-				{
-					ply--;
-					continue;
-				}
-
-				int eval = minimax(depth - 1, alpha, beta, true);
-
-				// undo move
-				restore_board();
-
-				minEval = min(minEval, eval);
-				beta = min(beta, eval);
-
-				if (beta <= alpha)
-				{
-					best_move = mv;
-					break;
-				}
-			}
-
-			return minEval;
-		}
-	}
-	*/
 }

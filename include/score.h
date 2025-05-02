@@ -182,6 +182,7 @@ namespace KhaosChess
 
 		Value get_score(const Position &pos);
 		Value get_weight() { return weight; }
+
 		void print_stats(const Position &pos);
 
 	private:
@@ -191,19 +192,22 @@ namespace KhaosChess
 		Value game_phase_weights(const Position &pos)
 		{
 			Value w = 0;
-
+	
 			w += (pos.count<KNIGHT>(WHITE) + pos.count<KNIGHT>(BLACK)) * PIECE_WEIGHTS[KNIGHT];
 			w += (pos.count<BISHOP>(WHITE) + pos.count<BISHOP>(BLACK)) * PIECE_WEIGHTS[BISHOP];
 			w += (pos.count<ROOK>(WHITE) + pos.count<ROOK>(BLACK)) * PIECE_WEIGHTS[ROOK];
 			w += (pos.count<QUEEN>(WHITE) + pos.count<QUEEN>(BLACK)) * PIECE_WEIGHTS[QUEEN];
-
+	
 			return std::min(w, MAX_PIECE_WEIGHTS);
 		}
 
-		Value combine(const Score &score, const Value &weight)
-		{
-			assert(0 <= weight && weight <= MAX_PIECE_WEIGHTS);
-			return (score.mg * weight + score.eg * (MAX_PIECE_WEIGHTS - weight)) / MAX_PIECE_WEIGHTS;
-		}
+		Value combine(const Score &score, const Value &weight);
 	};
+
+	template <ScoreComponent T>
+	inline Value Scorer<T>::combine(const Score &score, const Value &weight)
+	{
+		assert(0 <= weight && weight <= MAX_PIECE_WEIGHTS);
+		return (score.mg * weight + score.eg * (MAX_PIECE_WEIGHTS - weight)) / MAX_PIECE_WEIGHTS;
+	}
 } // namespace KhaosChess

@@ -2,7 +2,7 @@
 #include "movegen.h"
 #include "move.h"
 #include "position.h"
-#include "search.h"
+#include "search_engine.h"
 #include "perft.h"
 
 #include <iostream>
@@ -104,7 +104,7 @@ namespace KhaosChess
 		if (current = strstr(cmd, "depth"))
 		{
 			depth = atoi(current + 6);
-			// search_position(depth);
+			search_position(depth, pos);
 		}
 		else if (current = strstr(cmd, "perft"))
 		{

@@ -623,6 +623,9 @@ namespace KhaosChess
 
 		std::cout << pos << std::endl;
 
+		Score w_score = score_all_material<T, WHITE>(pos);
+		Score b_score = score_all_material<T, BLACK>(pos);
+
 		std::cout << std::showpoint << std::noshowpos << std::fixed
 				  << std::setprecision(2)
 				  << "+---------+--------------+--------------+--------------+"
@@ -659,8 +662,9 @@ namespace KhaosChess
 				  << std::endl
 				  << "+---------+--------------+--------------+--------------+"
 				  << std::endl
-				  << "|   TOTAL |" << score << std::endl
-				  << "|  WEIGHT |" << Score(game_phase_weights(pos), MAX_PIECE_WEIGHTS) << std::endl
+				  << "|   TOTAL |" << P(w_score, b_score) << std::endl
+				  << "|  WEIGHT |" << Score(weight, MAX_PIECE_WEIGHTS)
+				  << "|              |              |" << std::endl
 				  << "+---------+--------------+--------------+--------------+"
 				  << std::endl;
 #undef P
@@ -680,11 +684,14 @@ namespace KhaosChess
 	template void Scorer<SC_PIECE_COORDINATION>::print_stats(const Position &);
 	template void Scorer<SC_ALL>::print_stats(const Position &);
 
-	/*
-		A likely cause of these abnormal values is that we are stacking the scores
-		and that's why the king gets 400 000 points in the middlegame for white
-	*/
+	template Value Scorer<SC_MATERIAL>::get_score(const Position &);
+	template Value Scorer<SC_MOBILITY>::get_score(const Position &);
+	template Value Scorer<SC_KING_SAFETY>::get_score(const Position &);
+	template Value Scorer<SC_PAWN_STRUCTURE>::get_score(const Position &);
+	template Value Scorer<SC_PIECE_COORDINATION>::get_score(const Position &);
+	template Value Scorer<SC_ALL>::get_score(const Position &);
 
+	
 	/*
 	inline int score_move(int move)
 	{

@@ -14,11 +14,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Add include directories
-include_directories(
-    "${CMAKE_SOURCE_DIR}/include"
-    )
+include_directories("${CMAKE_SOURCE_DIR}/include")
     
-# All cops files
+# All source files
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/src/*.cpp"
 )
