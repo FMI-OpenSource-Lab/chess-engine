@@ -7,6 +7,7 @@
 #include "uci.h"
 #include "endgame.h"
 #include "score.h"
+#include "search_engine.h"
 
 using namespace KhaosChess;
 
@@ -16,7 +17,7 @@ int main()
 	BitBase::init();
 	Endgames::init();
 
-	if (0)
+	if (1)
 	{
 		std::cout << "Debugging\n"
 				  << std::endl;
@@ -25,13 +26,10 @@ int main()
 		InfoListPtr infos(new std::deque<MoveInfo>(1));
 
 		// pin position: "3r4/bk6/8/r1pPK3/8/8/6B1/8 w - - 0 1";
-		// pos.set(TEST_FEN, &infos->back());
 
-		std::string kq_vs_kr = "8/3kr3/8/8/3K1Q2/8/8/8 w - - 0 1";
-
-		pos.set(kq_vs_kr, &infos->back());
-
-		std::cout << Scorer<SC_ALL>().get_score(pos) << std::endl;
+		pos.set(TEST_FEN, &infos->back());
+		
+		search_position(pos, 1);
 	}
 	else
 		uci_loop();

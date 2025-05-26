@@ -322,6 +322,8 @@ constexpr PCV modify_pcv(PCV pcv, int c)
 		Bits 48-63: Unused
 */
 
+using SCORE_TYPE = int;
+
 // Allow to use ++File, --File, ++Rank, --Rank and etc.
 #define ENABLE_INCR_OPERATORS_ON(T)                          \
 	inline T &operator++(T &d) { return d = T(int(d) + 1); } \

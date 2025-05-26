@@ -9,8 +9,6 @@
 !src/**
 !include/
 !include/**
-!tools/
-!tools/**
 
 # Do not remove CMakeLists.txt file
 !CMakeLists.txt

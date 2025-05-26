@@ -104,7 +104,7 @@ namespace KhaosChess
 		if (current = strstr(cmd, "depth"))
 		{
 			depth = atoi(current + 6);
-			search_position(depth, pos);
+			search_position(pos, depth);
 		}
 		else if (current = strstr(cmd, "perft"))
 		{

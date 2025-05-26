@@ -23,14 +23,29 @@ mkdir build
 cd build
 
 # 3. Configure the project (defaults to Release mode)
+
+## 3.1 Release mode (default)
 cmake ..
-
-# 4. Build (Release) default
-cmake --build .
-
-# 4.1 Build (Debug)
+## 3.2 Debug mode
 cmake -DCMAKE_BUILD_TYPE=Debug ..
+
+# 4. Build
 cmake --build .
 
 # 5. After building
-./Engine
+./KhaosChess
+```
+---
+### Visualization:
+
+You can use KhaosChess with a graphical chess interface (GUI) like [Arena Chess GUI](https://www.playwitharena.de/)
+
+#### How to integrate with Arena GUI (Windows example):
+
+1. Open Arena GUI.
+2. Go to **Engines → Install New Engine**.
+3. Navigate to your compiled `KhaosChess.exe` binary and select it.
+4. Arena will prompt you for engine settings (you can leave most as default).
+5. The engine will now appear in your list and can be used to play, test or run engine-vs-engine matches.
+
+**Note**: The engine accepts the **UCI (Universal Chess Interface)** protocol

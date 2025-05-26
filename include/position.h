@@ -285,7 +285,7 @@ namespace KhaosChess
 		return get_attackers_to(s, get_all_pieces_bb());
 	}
 
-	inline Piece Position::captured_piece() const { return captured; }
+	inline Piece Position::captured_piece() const { return move_info->captured_piece; }
 
 	inline void Position::place_piece(Piece p, Square s)
 	{
