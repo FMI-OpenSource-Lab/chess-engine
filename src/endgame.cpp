@@ -69,9 +69,9 @@ namespace KhaosChess
             if (distance(w_ksq, b_ksq) <= 1 || w_ksq == w_pawn || b_ksq == w_pawn || (side == WHITE && is_black_in_check))
                 return R_INVALID;
 
-            BITBOARD black_king_moves = attacks_bb_by<KING>(b_ksq) &  // Get the black king moves
-                                        ~attacks_bb_by<KING>(w_ksq) & // Intersect with all the squares except the white king attacks
-                                        ~attacks_bb_by<PAWN>(w_pawn); // Intersect with all the squares except the white pawn attacks
+            BITBOARD black_king_moves = attacks_bb_by<KING>(b_ksq) &     // Get the black king moves
+                                        ~attacks_bb_by<KING>(w_ksq) &    // Intersect with all the squares except the white king attacks
+                                        ~pawn_attacks_bb<WHITE>(w_pawn); // Intersect with all the squares except the white pawn attacks
 
             // If it's black's turn and there are no legal moves
             if (side == BLACK && !black_king_moves)

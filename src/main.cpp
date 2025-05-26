@@ -8,6 +8,7 @@
 #include "endgame.h"
 #include "score.h"
 #include "search_engine.h"
+#include "search_engine.h"
 
 using namespace KhaosChess;
 
@@ -17,6 +18,7 @@ int main()
 	BitBase::init();
 	Endgames::init();
 
+	if (1)
 	if (1)
 	{
 		std::cout << "Debugging\n"
@@ -28,7 +30,8 @@ int main()
 		// pin position: "3r4/bk6/8/r1pPK3/8/8/6B1/8 w - - 0 1";
 
 		pos.set(TEST_FEN, &infos->back());
-		
+		std::cout << pos;
+
 		search_position(pos, 1);
 	}
 	else
