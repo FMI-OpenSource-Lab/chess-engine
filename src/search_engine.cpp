@@ -163,6 +163,9 @@ namespace KhaosChess
         // Loop through capture moves
         for (const ScoredMoves &scored_move : captures)
         {
+            if (pos.is_legal(scored_move))
+                continue;
+
             Move move = scored_move; // Implicit conversion from ScoredMoves to Move
             MoveInfo move_info;
 
@@ -258,5 +261,5 @@ namespace KhaosChess
     }
 
     // Called from parse_go(…) when you want to do a depth‐limited search
-    
+
 } // namespace KhaosChess

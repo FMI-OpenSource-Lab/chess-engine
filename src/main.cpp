@@ -9,6 +9,7 @@
 #include "score.h"
 #include "search_engine.h"
 #include "search_engine.h"
+#include "search_engine.h"
 
 using namespace KhaosChess;
 
@@ -18,8 +19,7 @@ int main()
 	BitBase::init();
 	Endgames::init();
 
-	if (1)
-	if (1)
+	if (0)
 	{
 		std::cout << "Debugging\n"
 				  << std::endl;
@@ -32,7 +32,7 @@ int main()
 		pos.set(TEST_FEN, &infos->back());
 		std::cout << pos;
 
-		search_position(pos, 1);
+		search_position(pos, 5);
 	}
 	else
 		uci_loop();
