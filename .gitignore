@@ -13,6 +13,9 @@
 # Do not remove CMakeLists.txt file
 !CMakeLists.txt
 
+# Do not ignore run shell file
+!run.sh
+
 # Ignore often generated files and folders
 build/
 bin/

@@ -15,7 +15,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Add include directories
 include_directories("${CMAKE_SOURCE_DIR}/include")
-    
+
 # All source files
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/src/*.cpp"
@@ -29,6 +29,8 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 if (MINGW)
     target_compile_definitions(${PROJECT_NAME} PRIVATE WIN64 _AMD64_ IS_64BIT)
 endif()
+
+install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)
 
 # Show compiler and system information
 message(STATUS "System: ${CMAKE_SYSTEM_NAME}")

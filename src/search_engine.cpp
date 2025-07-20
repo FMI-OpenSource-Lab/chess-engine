@@ -155,15 +155,15 @@ namespace KhaosChess
             alpha = stand_pat;
 
         // Generate only capture moves
-        MoveList<GT_CAPTURE> captures(pos);
+        MoveList<GT_LEGAL> legals(pos);
 
-        // Score captures for better ordering
-        score_moves(captures.begin(), captures.end());
+        // Score legal moves for better ordering
+        score_moves(legals.begin(), legals.end());
 
         // Loop through capture moves
-        for (const ScoredMoves &scored_move : captures)
+        for (const ScoredMoves &scored_move : legals)
         {
-            if (pos.is_legal(scored_move))
+            if (!is_capture(scored_move))
                 continue;
 
             Move move = scored_move; // Implicit conversion from ScoredMoves to Move
