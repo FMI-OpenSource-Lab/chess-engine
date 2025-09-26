@@ -1,17 +1,19 @@
 cmake_minimum_required(VERSION 3.10)
 
+# Project name and version
+project(KhaosChess VERSION 2.1.2 LANGUAGES CXX)
+
 # If not explicitly set, default to Release build type
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "No build type specified. Defaulting to Release.")
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
 endif()
 
-# Project name and version
-project(KhaosChess VERSION 2.1.2 LANGUAGES CXX)
-
 # Compiler settings
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -Wextra -Wpedantic")
 
 # Add include directories
 include_directories("${CMAKE_SOURCE_DIR}/include")
@@ -30,7 +32,9 @@ if (MINGW)
     target_compile_definitions(${PROJECT_NAME} PRIVATE WIN64 _AMD64_ IS_64BIT)
 endif()
 
-install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)
+install(
+  TARGETS ${PROJECT_NAME}
+  RUNTIME DESTINATION bin)
 
 # Show compiler and system information
 message(STATUS "System: ${CMAKE_SYSTEM_NAME}")

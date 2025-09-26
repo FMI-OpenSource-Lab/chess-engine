@@ -1,11 +1,11 @@
 #pragma once
 
-#include "defs.h"
 #include <array>
 
-namespace KhaosChess
-{
-	// clang-format off
+#include "defs.h"
+
+namespace KhaosChess {
+// clang-format off
 
 	constexpr std::array<int, SQUARE_TOTAL> RELEVANT_BISHOP_BITS = 
 	{
