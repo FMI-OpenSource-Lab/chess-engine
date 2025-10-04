@@ -8,33 +8,54 @@ This project was created as a diploma thesis for the completion of my Bachelor's
 ### Requirements:
 - CMake ≥ 3.10
 - C++17-compatible compiler (GCC / Clang / MSVC)
-- (Optional) Ninja or Make
 
 ---
 ### Build steps:
+
+To manually build the project, you can follow these steps:
+
+Firstly clone the repository:
 
 ```bash
 # 1. Clone the repository
 git clone https://github.com/FMI-OpenSource-Lab/chess-engine.git
 cd chess-engine
+```
 
-# 2. Create a build directory
+Then create a build directory and navigate into it:
+```bash
 mkdir build
 cd build
+```
 
-# 3. Configure the project (defaults to Release mode)
-
-## 3.1 Release mode (default)
+To configure and build the project in `debug` or `release` mode, you can use the following commands:
+```bash
+# Release mode (default)
 cmake ..
-## 3.2 Debug mode
-cmake -DCMAKE_BUILD_TYPE=Debug ..
 
-# 4. Build
+# Debug mode
+cmake -DCMAKE_BUILD_TYPE=Debug .. -DCMAKE_CXX_FLAGS_DEBUG="-DDEBUG_MODE"
+
+# Build
 cmake --build .
+```
 
-# 5. After building
+After building, when already in `build` folder, you can run the engine with:
+```bash
 ./KhaosChess
 ```
+
+Alternatively, if you are on Linux, you can use the provided `run.sh` script to automate these steps.
+This script also supports an `install` option to install the binary on the root where it could be accessed from anywhere.
+**Requires root privileges for installation.**
+
+Clone the repository as mentioned above, then run in the **project** root:
+```bash
+source run.sh
+```
+
+After that a menu would appear prompting the user to choose between building in `debug`, `release` mode or doing an `incremental-build` with custom CMake flags.
+
 ---
 ### Visualization:
 
@@ -44,7 +65,7 @@ You can use KhaosChess with a graphical chess interface (GUI) like [Arena Chess 
 
 1. Open Arena GUI.
 2. Go to **Engines → Install New Engine**.
-3. Navigate to your compiled `KhaosChess.exe` binary and select it.
+3. Navigate to your compiled binary called `KhaosChess` (on Windows:`KhaosChess.exe`) and select it.
 4. Arena will prompt you for engine settings (you can leave most as default).
 5. The engine will now appear in your list and can be used to play, test or run engine-vs-engine matches.
 

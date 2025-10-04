@@ -13,25 +13,30 @@
 using namespace KhaosChess;
 
 int main() {
-    Bitboards::init();
-    BitBase::init();
-    Endgames::init();
+  Bitboards::init();
+  BitBase::init();
+  Endgames::init();
 
-    if (DEBUG_MODE) {
-        std::cout << "Debugging\n" << std::endl;
+#ifdef DEBUG_MODE
+  std::cout << "Debugging\n" << std::endl;
 
-        Position pos{};
-        InfoListPtr infos(new std::deque<MoveInfo>(1));
+  Position pos{};
+  InfoListPtr infos(new std::deque<MoveInfo>(1));
 
-        // pin position: "3r4/bk6/8/r1pPK3/8/8/6B1/8 w - - 0 1";
+  // pin position: "3r4/bk6/8/r1pPK3/8/8/6B1/8 w - - 0 1";
 
-        pos.set(TEST_FEN, &infos->back());
-        std::cout << pos;
+  pos.set(TEST_FEN, &infos->back());
+  std::cout << pos;
 
-        search_position(pos, 5);
-    } else
-        uci_loop();
+  // TODO: Fix search_position
+  search_position(pos, 5);
 
-    // system("pause");
-    return 0;
+  return 0;
+#endif
+
+  // Start the UCI loop
+  uci_loop();
+
+  // system("pause");
+  return 0;
 }

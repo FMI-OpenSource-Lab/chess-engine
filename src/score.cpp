@@ -51,7 +51,7 @@ Score score_pawns(const Position &pos) {
   constexpr Color Them = ~Us;
   constexpr Direction Up = pawn_push_direction(Us);
   constexpr Direction Down = pawn_push_direction(Them);
-  constexpr int inc = Us == WHITE ? 1 : -1;
+  constexpr std::int32_t inc = Us == WHITE ? 1 : -1;
 
   Score score = 0;
 
@@ -113,8 +113,8 @@ Score score_pawns(const Position &pos) {
       if (are_doubled) score += PAWN_STRUCTURE_SCORES.doubled;
       if (support | phalanx) {
         score += Score(PAWN_STRUCTURE_SCORES.connected_bonus[rel_r] *
-                       (1 + static_cast<int>(bool(phalanx)) -
-                        static_cast<int>(bool(opposed))));
+                       (1 + static_cast<std::int32_t>(bool(phalanx)) -
+                        static_cast<std::int32_t>(bool(opposed))));
         score += Score(10 * count_bits(support));
       } else if (!neighbors)
         score += PAWN_STRUCTURE_SCORES.isolated;
@@ -505,7 +505,7 @@ Score score_king(const Position &pos) {
           pos.get_attacks_by<PAWN>(Them) | attacks_bb_by<KING>(enemy_ksq);
 
       if ((back_rank_area & blocked) == back_rank_area)
-        score += KING_SAFETY_SCORES.weak_backrank;
+        score += KING_SAFETY_SCORES.weak_back_rank;
     }
 
     // This approach will work becase as we evaluate for the both sides
@@ -689,7 +689,7 @@ template Value Scorer<SC_PIECE_COORDINATION>::get_score(const Position &);
 template Value Scorer<SC_ALL>::get_score(const Position &);
 
 /*
-inline int score_move(int move)
+inline std::int32_t score_move(std::int32_t move)
 {
         // score capture moves
         if (get_move_capture(move))
@@ -720,19 +720,19 @@ inline int score_move(int move)
         return 0;
 }
 
-int sort_move(moves* move_list)
+std::int32_t sort_move(moves* move_list)
 {
         // move scores
-        std::unique_ptr<int[]> move_scores =
-std::make_unique<int[]>(move_list->count);
+        std::unique_ptr<std::int32_t[]> move_scores =
+std::make_unique<std::int32_t[]>(move_list->count);
 
         std::cout << "\n\n";
-        for (int c = 0; c < move_list->count; c++)
+        for (std::int32_t c = 0; c < move_list->count; c++)
                 move_scores[c] = score_move(move_list->moves[c]);
 
-        for (int curr_mv = 0; curr_mv < move_list->count; curr_mv++)
-                for (int next_mv = curr_mv + 1; next_mv < move_list->count;
-next_mv++)
+        for (std::int32_t curr_mv = 0; curr_mv < move_list->count; curr_mv++)
+                for (std::int32_t next_mv = curr_mv + 1; next_mv <
+move_list->count; next_mv++)
                 {
                         // cmp current and next move scores
                         if (move_scores[curr_mv] < move_scores[next_mv])
@@ -754,7 +754,7 @@ void print_move_scores(moves* move_list)
         printf("     Move scores:\n\n");
 
         // loop over moves within a move list
-        for (int count = 0; count < move_list->count; count++)
+        for (std::int32_t count = 0; count < move_list->count; count++)
         {
                 printf("     move: ");
                 print_move(move_list->moves[count]);
