@@ -7,7 +7,7 @@
 namespace KhaosChess {
 // clang-format off
 
-	constexpr std::array<int, SQUARE_TOTAL> RELEVANT_BISHOP_BITS = 
+	constexpr std::array<std::int8_t, SQUARE_TOTAL> RELEVANT_BISHOP_BITS =
 	{
 		6, 5, 5, 5, 5, 5, 5, 6,
 		5, 5, 5, 5, 5, 5, 5, 5,
@@ -19,7 +19,7 @@ namespace KhaosChess {
 		6, 5, 5, 5, 5, 5, 5, 6
 	};
 
-	constexpr std::array<int, SQUARE_TOTAL> RELEVANT_ROOK_BITS =
+	constexpr std::array<std::int8_t, SQUARE_TOTAL> RELEVANT_ROOK_BITS =
 	{
 		12, 11, 11, 11, 11, 11, 11, 12,
 		11, 10, 10, 10, 10, 10, 10, 11,
@@ -32,7 +32,7 @@ namespace KhaosChess {
 	};
 
 	// rook magic numbers
-	constexpr std::array<BITBOARD, SQUARE_TOTAL> ROOK_MAGIC_NUMBERS = 
+	constexpr std::array<BITBOARD, SQUARE_TOTAL> ROOK_MAGIC_NUMBERS =
 	{
 		0x8a80104000800020ULL,
 		0x140002000100040ULL,
@@ -101,7 +101,7 @@ namespace KhaosChess {
 	};
 
 	// bishop magic numbers
-	constexpr std::array<BITBOARD, SQUARE_TOTAL> BISHOP_MAGIC_NUMBERS = 
+	constexpr std::array<BITBOARD, SQUARE_TOTAL> BISHOP_MAGIC_NUMBERS =
 	{
 		0x40040844404084ULL,
 		0x2004208a004208ULL,
@@ -186,7 +186,7 @@ namespace KhaosChess {
 	*/
 
 	// castling rights update constants
-	constexpr std::array<int, SQUARE_TOTAL> CASTLING_RIGHTS_TABLE = 
+	constexpr std::array<std::int32_t, SQUARE_TOTAL> CASTLING_RIGHTS_TABLE =
 	{
 		7, 15, 15, 15, 3, 15, 15, 11,
 		15, 15, 15, 15, 15, 15, 15, 15,

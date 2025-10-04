@@ -39,7 +39,8 @@ function debug() {
         mkdir build
 
         print-yellow "Build and configure into build folder!\n"
-        incremental-build -DCMAKE_BUILD_TYPE=Debug
+        incremental-build -DCMAKE_BUILD_TYPE=Debug                             \
+            -DCMAKE_CXX_FLAGS_DEBUG="-DDEBUG_MODE"
     )
 }
 
@@ -64,7 +65,7 @@ function incremental-build() {
         cd build
 
         # Take build type type as argument
-        cmake ${1} ..                                                       && {
+        cmake ${@} ..                                                       && {
             print-green "CMake: Successful configure!\n"
 
             cmake --build .                                                 && {
@@ -75,20 +76,21 @@ function incremental-build() {
                 sudo cmake --install . --prefix "/usr"                      && {
                     print-green "CMake: Installed successfully!\n"
                 }                                                           || {
-                    print-red "CMake: Installing failed!\n"
+                    print-red "CMake: Installing failed!\n";
+                    return 1;
                 }
             }                                                               || {
-                print-red "CMake: Build failed!\n"
+                print-red "CMake: Build failed!\n";
+                return 1;
             }
         }                                                                   || {
-            print-red "CMake: Configuration failed!\n"
+            print-red "CMake: Configuration failed!\n";
+            return 1;
         }
-    )
-
-    [ ${?} -ne 0 ]                                                          && {
-        print-red "CMake: Error occurred!\n"
-    }                                                                       || {
+    ) && {
         print-green "CMake: Success!\n"
+    }                                                                       || {
+        print-red "CMake: Error occurred!\n"
     }
 }
 
@@ -98,3 +100,4 @@ print-yellow "release\n"
 print-orange "  Builds with Release mode\n"
 print-yellow "incremental-build\n"
 print-orange "  Does incremental build with last build mode\n"
+print-orange "  Can be built with a specific flags passed as arguments\n"

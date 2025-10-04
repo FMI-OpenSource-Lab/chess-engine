@@ -90,7 +90,7 @@ void parse_position(const char* cmd, Position& pos, MoveInfo& mi) {
 }
 
 void parse_go(const char* cmd, Position& pos) {
-  int depth = 5;
+  std::int32_t depth = 5;
   const char* current = cmd;
 
   current += 3;

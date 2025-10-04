@@ -6,7 +6,7 @@ SearchEngine::SearchEngine(Position &pos)
       max_time(std::chrono::milliseconds(3000)),  // Default 3 seconds
       should_stop(false) {}
 
-Value SearchEngine::search(int depth, SearchInfo &info) {
+Value SearchEngine::search(std::int32_t depth, SearchInfo &info) {
   // Reset search info
   info = SearchInfo();
   info.depth = depth;
@@ -18,7 +18,8 @@ Value SearchEngine::search(int depth, SearchInfo &info) {
   Value beta = VALUE_INFINITE;
 
   // Iterative deepening
-  for (int current_depth = 1; current_depth <= depth; ++current_depth) {
+  for (std::int32_t current_depth = 1; current_depth <= depth;
+       ++current_depth) {
     std::vector<Move> current_pv;
     negamax(current_depth, alpha, beta, info, current_pv);
 
@@ -37,7 +38,7 @@ Value SearchEngine::search(int depth, SearchInfo &info) {
   return Scorer<SC_ALL>().get_score(pos);
 }
 
-Value SearchEngine::negamax(int depth, Value alpha, Value beta,
+Value SearchEngine::negamax(std::int32_t depth, Value alpha, Value beta,
                             SearchInfo &info, std::vector<Move> &pv) {
   pv.clear();
   Value score = Scorer<SC_ALL>().get_score(pos);
@@ -129,7 +130,7 @@ Value SearchEngine::quiescence(Value alpha, Value beta, SearchInfo &info) {
   }
 
   // Increment quiescence node counter
-  info.qnodes++;
+  info.q_nodes++;
 
   // Stand-pat cutoff
   if (stand_pat >= beta) return beta;
@@ -236,5 +237,32 @@ void SearchEngine::set_max_time(std::chrono::milliseconds max_time) {
 }
 
 // Called from parse_go(…) when you want to do a depth‐limited search
+
+void search_position(Position &pos, std::int32_t depth) {
+  // one MoveInfo per move in the history stack (already in uci_loop)
+  // static MoveInfo dummy_mi;
+
+  // build engine and info
+  SearchEngine engine(pos);
+  SearchInfo info;
+
+  // optional: set a time limit
+  // engine.set_max_time(std::chrono::milliseconds(3000));
+
+  // run the search
+  engine.search(depth, info);
+
+  // output best move
+  if (!info.pv.empty()) {
+    // assumes Move::uci() or similar returns e.g. "e2e4"
+    std::cout << "bestmove " << info.pv[0] << "\n";
+  } else {
+    // no legal moves (checkmate or stalemate)
+    std::cout << "bestmove 0000\n";
+  }
+
+  // flush so GUI sees it immediately
+  std::cout.flush();
+}
 
 }  // namespace KhaosChess
