@@ -238,31 +238,68 @@ void SearchEngine::set_max_time(std::chrono::milliseconds max_time) {
 
 // Called from parse_go(…) when you want to do a depth‐limited search
 
-void search_position(Position &pos, std::int32_t depth) {
-  // one MoveInfo per move in the history stack (already in uci_loop)
-  // static MoveInfo dummy_mi;
-
-  // build engine and info
-  SearchEngine engine(pos);
-  SearchInfo info;
-
-  // optional: set a time limit
-  // engine.set_max_time(std::chrono::milliseconds(3000));
-
-  // run the search
-  engine.search(depth, info);
-
-  // output best move
-  if (!info.pv.empty()) {
-    // assumes Move::uci() or similar returns e.g. "e2e4"
-    std::cout << "bestmove " << info.pv[0] << "\n";
-  } else {
-    // no legal moves (checkmate or stalemate)
-    std::cout << "bestmove 0000\n";
+Value alpha_beta_max(Position &pos, Value alpha, Value beta, std::int32_t depth,
+                     Value &best_score) {
+  if (depth == 0) {
+    return Scorer<SC_ALL>().get_score(pos);
   }
 
-  // flush so GUI sees it immediately
-  std::cout.flush();
+  best_score = -VALUE_INFINITE;
+
+  for (auto m : MoveList<GT_LEGAL>(pos)) {
+    MoveInfo mi{};
+    pos.do_move(m, mi);
+
+    Value score = alpha_beta_min(pos, alpha, beta, depth - 1, best_score);
+
+    if (score > best_score) {
+      best_score = score;
+      if (score > alpha) {
+        // alpha acts like max in minimax
+        alpha = score;
+      }
+    }
+    if (score >= beta) {
+      return score;  // cut-off
+    }
+
+    pos.undo_move(m);
+  }
+
+  return best_score;
+}
+
+Value alpha_beta_min(Position &pos, Value alpha, Value beta, std::int32_t depth,
+                     Value &best_score) {
+  if (depth == 0) {
+    return -Scorer<SC_ALL>().get_score(pos);
+  }
+
+  best_score = VALUE_INFINITE;
+
+  for (auto m : MoveList<GT_LEGAL>(pos)) {
+    MoveInfo mi{};
+    pos.do_move(m, mi);
+
+    Value score = alpha_beta_max(pos, alpha, beta, depth - 1, best_score);
+
+    if (score < best_score) {
+      best_score = score;
+
+      if (score < beta) {
+        // beta acts like min in minimax
+        beta = score;
+      }
+    }
+
+    if (score <= alpha) {
+      return score;  // fail soft alpha-cutoff
+    }
+
+    pos.undo_move(m);
+  }
+
+  return best_score;
 }
 
 }  // namespace KhaosChess

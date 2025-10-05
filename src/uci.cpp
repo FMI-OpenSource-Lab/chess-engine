@@ -98,7 +98,8 @@ void parse_go(const char* cmd, Position& pos) {
   // fixed depth search
   if ((current = strstr(cmd, "depth"))) {
     depth = atoi(current + 6);
-    search_position(pos, depth);
+    // search_position(pos, depth);
+
   } else if ((current = strstr(cmd, "perft"))) {
     depth = atoi(current + 6);
     perft_debug(pos, depth);

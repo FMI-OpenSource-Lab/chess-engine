@@ -52,5 +52,9 @@ class SearchEngine {
                  const std::vector<Move> &child_pv);
 };
 
-void search_position(Position &pos, std::int32_t depth);
+Value alpha_beta_max(Position &pos, Value alpha, Value beta, std::int32_t depth,
+                     Value &best_score);
+Value alpha_beta_min(Position &pos, Value alpha, Value beta, std::int32_t depth,
+                     Value &best_score);
+
 }  // namespace KhaosChess

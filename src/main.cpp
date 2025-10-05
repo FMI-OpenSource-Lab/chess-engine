@@ -28,8 +28,10 @@ int main() {
   pos.set(TEST_FEN, &infos->back());
   std::cout << pos;
 
-  // TODO: Fix search_position
-  search_position(pos, 5);
+  Value best = 0;
+  alpha_beta_max(pos, -VALUE_INFINITE, VALUE_INFINITE, 3, best);
+
+  std::cout << best << "\n";
 
   return 0;
 #endif
