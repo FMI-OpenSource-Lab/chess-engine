@@ -11,7 +11,7 @@ class Position;
 // The evaluation is done using a combination of material and positional
 // evaluation
 namespace Eval {
-Value simple_evaluation(const Position &);
-Value evaluate(const Position &);
+Value simple_evaluation(const Position&);
+Value evaluate(const Position&);
 }  // namespace Eval
 }  // namespace KhaosChess

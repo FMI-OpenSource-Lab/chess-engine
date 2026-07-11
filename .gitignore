@@ -43,3 +43,6 @@ cmake_install.cmake
 *.swp
 *.user
 *.vcxproj*
+
+!tests/
+!tests/**

@@ -464,6 +464,10 @@ Score score_king_safety(const Position &pos) {
 
 template <ScoreComponent Component, Color Us>
 Score score_king(const Position &pos) {
+  // Both kings must be on the board; a missing king means an illegal
+  // position reached the evaluation (e.g. a generated king capture)
+  assert(pos.count<KING>(Us) == 1 && pos.count<KING>(~Us) == 1);
+
   const Color Them = ~Us;
   const Square our_ksq = pos.square<KING>(Us);
   const Square enemy_ksq = pos.square<KING>(Them);

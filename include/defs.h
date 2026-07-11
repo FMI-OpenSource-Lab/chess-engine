@@ -7,7 +7,7 @@
 #define AUTHOR "Iulian Dashev"
 
 #if defined(_WIN64) && defined(_MSC_VER)  // No Makefile used
-#include <intrin.h>  // Microsoft header for _BitScanForward64()
+#include <intrin.h>                       // Microsoft header for _BitScanForward64()
 #define IS_64BIT
 #endif
 
@@ -68,217 +68,247 @@ constexpr const char *squareToCoordinates[] = {
 // clang-format on
 
 enum PieceType : std::int8_t {
-  NO_PIECE_TYPE,
-  PAWN,
-  KNIGHT,
-  BISHOP,
-  ROOK,
-  QUEEN,
-  KING,
-  ALL_PIECES = 0,
-  PIECE_TYPE_NB = 8
+    NO_PIECE_TYPE,
+    PAWN,
+    KNIGHT,
+    BISHOP,
+    ROOK,
+    QUEEN,
+    KING,
+    ALL_PIECES = 0,
+    PIECE_TYPE_NB = 8
 };
 
 enum Piece : std::int8_t {
-  NO_PIECE,
+    NO_PIECE,
 
-  WHITE_PAWN,
-  WHITE_KNIGHT,
-  WHITE_BISHOP,
-  WHITE_ROOK,
-  WHITE_QUEEN,
-  WHITE_KING,
+    WHITE_PAWN,
+    WHITE_KNIGHT,
+    WHITE_BISHOP,
+    WHITE_ROOK,
+    WHITE_QUEEN,
+    WHITE_KING,
 
-  BLACK_PAWN,
-  BLACK_KNIGHT,
-  BLACK_BISHOP,
-  BLACK_ROOK,
-  BLACK_QUEEN,
-  BLACK_KING,
+    BLACK_PAWN,
+    BLACK_KNIGHT,
+    BLACK_BISHOP,
+    BLACK_ROOK,
+    BLACK_QUEEN,
+    BLACK_KING,
 
-  PIECE_NB = 14
+    PIECE_NB = 14
 };
 
-enum Color : std::int8_t { WHITE, BLACK, BOTH };
+enum Color : std::int8_t { WHITE,
+                           BLACK,
+                           BOTH };
 
 enum Direction : std::int8_t {
-  DOWN = 8,
-  RIGHT = 1,
-  UP = -DOWN,
-  LEFT = -RIGHT,
+    DOWN = 8,
+    RIGHT = 1,
+    UP = -DOWN,
+    LEFT = -RIGHT,
 
-  DOWN_LEFT = DOWN + LEFT,
-  UP_LEFT = UP + LEFT,
-  UP_RIGHT = UP + RIGHT,
-  DOWN_RIGHT = DOWN + RIGHT
+    DOWN_LEFT = DOWN + LEFT,
+    UP_LEFT = UP + LEFT,
+    UP_RIGHT = UP + RIGHT,
+    DOWN_RIGHT = DOWN + RIGHT
 };
 
 enum File : std::int8_t {
-  FILE_A,
-  FILE_B,
-  FILE_C,
-  FILE_D,
-  FILE_E,
-  FILE_F,
-  FILE_G,
-  FILE_H,
-  FILE_NB
+    FILE_A,
+    FILE_B,
+    FILE_C,
+    FILE_D,
+    FILE_E,
+    FILE_F,
+    FILE_G,
+    FILE_H,
+    FILE_NB
 };
 
 enum Rank : std::int8_t {
-  RANK_8,
-  RANK_7,
-  RANK_6,
-  RANK_5,
-  RANK_4,
-  RANK_3,
-  RANK_2,
-  RANK_1,
-  RANK_NB
+    RANK_8,
+    RANK_7,
+    RANK_6,
+    RANK_5,
+    RANK_4,
+    RANK_3,
+    RANK_2,
+    RANK_1,
+    RANK_NB
 };
 
 enum CastlingRights : std::int8_t {
-  CASTLE_NB = 0,
-  WK = 1,
-  WQ = 2,
-  BK = 4,
-  BQ = 8,
+    CASTLE_NB = 0,
+    WK = 1,
+    WQ = 2,
+    BK = 4,
+    BQ = 8,
 
-  KINGSIDE = WK | BK,
-  QUEENSIDE = WQ | BQ,
-  WHITE_CASTLE = WK | WQ,
-  BLACK_CASTLE = BK | BQ,
-  ANY = WHITE_CASTLE | BLACK_CASTLE,
+    KINGSIDE = WK | BK,
+    QUEENSIDE = WQ | BQ,
+    WHITE_CASTLE = WK | WQ,
+    BLACK_CASTLE = BK | BQ,
+    ANY = WHITE_CASTLE | BLACK_CASTLE,
 
-  CASTLING_RIGHT_NB = 16
+    CASTLING_RIGHT_NB = 16
 };
 
-constexpr bool is_square_ok(Square s) { return s >= A8 && s <= H1; }
+constexpr bool is_square_ok(Square s) {
+    return s >= A8 && s <= H1;
+}
 
 // Castling Rights operator overloads
 inline CastlingRights operator&(Color c, CastlingRights cr) {
-  return CastlingRights((c == WHITE ? WHITE_CASTLE : BLACK_CASTLE) & cr);
+    return CastlingRights((c == WHITE ? WHITE_CASTLE : BLACK_CASTLE) & cr);
 }
-inline CastlingRights operator|(CastlingRights &c, CastlingRights a) {
-  return CastlingRights(std::int32_t(c) | std::int32_t(a));
+inline CastlingRights operator|(CastlingRights& c, CastlingRights a) {
+    return CastlingRights(std::int32_t(c) | std::int32_t(a));
 };
-inline CastlingRights operator&(CastlingRights &c, std::int32_t d) {
-  return CastlingRights(std::int32_t(c) & std::int32_t(d));
+inline CastlingRights operator&(CastlingRights& c, std::int32_t d) {
+    return CastlingRights(std::int32_t(c) & std::int32_t(d));
 }
-inline CastlingRights &operator|=(CastlingRights &lhs, CastlingRights rhs) {
-  lhs = static_cast<CastlingRights>(static_cast<std::int32_t>(lhs) |
-                                    static_cast<std::int32_t>(rhs));
-  return lhs;
+inline CastlingRights& operator|=(CastlingRights& lhs, CastlingRights rhs) {
+    lhs = static_cast<CastlingRights>(static_cast<std::int32_t>(lhs) |
+                                      static_cast<std::int32_t>(rhs));
+    return lhs;
 }
 // Direction operator overloads
 constexpr Direction operator+(Direction d1, Direction d2) {
-  return Direction(std::int32_t(d1) + std::int32_t(d2));
+    return Direction(std::int32_t(d1) + std::int32_t(d2));
 }
 constexpr Direction operator*(std::int32_t i, Direction d) {
-  return Direction(i * std::int32_t(d));
+    return Direction(i * std::int32_t(d));
 }
 constexpr Direction pawn_push_direction(Color c) {
-  return c == WHITE ? UP : DOWN;
+    return c == WHITE ? UP : DOWN;
 }
 
 // Additional operators to add a Direction to a Square
 constexpr Square operator+(Square s, Direction d) {
-  return Square(std::int32_t(s) + std::int32_t(d));
+    return Square(std::int32_t(s) + std::int32_t(d));
 }
 constexpr Square operator-(Square s, Direction d) {
-  return Square(std::int32_t(s) - std::int32_t(d));
+    return Square(std::int32_t(s) - std::int32_t(d));
 }
 constexpr Square operator-(Square s, std::int32_t d) {
-  return Square(std::int32_t(s) - d);
+    return Square(std::int32_t(s) - d);
 }
 constexpr Square operator+(Square s, std::int32_t d) {
-  return Square(std::int32_t(s) + d);
+    return Square(std::int32_t(s) + d);
 }
-inline Square &operator+=(Square &s, Direction d) { return s = s + d; }
-inline Square &operator-=(Square &s, Direction d) { return s = s - d; }
+inline Square& operator+=(Square& s, Direction d) {
+    return s = s + d;
+}
+inline Square& operator-=(Square& s, Direction d) {
+    return s = s - d;
+}
 
 inline Square operator|(Square s1, Square s2) {
-  return Square(std::int32_t(s1) | std::int32_t(s2));
+    return Square(std::int32_t(s1) | std::int32_t(s2));
 }
 inline Square operator|(Square s1, std::int32_t n) {
-  return Square(std::int32_t(s1) | n);
+    return Square(std::int32_t(s1) | n);
 }
 
 inline bool operator==(Square s1, Square s2) {
-  return std::int32_t(s1) == std::int32_t(s2);
+    return std::int32_t(s1) == std::int32_t(s2);
 }
 
 // Additional operators to increment the files by some value
 constexpr File operator+(File f, std::int32_t d) {
-  return File(std::int32_t(f) + d);
+    return File(std::int32_t(f) + d);
 }
 constexpr File operator-(File f, std::int32_t d) {
-  return File(std::int32_t(f) - d);
+    return File(std::int32_t(f) - d);
 }
-constexpr File operator+(File f, File d) { return File(f + std::int32_t(d)); }
-constexpr File operator-(File f, File d) { return File(f - std::int32_t(d)); }
+constexpr File operator+(File f, File d) {
+    return File(f + std::int32_t(d));
+}
+constexpr File operator-(File f, File d) {
+    return File(f - std::int32_t(d));
+}
 
-inline File &operator+=(File &f, std::int32_t i) { return f = f + i; }
+inline File& operator+=(File& f, std::int32_t i) {
+    return f = f + i;
+}
 
 // Additional operators to increment the files by some value
 constexpr Rank operator+(Rank f, std::int32_t d) {
-  return Rank(std::int32_t(f) + d);
+    return Rank(std::int32_t(f) + d);
 }
 constexpr Rank operator-(Rank f, std::int32_t d) {
-  return Rank(std::int32_t(f) - d);
+    return Rank(std::int32_t(f) - d);
 }
-constexpr Rank operator+(Rank f, Rank d) { return Rank(f + std::int32_t(d)); }
-constexpr Rank operator-(Rank f, Rank d) { return Rank(f - std::int32_t(d)); }
+constexpr Rank operator+(Rank f, Rank d) {
+    return Rank(f + std::int32_t(d));
+}
+constexpr Rank operator-(Rank f, Rank d) {
+    return Rank(f - std::int32_t(d));
+}
 
 // Toggle the colour
-constexpr Color operator~(Color c) { return Color(c ^ 1); }
+constexpr Color operator~(Color c) {
+    return Color(c ^ 1);
+}
 
 // Toggle the piece (WHITE_PAWN to BLACK_PAWN)
-constexpr Piece operator~(Piece p) { return Piece(p ^ 8); }
+constexpr Piece operator~(Piece p) {
+    return Piece(p ^ 8);
+}
 
 // Rank and File operator overloads
-constexpr File file_of(Square s) { return File(s % 8); }
-constexpr Rank rank_of(Square s) { return Rank(s >> 3); }
+constexpr File file_of(Square s) {
+    return File(s % 8);
+}
+constexpr Rank rank_of(Square s) {
+    return Rank(s >> 3);
+}
 constexpr Rank rank_relative_to_side(Color c, Rank r) {
-  return Rank(r ^ (c * 7));
+    return Rank(r ^ (c * 7));
 }
 
 // Square helper methods
 constexpr Square convert_to_square(std::int32_t rank, std::int32_t file) {
-  return Square(rank * 8 + file);
+    return Square(rank * 8 + file);
 }
 constexpr Square convert_to_square(Rank rank, File file) {
-  return convert_to_square(std::int32_t(rank), std::int32_t(file));
+    return convert_to_square(std::int32_t(rank), std::int32_t(file));
 }
-constexpr Square make_square(File f, Rank r) { return Square((r << 3) + f); }
+constexpr Square make_square(File f, Rank r) {
+    return Square((r << 3) + f);
+}
 constexpr Square sq_relative_to_side(Square s, Color c) {
-  return Square(std::int32_t(s) ^ (c * 56));
+    return Square(std::int32_t(s) ^ (c * 56));
 }
 constexpr Square flip_rankwise(Square s) {
-  return make_square(file_of(s), Rank(RANK_1 - rank_of(s)));
+    return make_square(file_of(s), Rank(RANK_1 - rank_of(s)));
 }  // Flips the rank of the square
 constexpr Square flip_filewise(Square s) {
-  return make_square(File(FILE_H - file_of(s)), rank_of(s));
+    return make_square(File(FILE_H - file_of(s)), rank_of(s));
 }  // Flips the file of the square
 
 // Piece, PieceType and Color helper methods
-constexpr Piece get_piece(Color c, PieceType pt) { return Piece(pt + (c * 6)); }
+constexpr Piece get_piece(Color c, PieceType pt) {
+    return Piece(pt + (c * 6));
+}
 
 constexpr PieceType type_of_piece(Piece p) {
-  return PieceType(p - 6 * std::int32_t(p / 7));
+    return PieceType(p - 6 * std::int32_t(p / 7));
 }
 
 constexpr Color get_piece_color(Piece p) {
-  assert(p != NO_PIECE);
-  // if piece is below 7 (white) the number will be betwenn [0:1)
-  // will become 1 or greater if piece is black
-  // due to integer rounding we work with 0 and 1 only
-  return Color(p / 7);
+    assert(p != NO_PIECE);
+    // if piece is below 7 (white) the number will be betwenn [0:1)
+    // will become 1 or greater if piece is black
+    // due to integer rounding we work with 0 and 1 only
+    return Color(p / 7);
 }
 
 constexpr Color square_color(Square s) {
-  return (std::int32_t(rank_of(s)) + std::int32_t(file_of(s))) & 1 ? BLACK
-                                                                   : WHITE;
+    return (std::int32_t(rank_of(s)) + std::int32_t(file_of(s))) & 1 ? BLACK
+                                                                     : WHITE;
 }
 
 constexpr std::int32_t TOTAL_MAX_DEPTH = 512;
@@ -328,23 +358,23 @@ constexpr PCV encode_pcv(std::int32_t wp, std::int32_t wn, std::int32_t wb,
                          std::int32_t wr, std::int32_t wq, std::int32_t bp,
                          std::int32_t bn, std::int32_t bb, std::int32_t br,
                          std::int32_t bq) {
-  // Casting is important because data is lost if we use only std::int32_t
-  return (C(wp) << 4LL | C(wn) << 8LL | C(wb) << 12LL | C(wr) << 16LL |
-          C(wq) << 20LL | C(bp) << 28LL | C(bn) << 32LL | C(bb) << 36LL |
-          C(br) << 40LL | C(bq) << 44LL);
+    // Casting is important because data is lost if we use only std::int32_t
+    return (C(wp) << 4LL | C(wn) << 8LL | C(wb) << 12LL | C(wr) << 16LL |
+            C(wq) << 20LL | C(bp) << 28LL | C(bn) << 32LL | C(bb) << 36LL |
+            C(br) << 40LL | C(bq) << 44LL);
 }
 
 // Assuming already encoded
 template <Piece piece>
 constexpr std::int32_t get_count_pcv(PCV pcv) {
-  assert(piece != NO_PIECE);
-  return std::int32_t(pcv >> C(4 * std::int32_t(piece)) & 0xF);
+    assert(piece != NO_PIECE);
+    return std::int32_t(pcv >> C(4 * std::int32_t(piece)) & 0xF);
 }
 
 template <Piece piece>
 constexpr PCV modify_pcv(PCV pcv, std::int32_t c) {
-  return (pcv & ~(C(0xF) << C(4 * std::int32_t(piece)))) |
-         (C(c) << C(4 * std::int32_t(piece)));
+    return (pcv & ~(C(0xF) << C(4 * std::int32_t(piece)))) |
+           (C(c) << C(4 * std::int32_t(piece)));
 }
 
 #undef C
@@ -368,9 +398,13 @@ constexpr PCV modify_pcv(PCV pcv, std::int32_t c) {
 using SCORE_TYPE = std::int32_t;
 
 // Allow to use ++File, --File, ++Rank, --Rank and etc.
-#define ENABLE_INCR_OPERATORS_ON(T)                                 \
-  inline T &operator++(T &d) { return d = T(std::int32_t(d) + 1); } \
-  inline T &operator--(T &d) { return d = T(std::int32_t(d) - 1); }
+#define ENABLE_INCR_OPERATORS_ON(T)        \
+    inline T& operator++(T& d) {           \
+        return d = T(std::int32_t(d) + 1); \
+    }                                      \
+    inline T& operator--(T& d) {           \
+        return d = T(std::int32_t(d) - 1); \
+    }
 
 // Enables increment by one operation
 ENABLE_INCR_OPERATORS_ON(Piece)

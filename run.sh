@@ -1,42 +1,44 @@
 #!/bin/bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 function print-yellow() {
     local YELLOW='\033[1;33m'
-    local NC='\033[0m' # No Color
+    local NC='\033[0m'
 
     printf "${YELLOW}${@}${NC}"
 }
 
 function print-red() {
     local RED='\033[0;31m'
-    local NC='\033[0m' # No Color
+    local NC='\033[0m'
 
     printf "${RED}${@}${NC}"
 }
 
 function print-green() {
     local GREEN='\033[0;32m'
-    local NC='\033[0m' # No Color
+    local NC='\033[0m'
 
     printf "${GREEN}${@}${NC}"
 }
 
 function print-orange() {
     local GREEN='\033[0;33m'
-    local NC='\033[0m' # No Color
+    local NC='\033[0m'
 
     printf "${GREEN}${@}${NC}"
 }
 
 function debug() {
-    [ -d "${PWD}/build" ]                                                   && {
+    [ -d "${SCRIPT_DIR}/build" ]                                               && {
         print-yellow "Build exists in current! Removing...\n"
-        rm -rf "build/"
+        rm -rf "${SCRIPT_DIR}/build/"
     }
 
     (
         print-yellow "Create build folder!\n"
-        mkdir build
+        mkdir "${SCRIPT_DIR}/build"
 
         print-yellow "Build and configure into build folder!\n"
         incremental-build -DCMAKE_BUILD_TYPE=Debug                             \
@@ -45,14 +47,14 @@ function debug() {
 }
 
 function release() {
-    [ -d "${PWD}/build" ]                                                   && {
+    [ -d "${SCRIPT_DIR}/build" ]                                               && {
         print-yellow "Build exists in current! Removing...\n"
-        rm -rf "build/"
+        rm -rf "${SCRIPT_DIR}/build/"
     }
 
     (
         print-yellow "Create build folder!\n"
-        mkdir build
+        mkdir "${SCRIPT_DIR}/build"
 
         print-yellow "Build and configure into build folder!\n"
         incremental-build -DCMAKE_BUILD_TYPE=Release
@@ -60,36 +62,25 @@ function release() {
 }
 
 function incremental-build() {
-    # Do stuff into separate subprocess
     (
-        cd build
+        cd "${SCRIPT_DIR}/build"
 
-        # Take build type type as argument
-        cmake ${@} ..                                                       && {
+        cmake "${@}" ..                                                        && {
             print-green "CMake: Successful configure!\n"
 
-            cmake --build .                                                 && {
+            cmake --build . --parallel                                         && {
                 print-green "CMake: Successful build!\n"
-
-                print-green "Install binary or library into root!\n"
-
-                sudo cmake --install . --prefix "/usr"                      && {
-                    print-green "CMake: Installed successfully!\n"
-                }                                                           || {
-                    print-red "CMake: Installing failed!\n";
-                    return 1;
-                }
-            }                                                               || {
+            }                                                                  || {
                 print-red "CMake: Build failed!\n";
                 return 1;
             }
-        }                                                                   || {
+        }                                                                      || {
             print-red "CMake: Configuration failed!\n";
             return 1;
         }
     ) && {
         print-green "CMake: Success!\n"
-    }                                                                       || {
+    }                                                                          || {
         print-red "CMake: Error occurred!\n"
     }
 }
