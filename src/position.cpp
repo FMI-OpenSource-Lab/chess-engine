@@ -607,6 +607,46 @@ void Position::undo_move(const Move& m) {
     calculate_threats();
 }
 
+// Passes the turn without moving: only side to move and en passant
+// change. Used by null-move pruning; never call while in check
+void Position::do_null_move(MoveInfo& new_info) {
+    assert(&new_info != move_info);
+
+    std::memcpy(&new_info, move_info, offsetof(struct MoveInfo, captured_piece));
+
+    new_info.prev = move_info;
+    move_info->next = &new_info;
+    move_info = &new_info;
+
+    fullmove_number++;
+    ++move_info->fifty_move;
+
+    BITBOARD k = move_info->prev->key ^ Zobrist::side;
+
+    if (move_info->en_passant != NONE) {
+        k ^= Zobrist::en_passant[file_of(move_info->en_passant)];
+        move_info->en_passant = NONE;
+    }
+
+    move_info->captured_piece = NO_PIECE;
+
+    side = ~side;
+    move_info->key = k;
+
+    assert(move_info->key == compute_key());
+
+    calculate_threats();
+}
+
+void Position::undo_null_move() {
+    side = ~side;
+
+    move_info = move_info->prev;
+    fullmove_number--;
+
+    calculate_threats();
+}
+
 bool Position::is_legal(Move m) const {
     assert(m.is_move_ok());
 

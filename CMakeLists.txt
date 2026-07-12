@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 # Project name and version
-project(KhaosChess VERSION 2.1.2 LANGUAGES CXX)
+project(KhaosChess VERSION 2.3.0 LANGUAGES CXX)
 
 # If not explicitly set, default to Release build type
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -23,6 +23,9 @@ list(REMOVE_ITEM SOURCES "${CMAKE_SOURCE_DIR}/src/main.cpp")
 
 add_library(khaos_core STATIC ${SOURCES})
 target_include_directories(khaos_core PUBLIC "${CMAKE_SOURCE_DIR}/include")
+
+# Single source of truth for the engine version (reported over UCI)
+target_compile_definitions(khaos_core PUBLIC VERSION="${PROJECT_VERSION}")
 
 # The engine executable is now just main.cpp linked against the library
 add_executable(${PROJECT_NAME} src/main.cpp)

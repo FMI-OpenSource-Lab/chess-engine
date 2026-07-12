@@ -3,7 +3,6 @@
 
 // Engine details
 #define NAME "KhaosChess"
-#define VERSION "2.2.0"
 #define AUTHOR "Iulian Dashev"
 
 #if defined(_WIN64) && defined(_MSC_VER)  // No Makefile used

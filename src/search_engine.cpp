@@ -83,6 +83,7 @@ Value SearchEngine::search(std::int32_t depth, SearchInfo& info) {
                       << info.time.count() << " pv";
             for (const Move& m : info.pv)
                 std::cout << " " << m.uci_move();
+
             std::cout << std::endl;
         }
     }
@@ -91,7 +92,7 @@ Value SearchEngine::search(std::int32_t depth, SearchInfo& info) {
 }
 
 Value SearchEngine::negamax(std::int32_t depth, std::int32_t ply, Value alpha, Value beta,
-                            SearchInfo& info) {
+                            SearchInfo& info, bool can_null) {
     pv_length[ply] = ply;
 
     // Check if we're out of time
@@ -127,16 +128,40 @@ Value SearchEngine::negamax(std::int32_t depth, std::int32_t ply, Value alpha, V
     if (depth <= 0)
         return quiescence(ply, alpha, beta, info);
 
+    Color stm = pos.side_to_move();
+    bool in_check =
+        pos.get_attackers_to(pos.square<KING>(stm)) & pos.get_pieces_bb(~stm);
+
+    // Null-move pruning: give the opponent a free move; if a reduced
+    // search still fails high, a real move surely will too. Skipped in
+    // check (passing is illegal), right after another null move, near
+    // mate scores, and without pieces (zugzwang)
+    if (can_null && !in_check && ply > 0 && depth >= 3 &&
+        std::abs(beta) < VALUE_MATE - MAX_PLY &&
+        pos.count(stm, KNIGHT, BISHOP, ROOK, QUEEN) > 0) {
+        constexpr std::int32_t R = 3;
+
+        MoveInfo null_info;
+        pos.do_null_move(null_info);
+
+        Value null_score =
+            -negamax(depth - 1 - R, ply + 1, -beta, -beta + 1, info, false);
+
+        pos.undo_null_move();
+
+        if (should_stop)
+            return 0;
+
+        if (null_score >= beta)
+            return beta;
+    }
+
     // Generate legal moves
     MoveList<GT_LEGAL> moves(pos);
 
     // If no legal moves, check for checkmate or stalemate
     if (moves.size() == 0) {
-        Color stm = pos.side_to_move();
-        bool is_check =
-            pos.get_attackers_to(pos.square<KING>(stm)) & pos.get_pieces_bb(~stm);
-
-        return is_check ? -VALUE_MATE + ply : VALUE_DRAW;  // Checkmate or Stalemate
+        return in_check ? -VALUE_MATE + ply : VALUE_DRAW;  // Checkmate or Stalemate
     }
 
     // Score moves for better ordering

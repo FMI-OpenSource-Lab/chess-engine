@@ -42,7 +42,7 @@ class SearchEngine {
 
     // Core search functions
     Value negamax(std::int32_t depth, std::int32_t ply, Value alpha, Value beta,
-                  SearchInfo& info);
+                  SearchInfo& info, bool can_null = true);
     Value quiescence(std::int32_t ply, Value alpha, Value beta, SearchInfo& info);
 
     // Utility functions

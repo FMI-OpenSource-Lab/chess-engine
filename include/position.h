@@ -180,6 +180,8 @@ class Position {
     // Doing and undoing moves
     void do_move(const Move& m, MoveInfo& new_info);
     void undo_move(const Move& m);
+    void do_null_move(MoveInfo& new_info);
+    void undo_null_move();
 
     void update_blocks_and_pins(Color c);
     void remove_piece(Square s);
