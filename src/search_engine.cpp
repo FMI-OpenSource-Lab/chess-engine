@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <cstdlib>
+#include <cstring>
 
 #include "tt.h"
 
@@ -39,6 +40,12 @@ Value SearchEngine::search(std::int32_t depth, SearchInfo& info) {
     start_time = std::chrono::high_resolution_clock::now();
     should_stop = false;
     time_checks = 0;
+
+    // Fresh ordering state per search; history persists across the
+    // iterative-deepening iterations below, which is where it pays off
+    for (std::int32_t i = 0; i < MAX_PLY; ++i)
+        killers[i][0] = killers[i][1] = Move::invalid_move();
+    std::memset(history, 0, sizeof(history));
 
     Value alpha = -VALUE_INFINITE;
     Value beta = VALUE_INFINITE;
@@ -133,7 +140,7 @@ Value SearchEngine::negamax(std::int32_t depth, std::int32_t ply, Value alpha, V
     }
 
     // Score moves for better ordering
-    score_moves(moves.begin(), moves.end(),
+    score_moves(moves.begin(), moves.end(), ply,
                 is_tt_hit ? tte->move : Move::invalid_move());
 
     // Local PV line for this level
@@ -162,6 +169,19 @@ Value SearchEngine::negamax(std::int32_t depth, std::int32_t ply, Value alpha, V
 
         // Beta cutoff (fail-high)
         if (score >= beta) {
+            // Quiet cutoff
+            if (!is_capture(move) && move.promoted() == NO_PIECE_TYPE) {
+                if (move != killers[ply][0]) {
+                    killers[ply][1] = killers[ply][0];
+                    killers[ply][0] = move;
+                }
+
+                std::int32_t& h = history[pos.side_to_move()]
+                                         [move.source_square()]
+                                         [move.target_square()];
+                h = std::min(h + depth * depth, 16'000);
+            }
+
             tt::TT.store(pos.key(), score_to_tt(beta, ply), depth,
                          tt::Flag::F_LOWER_BOUND, move);
             return beta;
@@ -236,7 +256,7 @@ Value SearchEngine::quiescence(std::int32_t ply, Value alpha, Value beta, Search
     }
 
     // Score legal moves for better ordering
-    score_moves(legals.begin(), legals.end(), Move::invalid_move(), false);
+    score_moves(legals.begin(), legals.end(), ply, Move::invalid_move(), false);
 
     // Loop through capture moves
     for (const ScoredMoves& scored_move : legals) {
@@ -271,10 +291,9 @@ Value SearchEngine::quiescence(std::int32_t ply, Value alpha, Value beta, Search
     return alpha;
 }
 
-void SearchEngine::score_moves(ScoredMoves* begin, ScoredMoves* end, Move tt_move, bool score_quiets) {
-    // Base eval is only used to score quiet moves relative to parent
-    Value base = score_quiets ? Scorer<SC_ALL>().get_score(pos) : VALUE_DRAW;
-
+void SearchEngine::score_moves(ScoredMoves* begin, ScoredMoves* end,
+                               std::int32_t ply, Move tt_move,
+                               bool score_quiets) {
     // Simple move ordering: MVV-LVA (Most Valuable Victim - Least Valuable
     // Aggressor)
     for (ScoredMoves* it = begin; it != end; ++it) {
@@ -286,38 +305,34 @@ void SearchEngine::score_moves(ScoredMoves* begin, ScoredMoves* end, Move tt_mov
             continue;
         }
 
-        // Score captures based on MVV-LVA (victim value * 10 - aggressor value)
-        if (is_capture(move)) {
+        // Captures and promotions: MVV-LVA (most valuable victim first,
+        // least valuable aggressor as tiebreak)
+        if (is_capture(move) || move.promoted() != NO_PIECE_TYPE) {
             PieceType victim = type_of_piece(pos.get_piece_on(move.target_square()));
             PieceType aggressor =
                 type_of_piece(pos.get_piece_on(move.source_square()));
 
-            // Use material values from your score.h
-            it->score = 1000 + MATERIAL_SCORES.piece_value[victim].mg -
+            it->score = 100'000 + MATERIAL_SCORES.piece_value[victim].mg -
                         MATERIAL_SCORES.piece_value[aggressor].mg / 10;
 
-            // Bonus for promotions
             if (move.promoted() != NO_PIECE_TYPE)
                 it->score += 900 + MATERIAL_SCORES.piece_value[move.promoted()].mg;
         }
-        // Score quiet moves (can be expanded later)
+        // Quiets: killers first, then history
         else if (score_quiets) {
-            // Killers and history heuristic would go here
-            // For now, we'll just have a simple baseline
-            MoveInfo mi;
-            pos.do_move(move, mi);
-
-            Value child_eval = Scorer<SC_ALL>().get_score(pos);
-
-            pos.undo_move(move);
-            it->score = child_eval - base;
+            if (move == killers[ply][0])
+                it->score = 90'000;
+            else if (move == killers[ply][1])
+                it->score = 80'000;
+            else
+                it->score = history[pos.side_to_move()][move.source_square()]
+                                   [move.target_square()];
         } else {
             // Quiescence discards quiets (except evasions)
             it->score = -1'000'000;
         }
     }
 
-    // Sort moves based on score (higher scores first)
     std::sort(begin, end, [](auto& a, auto& b) { return a.score > b.score; });
 }
 

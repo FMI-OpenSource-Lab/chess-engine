@@ -9,14 +9,13 @@ Development continues beyond the thesis with a single goal: make the engine as s
 
 ### Working
 - **Board representation**: bitboards with magic sliding-piece attacks; full legal move generation, verified with a perft test suite against known positions
-- **Search**: iterative-deepening negamax alpha-beta with quiescence search, transposition table (Zobrist hashing), draw detection (fifty-move rule and threefold repetition), and time-based stopping
+- **Search**: iterative-deepening negamax alpha-beta with quiescence search, transposition table (Zobrist hashing), killer-move and history-heuristic move ordering, draw detection (fifty-move rule and threefold repetition), and time-based stopping
 - **Evaluation**: tapered middlegame/endgame scoring (material, pawn structure, king safety and more), specialized endgame evaluators keyed by material, and a KPK bitbase
 - **UCI protocol**: plays complete games in GUIs (e.g. Arena) and match runners (e.g. fastchess)
 
 ### Roadmap
 Each item gets validated with engine-vs-engine matches (see [Testing](#testing)) before it lands:
 
-- Killer moves + history heuristic move ordering
 - Null-move pruning and late move reductions
 - Principal variation search + aspiration windows
 - Static exchange evaluation (SEE)
@@ -96,7 +95,7 @@ A GoogleTest suite lives in `tests/` and covers position handling (FEN round-tri
 
 ### Engine matches (fastchess)
 
-Strength changes are never eyeballed — they are measured with engine-vs-engine matches using [fastchess](https://github.com/Disservin/fastchess):
+Strength changes are never eyeballed - they are measured with engine-vs-engine matches using [fastchess](https://github.com/Disservin/fastchess):
 
 - A **frozen baseline binary** (`KhaosChess-base`) is kept as the reference opponent. Harness and protocol fixes get folded into the baseline; strength changes never do.
 - Games start from a book of varied openings (e.g. an 8-move opening book), each opening played twice with colors swapped.
@@ -114,7 +113,7 @@ fastchess \
   -pgnout file=match.pgn
 ```
 
-A healthy run ends with a roughly 50/50 score against an equal baseline and **zero disconnects or illegal moves** — the match runner doubles as an integration test that surfaces bugs perft never can (UCI parsing, endgame evaluation, time management).
+A healthy run ends with a roughly 50/50 score against an equal baseline and **zero disconnects or illegal moves** - the match runner doubles as an integration test that surfaces bugs perft never can (UCI parsing, endgame evaluation, time management).
 
 ---
 ### Visualization:

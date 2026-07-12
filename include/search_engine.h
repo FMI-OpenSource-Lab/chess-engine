@@ -49,7 +49,14 @@ class SearchEngine {
     bool is_time_up();
     bool is_capture(Move move);
 
-    void score_moves(ScoredMoves* begin, ScoredMoves* end, Move tt_move = Move::invalid_move(), bool score_quiets = true);
+    void score_moves(ScoredMoves* begin, ScoredMoves* end, std::int32_t ply,
+                     Move tt_move = Move::invalid_move(),
+                     bool score_quiets = true);
+
+    // Quiet-move ordering: two killer slots per ply, and a butterfly
+    // history table bumped by depth^2 on every quiet beta cutoff
+    Move killers[MAX_PLY][2];
+    std::int32_t history[BOTH][SQUARE_TOTAL][SQUARE_TOTAL];
 
     // Triangular PV table: pv_table[ply] is the best line found from that
     // ply, ending at pv_length[ply]. Copied into SearchInfo at the root.
