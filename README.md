@@ -9,16 +9,14 @@ Development continues beyond the thesis with a single goal: make the engine as s
 
 ### Working
 - **Board representation**: bitboards with magic sliding-piece attacks; full legal move generation, verified with a perft test suite against known positions
-- **Search**: iterative-deepening negamax alpha-beta with quiescence search, transposition table (Zobrist hashing), killer-move and history-heuristic move ordering, null-move pruning, draw detection (fifty-move rule and threefold repetition), and time-based stopping
+- **Search**: iterative-deepening negamax alpha-beta with quiescence search, principal variation search with aspiration windows, transposition table (Zobrist hashing), move ordering by killer moves, history heuristic, and static exchange evaluation (SEE), late move reductions, null-move pruning, forward pruning (reverse futility, late move pruning, futility), check extensions, draw detection (fifty-move rule and repetition), and time- or node-based stopping
 - **Evaluation**: tapered middlegame/endgame scoring (material, pawn structure, king safety and more), specialized endgame evaluators keyed by material, and a KPK bitbase
 - **UCI protocol**: plays complete games in GUIs (e.g. Arena) and match runners (e.g. fastchess)
 
 ### Roadmap
 Each item gets validated with engine-vs-engine matches (see [Testing](#testing)) before it lands:
 
-- Late move reductions
-- Principal variation search + aspiration windows
-- Static exchange evaluation (SEE)
+- Countermove and continuation-history move ordering
 - Smarter time management and UCI `stop` support
 - Texel tuning of the evaluation weights
 - Long term: Lazy SMP, NNUE evaluation

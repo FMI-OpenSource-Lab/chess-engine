@@ -29,29 +29,51 @@ class SearchEngine {
 
     // Search entry point
     Value search(std::int32_t depth, SearchInfo& info);
-
     // Set maximum time for search
     void set_max_time(std::chrono::milliseconds max_time);
+
+    // Cap the search at a node budget; 0 means no limit. Node-limited
+    // games are immune to timing noise from CPU contention
+    void set_max_nodes(std::uint64_t nodes);
 
    private:
     Position& pos;
     std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
     std::chrono::milliseconds max_time;
+    std::uint64_t max_nodes;  // 0 = no node limit
+
     bool should_stop;
     std::uint64_t time_checks;
 
     // Core search functions
     Value negamax(std::int32_t depth, std::int32_t ply, Value alpha, Value beta,
-                  SearchInfo& info, bool can_null = true);
+                  SearchInfo& info, bool can_null = true,
+                  std::int32_t num_extensions = 0);
     Value quiescence(std::int32_t ply, Value alpha, Value beta, SearchInfo& info);
 
     // Utility functions
     bool is_time_up();
     bool is_capture(Move move);
+    bool null_move_cuts(std::int32_t depth, std::int32_t ply, Value beta,
+                        SearchInfo& info, std::int32_t num_extensions);
+    bool should_skip_quiet(std::int32_t depth, std::int32_t moves_searched,
+                           Value alpha, Value static_eval);
 
     void score_moves(ScoredMoves* begin, ScoredMoves* end, std::int32_t ply,
                      Move tt_move = Move::invalid_move(),
                      bool score_quiets = true);
+    void update_quiet_stats(Move move, std::int32_t ply, std::int32_t depth);
+    void update_pv(Move move, std::int32_t ply);
+    void report_iteration(const SearchInfo& info, std::int32_t depth, Value score) const;
+
+    Value aspiration_search(std::int32_t depth, Value prev_score, SearchInfo& info);
+    Value pvs_search(std::int32_t depth, std::int32_t ply, Value alpha, Value beta,
+                     SearchInfo& info, std::int32_t moves_searched,
+                     bool in_check, bool is_quiet, std::int32_t num_extensions);
+
+    std::int32_t lmr_reduction(std::int32_t depth, std::int32_t moves_searched,
+                               bool in_check, bool is_quiet);
+    std::int32_t calculate_extension_depth(bool in_check, std::int32_t num_extensions) const;
 
     // Quiet-move ordering: two killer slots per ply, and a butterfly
     // history table bumped by depth^2 on every quiet beta cutoff

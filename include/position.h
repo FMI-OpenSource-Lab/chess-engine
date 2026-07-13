@@ -151,6 +151,7 @@ class Position {
     bool is_square_attacked(Square s) const;
     bool is_square_attacked(Square s, Color c) const;
     bool is_draw() const;
+    bool see_ge(Move m, Value threshold = 0) const;
 
     // Pieces
     Piece get_piece_on(Square s) const;

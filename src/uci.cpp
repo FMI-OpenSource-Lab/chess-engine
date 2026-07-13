@@ -118,6 +118,11 @@ void parse_go(const char* cmd, Position& pos) {
     if ((current = strstr(cmd, "depth")))
         depth = atoi(current + 6);
 
+    // fixed nodes per move
+    std::int64_t max_nodes = 0;
+    if ((current = strstr(cmd, "nodes")))
+        max_nodes = atoll(current + 6);
+
     // fixed time per move
     if ((current = strstr(cmd, "movetime")))
         search_time = atoll(current + 9);
@@ -139,7 +144,7 @@ void parse_go(const char* cmd, Position& pos) {
     }
 
     // bare "go" or "go infinite": no explicit limit, fall back to a fixed depth
-    if (!depth && !search_time)
+    if (!depth && !search_time && !max_nodes)
         depth = 6;
 
     SearchEngine engine(pos);
@@ -147,6 +152,9 @@ void parse_go(const char* cmd, Position& pos) {
     // when only a depth limit is given, effectively disable the time limit
     engine.set_max_time(std::chrono::milliseconds(
         search_time ? search_time : 24LL * 60 * 60 * 1000));
+
+    if (max_nodes)
+        engine.set_max_nodes(static_cast<std::uint64_t>(max_nodes));
 
     SearchInfo info;
     engine.search(depth ? depth : 64, info);
@@ -181,7 +189,7 @@ void uci_loop() {
     // def user/GUI inout buffer
     char input_buffer[INPUT_BUFFER];
 
-    std::cout << "id name " << NAME << " " << VERSION << "\n";
+    std::cout << "id name " << NAME << "\n";
     std::cout << "id author " << AUTHOR << "\n";
     std::cout << "uciok\n";
 
@@ -233,7 +241,7 @@ void uci_loop() {
 
         // parse UCI "uci" command
         else if (strncmp(input_buffer, "uci", 3) == 0) {
-            std::cout << "\nid name " << NAME << " " << VERSION << "\n";
+            std::cout << "\nid name " << NAME << "\n";
             std::cout << "id author " << AUTHOR << "\n";
             std::cout << "uciok\n";
         }

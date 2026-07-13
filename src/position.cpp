@@ -619,7 +619,7 @@ void Position::do_null_move(MoveInfo& new_info) {
     move_info = &new_info;
 
     fullmove_number++;
-    ++move_info->fifty_move;
+    move_info->fifty_move = 0;
 
     BITBOARD k = move_info->prev->key ^ Zobrist::side;
 
@@ -861,6 +861,107 @@ bool Position::is_draw() const {
     }
 
     return false;
+}
+
+// Exchange values for SEE. Index 0 is NO_PIECE_TYPE, so an empty target
+// square (a quiet move) naturally prices at zero. The king's value is
+// never read: a king "capture" exits the swap loop before pricing it
+constexpr Value SEE_VALUE[PIECE_TYPE_NB] = {0, 100, 300, 300, 500, 900, 0, 0};
+
+// Plays out the capture sequence on the target square, both sides always
+// recapturing with their least valuable attacker. Sliders uncovered by a
+// departing attacker join the exchange (x-rays). Pins are ignored - the
+// rare misjudged exchange is the price of keeping the loop this cheap
+bool Position::see_ge(Move m, Value threshold) const {
+    // Castling never wins material; en passant and promotions are rare
+    // enough to price as "breaks even"
+    if (m.move_type() != MT_NORMAL) {
+        return threshold <= 0;
+    }
+
+    Square from = m.source_square();
+    Square to = m.target_square();
+
+    // Best case: capture the victim and never get recaptured. Failing
+    // the threshold even then is an immediate no
+    Value swap = SEE_VALUE[type_of_piece(get_piece_on(to))] - threshold;
+    if (swap < 0) {
+        return false;
+    }
+
+    // Worst case: the mover is lost for nothing further. Winning even
+    // then is an immediate yes
+    swap = SEE_VALUE[type_of_piece(get_piece_on(from))] - swap;
+    if (swap <= 0) {
+        return true;
+    }
+
+    BITBOARD occupied =
+        get_all_pieces_bb() ^ square_to_BB(from) ^ square_to_BB(to);
+    Color stm = get_piece_color(get_piece_on(from));
+    BITBOARD attackers = get_attackers_to(to, occupied);
+    std::int32_t res = 1;  // 1 while the side that just moved stands to win
+
+    while (true) {
+        stm = ~stm;
+        attackers &= occupied;  // spent attackers no longer participate
+
+        BITBOARD stm_attackers = attackers & get_pieces_bb(stm);
+
+        // No attacker left: stm loses the exchange
+        if (!stm_attackers) {
+            break;
+        }
+
+        res ^= 1;
+
+        // Capture with the least valuable attacker, remove it from the
+        // board, and let any slider hiding behind it join in (x-ray)
+        BITBOARD bb;
+        if ((bb = stm_attackers & get_pieces_bb(PAWN))) {
+            if ((swap = SEE_VALUE[PAWN] - swap) < res) {
+                break;
+            }
+            occupied ^= square_to_BB(get_ls1b(bb));
+            attackers |= attacks_bb_by<BISHOP>(to, occupied) &
+                         get_pieces_bb(BISHOP, QUEEN);
+        } else if ((bb = stm_attackers & get_pieces_bb(KNIGHT))) {
+            if ((swap = SEE_VALUE[KNIGHT] - swap) < res) {
+                break;
+            }
+            occupied ^= square_to_BB(get_ls1b(bb));
+        } else if ((bb = stm_attackers & get_pieces_bb(BISHOP))) {
+            if ((swap = SEE_VALUE[BISHOP] - swap) < res) {
+                break;
+            }
+            occupied ^= square_to_BB(get_ls1b(bb));
+            attackers |= attacks_bb_by<BISHOP>(to, occupied) &
+                         get_pieces_bb(BISHOP, QUEEN);
+        } else if ((bb = stm_attackers & get_pieces_bb(ROOK))) {
+            if ((swap = SEE_VALUE[ROOK] - swap) < res) {
+                break;
+            }
+            occupied ^= square_to_BB(get_ls1b(bb));
+            attackers |= attacks_bb_by<ROOK>(to, occupied) &
+                         get_pieces_bb(ROOK, QUEEN);
+        } else if ((bb = stm_attackers & get_pieces_bb(QUEEN))) {
+            if ((swap = SEE_VALUE[QUEEN] - swap) < res) {
+                break;
+            }
+            occupied ^= square_to_BB(get_ls1b(bb));
+            attackers |= (attacks_bb_by<BISHOP>(to, occupied) &
+                          get_pieces_bb(BISHOP, QUEEN)) |
+                         (attacks_bb_by<ROOK>(to, occupied) &
+                          get_pieces_bb(ROOK, QUEEN));
+        } else {
+            // Only the king is left to recapture: legal only if the other
+            // side has no attacker remaining, else it walks into a capture
+            return (attackers & ~get_pieces_bb(stm)) ? (res ^ 1) != 0
+                                                     : res != 0;
+        }
+    }
+
+    return res != 0;
 }
 
 }  // namespace KhaosChess
