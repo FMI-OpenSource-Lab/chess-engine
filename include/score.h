@@ -73,6 +73,90 @@ constexpr Score S(Value mg, Value eg) {
     return Score(mg, eg);
 }
 
+// clang-format off
+
+// Piece-square table, indexed [PieceType][sq_relative_to_side(s, Us)]
+// (identity for White, vertical flip for Black). Written from White's
+// perspective: first row = rank 8, matching Square A8 = 0.
+// Plain numbers use Score's mg = eg constructor; the king gets explicit
+// S(mg, eg) pairs since its placement inverts between game phases.
+// Seeded from the CPW simplified-evaluation tables scaled to KhaosChess
+// units (pawn mg = 300); placeholder values until Texel tuning.
+constexpr Score PSQT[PIECE_TYPE_NB][SQUARE_TOTAL] = {
+    {   // NO_PIECE_TYPE
+        0,    0,    0,    0,    0,    0,    0,    0,
+        0,    0,    0,    0,    0,    0,    0,    0,
+        0,    0,    0,    0,    0,    0,    0,    0,
+        0,    0,    0,    0,    0,    0,    0,    0,
+        0,    0,    0,    0,    0,    0,    0,    0,
+        0,    0,    0,    0,    0,    0,    0,    0,
+        0,    0,    0,    0,    0,    0,    0,    0,
+        0,    0,    0,    0,    0,    0,    0,    0},
+    {   // PAWN (mg = eg until Texel tuning)
+        0,    0,    0,    0,    0,    0,    0,    0,
+      150,  150,  150,  150,  150,  150,  150,  150,
+       30,   30,   60,   90,   90,   60,   30,   30,
+       15,   15,   30,   75,   75,   30,   15,   15,
+        0,    0,    0,   60,   60,    0,    0,    0,
+       15,  -15,  -30,    0,    0,  -30,  -15,   15,
+       15,   30,   30,  -60,  -60,   30,   30,   15,
+        0,    0,    0,    0,    0,    0,    0,    0},
+    {   // KNIGHT (mg = eg until Texel tuning)
+     -150, -120,  -90,  -90,  -90,  -90, -120, -150,
+     -120,  -60,    0,    0,    0,    0,  -60, -120,
+      -90,    0,   30,   45,   45,   30,    0,  -90,
+      -90,   15,   45,   60,   60,   45,   15,  -90,
+      -90,    0,   45,   60,   60,   45,    0,  -90,
+      -90,   15,   30,   45,   45,   30,   15,  -90,
+     -120,  -60,    0,   15,   15,    0,  -60, -120,
+     -150, -120,  -90,  -90,  -90,  -90, -120, -150},
+    {   // BISHOP (mg = eg until Texel tuning)
+      -60,  -30,  -30,  -30,  -30,  -30,  -30,  -60,
+      -30,    0,    0,    0,    0,    0,    0,  -30,
+      -30,    0,   15,   30,   30,   15,    0,  -30,
+      -30,   15,   15,   30,   30,   15,   15,  -30,
+      -30,    0,   30,   30,   30,   30,    0,  -30,
+      -30,   30,   30,   30,   30,   30,   30,  -30,
+      -30,   15,    0,    0,    0,    0,   15,  -30,
+      -60,  -30,  -30,  -30,  -30,  -30,  -30,  -60},
+    {   // ROOK (mg = eg until Texel tuning)
+        0,    0,    0,    0,    0,    0,    0,    0,
+       15,   30,   30,   30,   30,   30,   30,   15,
+      -15,    0,    0,    0,    0,    0,    0,  -15,
+      -15,    0,    0,    0,    0,    0,    0,  -15,
+      -15,    0,    0,    0,    0,    0,    0,  -15,
+      -15,    0,    0,    0,    0,    0,    0,  -15,
+      -15,    0,    0,    0,    0,    0,    0,  -15,
+        0,    0,    0,   15,   15,    0,    0,    0},
+    {   // QUEEN (mg = eg until Texel tuning)
+      -60,  -30,  -30,  -15,  -15,  -30,  -30,  -60,
+      -30,    0,    0,    0,    0,    0,    0,  -30,
+      -30,    0,   15,   15,   15,   15,    0,  -30,
+      -15,    0,   15,   15,   15,   15,    0,  -15,
+        0,    0,   15,   15,   15,   15,    0,  -15,
+      -30,   15,   15,   15,   15,   15,    0,  -30,
+      -30,    0,   15,    0,    0,    0,    0,  -30,
+      -60,  -30,  -30,  -15,  -15,  -30,  -30,  -60},
+    {   // KING
+     S( -90,-150), S(-120,-120), S(-120, -90), S(-150, -60),
+     S(-150, -60), S(-120, -90), S(-120,-120), S( -90,-150),
+     S( -90, -90), S(-120, -60), S(-120, -30), S(-150,   0),
+     S(-150,   0), S(-120, -30), S(-120, -60), S( -90, -90),
+     S( -90, -90), S(-120, -30), S(-120,  60), S(-150,  90),
+     S(-150,  90), S(-120,  60), S(-120, -30), S( -90, -90),
+     S( -90, -90), S(-120, -30), S(-120,  90), S(-150, 120),
+     S(-150, 120), S(-120,  90), S(-120, -30), S( -90, -90),
+     S( -60, -90), S( -90, -30), S( -90,  90), S(-120, 120),
+     S(-120, 120), S( -90,  90), S( -90, -30), S( -60, -90),
+     S( -30, -90), S( -60, -30), S( -60,  60), S( -60,  90),
+     S( -60,  90), S( -60,  60), S( -60, -30), S( -30, -90),
+     S(  60, -90), S(  60, -90), S(   0,   0), S(   0,   0),
+     S(   0,   0), S(   0,   0), S(  60, -90), S(  60, -90),
+     S(  60,-150), S(  90, -90), S(  30, -90), S(   0, -90),
+     S(   0, -90), S(  30, -90), S(  90, -90), S(  60,-150)}};
+
+// clang-format on
+
 // Material values
 struct Material {
     Score piece_value[PIECE_TYPE_NB] = {S(0, 0), S(300, 370), S(890, 880),
@@ -169,6 +253,12 @@ constexpr Value VALUE_INFINITE = 640'001;
 constexpr Value VALUE_MATE = 640'000;
 constexpr Value VALUE_KNOWN_WIN =
     640'001 - 8 * MAX_PLY - 8 * MATERIAL_SCORES.all_pieces();
+    constexpr Value TEMPO = 20;
+
+// Kill-switches for the tempo + PSQT batch
+constexpr bool TEMPO_ENABLED = false;
+constexpr bool PSQT_ENABLED = false;
+
 
 class Position;
 

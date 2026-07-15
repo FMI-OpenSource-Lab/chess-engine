@@ -246,6 +246,25 @@ void uci_loop() {
             std::cout << "uciok\n";
         }
 
+        // parse debug "eval" command - static evaluation breakdown,
+        // optionally for a single component
+        else if (strncmp(input_buffer, "eval", 4) == 0) {
+            const char* arg = input_buffer + 4;
+
+            if (strstr(arg, "material"))
+                Scorer<SC_MATERIAL>().print_stats(pos);
+            else if (strstr(arg, "mobility"))
+                Scorer<SC_MOBILITY>().print_stats(pos);
+            else if (strstr(arg, "king"))
+                Scorer<SC_KING_SAFETY>().print_stats(pos);
+            else if (strstr(arg, "pawn"))
+                Scorer<SC_PAWN_STRUCTURE>().print_stats(pos);
+            else if (strstr(arg, "coord"))
+                Scorer<SC_PIECE_COORDINATION>().print_stats(pos);
+            else
+                Scorer<SC_ALL>().print_stats(pos);
+        }
+
         else if (!strncmp(input_buffer, "d", 1))
             std::cout << pos << std::endl;
     }
