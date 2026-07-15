@@ -127,6 +127,7 @@ Each row was measured against the frozen baseline binary that preceded it; featu
 | 2.5.0 | Aspiration windows, check extensions | 200 games, 40k fixed nodes | +26 ± 41 |
 | **2.5.0** | **Cumulative vs 2.3.0** | **500 games, tc 8+0.08** | **+81 ± 27** |
 | 2.6.0 | Evaluation bug fixes: king shelter after castling, inverted king mobility, back-rank blockers, pin-aware mobility, semi-open files, x-ray batteries | 400 games, 20k fixed nodes | +53 ± 29 |
+| 2.7.0 | Tempo bonus, piece-square tables (CPW-seeded, tapered), full connected-rooks bonus | 400 games, 20k fixed nodes | +59 ± 29 |
 
 Fixed-node matches (`go nodes`) are used for changes where timing noise would drown the signal; they deliberately ignore speed costs, which is why the cumulative timed number runs below the sum of the parts.
 

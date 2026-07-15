@@ -253,12 +253,11 @@ constexpr Value VALUE_INFINITE = 640'001;
 constexpr Value VALUE_MATE = 640'000;
 constexpr Value VALUE_KNOWN_WIN =
     640'001 - 8 * MAX_PLY - 8 * MATERIAL_SCORES.all_pieces();
-    constexpr Value TEMPO = 20;
+constexpr Value TEMPO = 20;
 
 // Kill-switches for the tempo + PSQT batch
-constexpr bool TEMPO_ENABLED = false;
-constexpr bool PSQT_ENABLED = false;
-
+constexpr bool TEMPO_ENABLED = true;
+constexpr bool PSQT_ENABLED = true;
 
 class Position;
 
