@@ -58,6 +58,12 @@ constexpr std::int32_t ASPIRATION_MIN_DEPTH = 4;
 // By how much we want to extend the depth search
 constexpr std::int32_t MAX_EXTENSION = 16;
 
+constexpr bool MATE_DISTANCE_PRUNING = true;
+constexpr bool QSEARCH_TT = false;
+
+constexpr std::int32_t NULL_MOVE_DIVISOR = 1000;
+constexpr std::int32_t IIR_MIN_DEPTH = 1000;
+
 static Value score_to_tt(Value score, std::int32_t ply) {
     if (score >= VALUE_MATE - MAX_PLY) {
         return score + ply;
@@ -159,6 +165,17 @@ Value SearchEngine::negamax(std::int32_t depth, std::int32_t ply, Value alpha, V
         return VALUE_DRAW;
     }
 
+    // Mate distance pruning: cap the window by the fastest mate possible
+    // from this ply; a collapsed window means nothing here can matter
+    if (MATE_DISTANCE_PRUNING && (ply > 0)) {
+        alpha = std::max(alpha, -VALUE_MATE + ply);
+        beta = std::min(beta, VALUE_MATE - (ply + 1));
+
+        if (alpha >= beta) {
+            return alpha;
+        }
+    }
+
     Color stm = pos.side_to_move();
     bool in_check =
         pos.get_attackers_to(pos.square<KING>(stm)) & pos.get_pieces_bb(~stm);
@@ -180,6 +197,12 @@ Value SearchEngine::negamax(std::int32_t depth, std::int32_t ply, Value alpha, V
             ((tte->flag == tt::Flag::F_UPPER_BOUND) && (tt_score <= alpha))) {
             return tt_score;
         }
+    }
+
+    // Internal iterative reduction: no TT move at high depth means the node
+    // is probably unimportant; search it shallower and let the TT fill in
+    if ((depth >= IIR_MIN_DEPTH) && (!is_tt_hit || (tte->move == Move::invalid_move()))) {
+        depth--;
     }
 
     // At depth 0, switch to quiescence search to evade horizon effect
@@ -305,6 +328,27 @@ Value SearchEngine::quiescence(std::int32_t ply, Value alpha, Value beta, Search
         return Scorer<SC_ALL>().get_score(pos);
     }
 
+    // Transposition table probe; any stored entry beats a depth-0 search
+    bool is_tt_hit = false;
+    tt::TTEntry* tte = nullptr;
+
+    if (QSEARCH_TT) {
+        tte = tt::TT.probe(pos.key(), is_tt_hit);
+
+        if (is_tt_hit) {
+            Value tt_score = score_from_tt(tte->score, ply);
+
+            if ((tte->flag == tt::Flag::F_EXACT) ||
+                ((tte->flag == tt::Flag::F_LOWER_BOUND) && (tt_score >= beta)) ||
+                ((tte->flag == tt::Flag::F_UPPER_BOUND) && (tt_score <= alpha))) {
+                return tt_score;
+            }
+        }
+    }
+
+    Value orig_alpha = alpha;
+    Move best_move = Move::invalid_move();
+
     Color stm = pos.side_to_move();
     bool in_check = pos.get_attackers_to(pos.square<KING>(stm)) & pos.get_pieces_bb(~stm);
 
@@ -313,6 +357,10 @@ Value SearchEngine::quiescence(std::int32_t ply, Value alpha, Value beta, Search
 
         // Stand-pat cutoff
         if (stand_pat >= beta) {
+            if (QSEARCH_TT) {
+                tt::TT.store(pos.key(), score_to_tt(beta, ply), 0,
+                             tt::Flag::F_LOWER_BOUND, Move::invalid_move());
+            }
             return beta;
         }
 
@@ -330,8 +378,10 @@ Value SearchEngine::quiescence(std::int32_t ply, Value alpha, Value beta, Search
         return -VALUE_MATE + ply;
     }
 
-    // Score legal moves for better ordering
-    score_moves(legals.begin(), legals.end(), ply, Move::invalid_move(), false);
+    // Score legal moves for better ordering; a quiet TT move is harmless,
+    // the capture filter below skips it anyway
+    score_moves(legals.begin(), legals.end(), ply,
+                (QSEARCH_TT && is_tt_hit) ? tte->move : Move::invalid_move(), false);
 
     // Loop through capture moves
     for (const ScoredMoves& scored_move : legals) {
@@ -364,13 +414,24 @@ Value SearchEngine::quiescence(std::int32_t ply, Value alpha, Value beta, Search
 
         // Beta cutoff (fail-high)
         if (score >= beta) {
+            if (QSEARCH_TT) {
+                tt::TT.store(pos.key(), score_to_tt(beta, ply), 0,
+                             tt::Flag::F_LOWER_BOUND, move);
+            }
             return beta;
         }
 
         // Better move found
         if (score > alpha) {
             alpha = score;
+            best_move = move;
         }
+    }
+
+    if (QSEARCH_TT) {
+        tt::Flag flag = (alpha > orig_alpha) ? tt::Flag::F_EXACT
+                                             : tt::Flag::F_UPPER_BOUND;
+        tt::TT.store(pos.key(), score_to_tt(alpha, ply), 0, flag, best_move);
     }
 
     return alpha;
@@ -541,7 +602,9 @@ bool SearchEngine::null_move_cuts(std::int32_t depth, std::int32_t ply, Value be
     MoveInfo null_info;
     pos.do_null_move(null_info);
 
-    Value null_score = -negamax(depth - 1 - NULL_MOVE_REDUCTION, ply + 1, -beta, -beta + 1, info,
+    std::int32_t reduction = NULL_MOVE_REDUCTION + depth / NULL_MOVE_DIVISOR;
+
+    Value null_score = -negamax(depth - 1 - reduction, ply + 1, -beta, -beta + 1, info,
                                 false, num_extensions);
 
     pos.undo_null_move();
@@ -584,7 +647,8 @@ void SearchEngine::report_iteration(const SearchInfo& info, std::int32_t depth,
     std::cout << "info depth " << depth;
 
     if (std::abs(score) >= VALUE_MATE - MAX_PLY) {
-        std::int32_t mate_in = (VALUE_MATE - std::abs(score));
+        std::int32_t mate_in = (VALUE_MATE - std::abs(score) + 1) / 2;
+
         std::cout << " score mate " << (score > 0 ? mate_in : -mate_in);
     } else {
         std::cout << " score cp " << score;
@@ -592,6 +656,7 @@ void SearchEngine::report_iteration(const SearchInfo& info, std::int32_t depth,
 
     std::cout << " nodes " << (info.nodes + info.q_nodes) << " time "
               << info.time.count() << " pv";
+
     for (const Move& m : info.pv) {
         std::cout << " " << m.uci_move();
     }

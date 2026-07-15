@@ -16,6 +16,7 @@ Development continues beyond the thesis with a single goal: make the engine as s
 ### Roadmap
 Each item gets validated with engine-vs-engine matches (see [Testing](#testing)) before it lands:
 
+- Transposition table v2: depth-preferred replacement with aging, stored static eval, UCI `Hash` option (unlocks shelved qsearch-TT and IIR features)
 - Countermove and continuation-history move ordering
 - Smarter time management and UCI `stop` support
 - Texel tuning of the evaluation weights
@@ -112,6 +113,21 @@ fastchess \
 ```
 
 A healthy run ends with a roughly 50/50 score against an equal baseline and **zero disconnects or illegal moves** - the match runner doubles as an integration test that surfaces bugs perft never can (UCI parsing, endgame evaluation, time management).
+
+### Measured progress
+
+Each row was measured against the frozen baseline binary that preceded it; features land in batches, so several rows can ship in one release. Error bars are 95% confidence.
+
+| Landed in | Change | Match conditions | Elo |
+|-----------|--------|------------------|-----|
+| 2.3.0 | Killer-move and history-heuristic ordering | 100 games, tc 8+0.08 | +168 ± 68 |
+| 2.3.0 | Null-move pruning | 200 games, tc 8+0.08 | +93 ± 44 |
+| 2.5.0 | Principal variation search | 280 games, tc 8+0.08 | +12 ± 34 |
+| 2.5.0 | Late move reductions, reverse futility, late move pruning, futility pruning, SEE | 200 games, tc 8+0.08 | +87 ± 42 |
+| 2.5.0 | Aspiration windows, check extensions | 200 games, 40k fixed nodes | +26 ± 41 |
+| **2.5.0** | **Cumulative vs 2.3.0** | **500 games, tc 8+0.08** | **+81 ± 27** |
+
+Fixed-node matches (`go nodes`) are used for changes where timing noise would drown the signal; they deliberately ignore speed costs, which is why the cumulative timed number runs below the sum of the parts.
 
 ---
 ### Visualization:
