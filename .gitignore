@@ -46,3 +46,5 @@ cmake_install.cmake
 
 !tests/
 !tests/**
+!tools/
+!tools/**

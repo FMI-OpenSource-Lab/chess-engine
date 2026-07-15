@@ -31,6 +31,10 @@ target_compile_definitions(khaos_core PUBLIC VERSION="${PROJECT_VERSION}")
 add_executable(${PROJECT_NAME} src/main.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE khaos_core)
 
+# Score tuner
+add_executable(tuner tools/tuner.cpp)
+target_link_libraries(tuner PRIVATE khaos_core)
+
 # Compiler specific settings
 if (MINGW)
     target_compile_definitions(${PROJECT_NAME} PRIVATE WIN64 _AMD64_ IS_64BIT)

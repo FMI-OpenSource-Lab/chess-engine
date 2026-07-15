@@ -132,6 +132,33 @@ Each row was measured against the frozen baseline binary that preceded it; featu
 Fixed-node matches (`go nodes`) are used for changes where timing noise would drown the signal; they deliberately ignore speed costs, which is why the cumulative timed number runs below the sum of the parts.
 
 ---
+
+## Evaluation tuning (Texel method)
+
+The evaluation weights - material values, mobility bonuses, king-safety penalties, piece-square tables - are not hand-guessed. They are fitted with [Texel tuning](https://www.chessprogramming.org/Texel%27s_Tuning_Method): a static evaluation is secretly a prediction of who wins, so every weight is adjusted until the eval best predicts the results of thousands of real games.
+
+The pipeline lives in `tools/`:
+
+1. **Extract training positions** from fastchess match PGNs with `tools/extract_texel.py` (requires `python-chess`). Every finished game donates its quiet positions, each labeled with the game's final result:
+
+   ```bash
+   python3 tools/extract_texel.py 'path/to/*.pgn' > texel_positions.txt
+   ```
+
+   Positions in check, positions where the played move was a capture or promotion, the opening-book plies, and the final plies are all skipped - in real search the eval only ever scores quiet positions, so only those may teach it.
+
+2. **Fit the weights** with the tuner (`tools/tuner.cpp`, built as `bin/tuner`). It maps each eval score through a logistic curve to a win probability, measures the mean squared error against the actual results over the whole dataset, and nudges every weight in the direction that lowers the error (coordinate descent), sweeping until nothing improves:
+
+   ```bash
+   ./bin/tuner texel_positions.txt          # full run (hours; saves progress every sweep)
+   ./bin/tuner texel_positions.txt 10000    # quick smoke test
+   ```
+
+   The weights are exposed through a registry (`include/tune.h`, `src/tune.cpp`) - the same idea as Stockfish's `TUNE` macro: eval constants are mutable globals with compile-time defaults, so the optimizer can adjust them in memory without rebuilding the engine.
+
+3. **Validate.** Tuned values are pasted back into `include/score.h` as the new defaults, and the rebuilt engine must beat the previous baseline in a fastchess match before anything lands (see [Measured progress](#measured-progress)). Fitting the data better is a proxy; winning games is the objective.
+
+---
 ### Visualization:
 
 You can use KhaosChess with a graphical chess interface (GUI) like [Arena Chess GUI](https://www.playwitharena.de/)

@@ -17,7 +17,7 @@ constexpr std::int32_t SCORE_CAPTURE = SCORE_KILLER_PRIMARY + 1;
 // A capture's ceiling: queen victim + promotion bonus + promoted queen
 constexpr std::int32_t SCORE_PROMOTION_BONUS = 900;
 constexpr std::int32_t CAPTURE_CEILING =
-    SCORE_CAPTURE + (2 * MATERIAL_SCORES.piece_value[QUEEN].mg) + SCORE_PROMOTION_BONUS;
+    SCORE_CAPTURE + (2 * Material().piece_value[QUEEN].mg) + SCORE_PROMOTION_BONUS;
 
 constexpr std::int32_t SCORE_TT_MOVE = CAPTURE_CEILING + 1;
 constexpr std::int32_t SCORE_SKIP = -1'000'000;

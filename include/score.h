@@ -82,7 +82,7 @@ constexpr Score S(Value mg, Value eg) {
 // S(mg, eg) pairs since its placement inverts between game phases.
 // Seeded from the CPW simplified-evaluation tables scaled to KhaosChess
 // units (pawn mg = 300); placeholder values until Texel tuning.
-constexpr Score PSQT[PIECE_TYPE_NB][SQUARE_TOTAL] = {
+inline Score PSQT[PIECE_TYPE_NB][SQUARE_TOTAL] = {
     {   // NO_PIECE_TYPE
         0,    0,    0,    0,    0,    0,    0,    0,
         0,    0,    0,    0,    0,    0,    0,    0,
@@ -236,10 +236,12 @@ struct KingSafety {
 };
 
 // Define the actual instances
-constexpr Material MATERIAL_SCORES;
-constexpr PieceBonus PIECE_SCORES;
-constexpr PawnStructure PAWN_STRUCTURE_SCORES;
-constexpr KingSafety KING_SAFETY_SCORES;
+inline Material MATERIAL_SCORES;
+inline PieceBonus PIECE_SCORES;
+inline PawnStructure PAWN_STRUCTURE_SCORES;
+inline KingSafety KING_SAFETY_SCORES;
+
+inline Value TEMPO = 20;
 
 const Value PIECE_WEIGHTS[PIECE_TYPE_NB] = {0, 0, 1, 1, 2, 4, 0};
 
@@ -252,8 +254,7 @@ const Value MAX_PIECE_WEIGHTS =
 constexpr Value VALUE_INFINITE = 640'001;
 constexpr Value VALUE_MATE = 640'000;
 constexpr Value VALUE_KNOWN_WIN =
-    640'001 - 8 * MAX_PLY - 8 * MATERIAL_SCORES.all_pieces();
-constexpr Value TEMPO = 20;
+    640'001 - 8 * MAX_PLY - 8 * Material().all_pieces();
 
 // Kill-switches for the tempo + PSQT batch
 constexpr bool TEMPO_ENABLED = true;
