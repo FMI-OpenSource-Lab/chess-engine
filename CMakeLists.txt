@@ -33,7 +33,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE khaos_core)
 
 # Score tuner
 add_executable(tuner tools/tuner.cpp)
-target_link_libraries(tuner PRIVATE khaos_core)
+target_link_libraries(tuner PRIVATE khaos_core tbb)
 
 # Compiler specific settings
 if (MINGW)

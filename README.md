@@ -139,19 +139,19 @@ The evaluation weights - material values, mobility bonuses, king-safety penaltie
 
 The pipeline lives in `tools/`:
 
-1. **Extract training positions** from fastchess match PGNs with `tools/extract_texel.py` (requires `python-chess`). Every finished game donates its quiet positions, each labeled with the game's final result:
+1. **Get labeled positions.** Either download a public dataset - the tuner natively reads zurichess-style EPD (`... c9 "1-0";`), Ethereal-style books (`<fen> [1.0]`) and plain `<fen>;<result>` lines - or extract your own from fastchess match PGNs with `tools/pgn_to_dataset.py` (requires `python-chess`):
 
    ```bash
-   python3 tools/extract_texel.py 'path/to/*.pgn' > texel_positions.txt
+   python3 tools/pgn_to_dataset.py 'path/to/*.pgn' > positions.txt
    ```
 
-   Positions in check, positions where the played move was a capture or promotion, the opening-book plies, and the final plies are all skipped - in real search the eval only ever scores quiet positions, so only those may teach it.
+   Every finished game donates its quiet positions, each labeled with the game's final result. Positions in check, positions where the played move was a capture or promotion, the opening-book plies, and the final plies are all skipped - in real search the eval only ever scores quiet positions, so only those may teach it.
 
-2. **Fit the weights** with the tuner (`tools/tuner.cpp`, built as `bin/tuner`). It maps each eval score through a logistic curve to a win probability, measures the mean squared error against the actual results over the whole dataset, and nudges every weight in the direction that lowers the error (coordinate descent), sweeping until nothing improves:
+2. **Fit the weights** with the tuner (`tools/tuner.cpp`, built as `bin/tuner`; building it needs Intel TBB, e.g. `dnf install tbb-devel` - the engine itself stays dependency-free). It maps each eval score through a logistic curve to a win probability, measures the mean squared error against the actual results over the whole dataset in parallel (`std::execution::par`), and nudges every weight in the direction that lowers the error (coordinate descent), sweeping until nothing improves:
 
    ```bash
-   ./bin/tuner texel_positions.txt          # full run (hours; saves progress every sweep)
-   ./bin/tuner texel_positions.txt 10000    # quick smoke test
+   ./bin/tuner quiet-labeled.epd          # full run (hours; saves progress every sweep)
+   ./bin/tuner quiet-labeled.epd 10000    # quick smoke test
    ```
 
    The weights are exposed through a registry (`include/tune.h`, `src/tune.cpp`) - the same idea as Stockfish's `TUNE` macro: eval constants are mutable globals with compile-time defaults, so the optimizer can adjust them in memory without rebuilding the engine.

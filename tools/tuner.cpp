@@ -4,7 +4,8 @@
 #include <fstream>
 #include <iostream>
 #include <string>
-#include <vector>
+#include <execution>
+#include <numeric>
 
 #include "bitboard.h"
 #include "endgame.h"
@@ -26,6 +27,51 @@ struct Sample {
 // element addresses must never move
 std::deque<Sample> samples;
 
+// Parse one dataset line. Accepted dialects:
+//   zurichess EPD:   <fen fields> c9 "1-0";      (also 0-1, 1/2-1/2)
+//   Ethereal book:   <fen> [1.0]                 (also 0.5, 0.0)
+//   plain:           <fen>;1.0
+// The result is always from White's perspective in all three.
+bool parse_line(const std::string& line, std::string& fen, double& result) {
+    size_t pos;
+    if ((pos = line.find(" c9 \"")) != std::string::npos) {
+        std::string r =
+            line.substr(pos + 5, line.find('"', pos + 5) - (pos + 5));
+        if (r == "1-0")
+            result = 1.0;
+        else if (r == "0-1")
+            result = 0.0;
+        else if (r == "1/2-1/2")
+            result = 0.5;
+        else
+            return false;
+        fen = line.substr(0, pos);
+        return true;
+    }
+    if ((pos = line.find(" [")) != std::string::npos) {
+        result = std::stod(line.substr(pos + 2));
+        fen = line.substr(0, pos);
+        return true;
+    }
+    if ((pos = line.rfind(';')) != std::string::npos) {
+        result = std::stod(line.substr(pos + 1));
+        fen = line.substr(0, pos);
+        return true;
+    }
+    return false;
+}
+
+// EPD lines carry only the first four FEN fields; Position::set
+// expects all six, so append neutral move counters when missing
+std::string normalized(std::string fen) {
+    int fields = 1;
+    for (char c : fen)
+        fields += (c == ' ');
+    if (fields == 4)
+        fen += " 0 1";
+    return fen;
+}
+
 double sigmoid(double eval, double k) {
     return 1.0 / (1.0 + std::pow(10.0, -k * eval / 400.0));
 }
@@ -37,27 +83,29 @@ Value evaluate_white(const Position& pos) {
 }
 
 double mean_squared_error(double k) {
-    double total = 0.0;
-    for (const Sample& s : samples) {
-        double diff = s.result - sigmoid(evaluate_white(s.pos), k);
-        total += diff * diff;
-    }
+    double total = std::transform_reduce(
+        std::execution::par, samples.begin(), samples.end(), 0.0,
+        std::plus<>(),
+        [k](const Sample& s) {
+            double diff = s.result - sigmoid(evaluate_white(s.pos), k);
+            return diff * diff;
+        });
     return total / double(samples.size());
 }
 
 size_t load_dataset(const char* path, size_t limit) {
     std::ifstream in(path);
-    std::string line;
+    std::string line, fen;
+    double result;
     while (std::getline(in, line)) {
         if (limit && samples.size() >= limit)
             break;
-        size_t sep = line.rfind(';');
-        if (sep == std::string::npos)
+        if (!parse_line(line, fen, result))
             continue;
         samples.emplace_back();
         Sample& s = samples.back();
-        s.result = std::stod(line.substr(sep + 1));
-        s.pos.set(line.substr(0, sep), &s.mi);
+        s.result = result;
+        s.pos.set(normalized(fen), &s.mi);
     }
     return samples.size();
 }
@@ -85,6 +133,23 @@ double fit_k() {
 void save_params() {
     std::ofstream out("tuned_params.txt");
     print_params(out);
+}
+
+// Resume support: load a previous run's tuned_params.txt back into the
+// registry, so tuning continues from there instead of the compiled-in
+// defaults
+size_t load_params(const char* path) {
+    std::ifstream in(path);
+    std::string name;
+    Value v;
+    size_t applied = 0;
+    while (in >> name >> v) {
+        if (set_param(name, v))
+            ++applied;
+        else
+            std::cerr << "unknown param: " << name << "\n";
+    }
+    return applied;
 }
 
 void tune_weights(double k) {
@@ -128,7 +193,9 @@ void tune_weights(double k) {
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        std::cerr << "usage: tuner <positions-file> [max-positions]\n";
+        std::cerr
+            << "usage: tuner <positions-file> [max-positions] [resume-file]\n"
+            << "       max-positions 0 = no limit\n";
         return 1;
     }
 
@@ -139,6 +206,10 @@ int main(int argc, char* argv[]) {
 
     size_t limit = argc > 2 ? std::stoul(argv[2]) : 0;
     std::cout << "loaded " << load_dataset(argv[1], limit) << " positions\n";
+
+    if (argc > 3)
+        std::cout << "resumed " << load_params(argv[3]) << " weights from "
+                  << argv[3] << "\n";
 
     double k = fit_k();
     tune_weights(k);
