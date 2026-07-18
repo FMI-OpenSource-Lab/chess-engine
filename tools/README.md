@@ -42,11 +42,11 @@ Built together with the engine; the target needs Intel TBB
 computation runs parallel via `std::execution::par`.
 
 ```bash
-./bin/tuner <positions-file> [max-positions] [resume-file]
+./bin/tuner <positions-file> [max-positions] [max-outer] [trust] [resume-file]
 
-./bin/tuner quiet-labeled.epd                        # full run
-./bin/tuner quiet-labeled.epd 10000                  # quick smoke test
-./bin/tuner quiet-labeled.epd 0 tuned_params.txt     # resume a previous run
+./bin/tuner quiet-labeled.epd                              # full run (15 outers, trust 30)
+./bin/tuner quiet-labeled.epd 10000                        # quick smoke test
+./bin/tuner quiet-labeled.epd 0 15 30 gradient_params.txt  # resume a previous run
 ```
 
 Accepted input formats, auto-detected per line (they can be mixed in one
@@ -69,22 +69,24 @@ file):
    fitted first by a coarse-then-fine grid scan (that is the
    `K = ..., initial error = ...` startup line), then frozen so that all
    later improvement must come from the weights.
-4. **Coordinate descent**: for each of the ~830 registered weights
-   (see `include/tune.h`), try +step, else -step, keep whatever lowers the
-   error; sweep until a full pass changes nothing, then shrink the step
-   (15 -> 5 -> 2).
+4. **Gradient descent (Adam)**: the eval is linear in each of the ~830
+   registered weights (see `include/tune.h`), so per-position coefficient
+   vectors are extracted once by finite differences; one pass over those
+   cached features then yields the exact gradient for all weights at once,
+   and Adam steps inside a trust region, re-extracting whenever the weights
+   drift too far from the extraction point. The maths and the design are in
+   [gradient-tuner.md](gradient-tuner.md).
 
-Each sweep prints one line - adjusted count and error should both fall over
-time - and rewrites `tuned_params.txt` in the working directory, so an
-interrupted run loses at most the current sweep.
+Each outer iteration prints an honest `real MSE` line (the error at the
+current weights, falling over time) and rewrites `gradient_params.txt` in the
+working directory, so an interrupted run loses at most the current iteration.
 
 ### Things to know
 
-- **`tuned_params.txt` is overwritten by every run.** Copy the result of a
+- **`gradient_params.txt` is overwritten by every run.** Copy the result of a
   finished run somewhere safe before starting another.
 - **Small datasets overfit.** With ~830 free weights, tuning against a few
-  thousand positions memorizes noise (the giveaway: hundreds of weights
-  adjusted sweep after sweep, forever). Use the `max-positions` cap for
+  thousand positions memorizes noise. Use the `max-positions` cap for
   smoke tests only, never for real tuning.
 - **Error values are only comparable within one run** - each run re-fits K,
   and a different K shifts the error scale slightly.

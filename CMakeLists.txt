@@ -31,7 +31,7 @@ target_compile_definitions(khaos_core PUBLIC VERSION="${PROJECT_VERSION}")
 add_executable(${PROJECT_NAME} src/main.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE khaos_core)
 
-# Score tuner
+# Score tuner (coordinate-descent and gradient modes)
 add_executable(tuner tools/tuner.cpp)
 target_link_libraries(tuner PRIVATE khaos_core tbb)
 

@@ -147,10 +147,10 @@ The pipeline lives in `tools/`:
 
    Every finished game donates its quiet positions, each labeled with the game's final result. Positions in check, positions where the played move was a capture or promotion, the opening-book plies, and the final plies are all skipped - in real search the eval only ever scores quiet positions, so only those may teach it.
 
-2. **Fit the weights** with the tuner (`tools/tuner.cpp`, built as `bin/tuner`; building it needs Intel TBB, e.g. `dnf install tbb-devel` - the engine itself stays dependency-free). It maps each eval score through a logistic curve to a win probability, measures the mean squared error against the actual results over the whole dataset in parallel (`std::execution::par`), and nudges every weight in the direction that lowers the error (coordinate descent), sweeping until nothing improves:
+2. **Fit the weights** with the tuner (`tools/tuner.cpp`, built as `bin/tuner`; building it needs Intel TBB, e.g. `dnf install tbb-devel` - the engine itself stays dependency-free). It maps each eval score through a logistic curve to a win probability, measures the mean squared error against the actual results over the whole dataset in parallel (`std::execution::par`), and follows the analytic gradient of that error (Adam steps over cached feature vectors, re-extracted in a trust-region loop - see [tools/gradient-tuner.md](tools/gradient-tuner.md) for the maths):
 
    ```bash
-   ./bin/tuner quiet-labeled.epd          # full run (hours; saves progress every sweep)
+   ./bin/tuner quiet-labeled.epd          # full run (hours; checkpoints every iteration)
    ./bin/tuner quiet-labeled.epd 10000    # quick smoke test
    ```
 
