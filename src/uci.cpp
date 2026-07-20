@@ -1,14 +1,13 @@
 #include "uci.h"
 
 #include <stdlib.h>
-
 #include <iostream>
 
 #include "move.h"
 #include "movegen.h"
 #include "perft.h"
 #include "position.h"
-#include "search_engine.h"
+#include "thread.h"
 #include "tt.h"
 
 namespace KhaosChess {
@@ -22,16 +21,20 @@ Move parse_move(std::string move_string, const Position& pos) {
         Square m_target = m.target_square();
 
         // Castling is encoded king->rook square; UCI speaks king->g/c file
-        if (m.move_type() == MT_CASTLING)
-            m_target = make_square(m_target > m.source_square() ? FILE_G : FILE_C,
-                                   rank_of(m.source_square()));
+        if (m.move_type() == MT_CASTLING) {
+            m_target =
+                make_square(m_target > m.source_square() ? FILE_G : FILE_C,
+                            rank_of(m.source_square()));
+        }
 
         if (m.source_square() == source && m_target == target) {
             if (m.move_type() == MT_PROMOTION) {
                 // UCI promotion letters are always lowercase (e7e8q); BLACK
                 // indexes the lowercase half of ascii_pieces
-                if (move_string[4] == ascii_pieces[get_piece(BLACK, m.promoted())])
+                if (move_string[4] ==
+                    ascii_pieces[get_piece(BLACK, m.promoted())]) {
                     return m;
+                }
 
                 continue;
             }
@@ -54,19 +57,19 @@ void parse_position(const char* cmd, Position& pos, InfoListPtr& infos) {
     cmd += 9;
     const char* current = cmd;
 
-    if (strncmp(current, "startpos", 8) == 0)
+    if (strncmp(current, "startpos", 8) == 0) {
         pos.set(START_FEN, &infos->back());
-    else if (strncmp(current, "testpos", 7) == 0)
+    } else if (strncmp(current, "testpos", 7) == 0) {
         pos.set(TEST_FEN, &infos->back());
-    else  // UCI "fen" command
+    } else  // UCI "fen" command
     {
         // fen command is available
         current = strstr(cmd, "fen");
 
         // fen command is not available
-        if (current == NULL)
+        if (current == NULL) {
             pos.set(START_FEN, &infos->back());
-        else  // found FEN
+        } else  // found FEN
         {
             current += 4;
 
@@ -88,15 +91,17 @@ void parse_position(const char* cmd, Position& pos, InfoListPtr& infos) {
             Move move = parse_move(current, pos);
 
             // no move
-            if (move == Move::invalid_move())
+            if (move == Move::invalid_move()) {
                 break;
+            }
 
             // make the move
             infos->emplace_back();
             pos.do_move(move, infos->back());
 
-            while (*current && *current != ' ')
+            while (*current && *current != ' ') {
                 current++;
+            }
 
             current++;
         }
@@ -115,18 +120,20 @@ void parse_go(const char* cmd, Position& pos) {
     std::int64_t search_time = 0;  // in milliseconds
 
     // fixed depth search
-    if ((current = strstr(cmd, "depth")))
+    if ((current = strstr(cmd, "depth"))) {
         depth = atoi(current + 6);
+    }
 
     // fixed nodes per move
     std::int64_t max_nodes = 0;
-    if ((current = strstr(cmd, "nodes")))
+    if ((current = strstr(cmd, "nodes"))) {
         max_nodes = atoll(current + 6);
+    }
 
     // fixed time per move
-    if ((current = strstr(cmd, "movetime")))
+    if ((current = strstr(cmd, "movetime"))) {
         search_time = atoll(current + 9);
-    else {
+    } else {
         // allocate a slice of the remaining clock time
         const char* time_token = pos.side_to_move() == WHITE ? "wtime" : "btime";
         const char* inc_token = pos.side_to_move() == WHITE ? "winc" : "binc";
@@ -134,44 +141,46 @@ void parse_go(const char* cmd, Position& pos) {
         std::int64_t time_left = 0;
         std::int64_t increment = 0;
 
-        if ((current = strstr(cmd, time_token)))
+        if ((current = strstr(cmd, time_token))) {
             time_left = atoll(current + 6);
-        if ((current = strstr(cmd, inc_token)))
+        }
+        if ((current = strstr(cmd, inc_token))) {
             increment = atoll(current + 5);
+        }
 
-        if (time_left)
+        if (time_left) {
             search_time = time_left / 20 + increment / 2;
+        }
     }
 
     // bare "go" or "go infinite": no explicit limit, fall back to a fixed depth
-    if (!depth && !search_time && !max_nodes)
+    if (!depth && !search_time && !max_nodes) {
         depth = 6;
+    }
 
-    SearchEngine engine(pos);
+    SearchLimits limits;
+    limits.max_time = std::chrono::milliseconds(
+        search_time ? search_time : 24LL * 60 * 60 * 1000);
+    limits.node_limit = static_cast<std::uint64_t>(max_nodes);
+    limits.depth = depth ? depth : 64;
 
-    // when only a depth limit is given, effectively disable the time limit
-    engine.set_max_time(std::chrono::milliseconds(
-        search_time ? search_time : 24LL * 60 * 60 * 1000));
-
-    if (max_nodes)
-        engine.set_max_nodes(static_cast<std::uint64_t>(max_nodes));
-
-    SearchInfo info;
-    engine.search(depth ? depth : 64, info);
+    SearchInfo info = Threads.run(pos, limits);
 
     Move best = info.pv.empty() ? Move::invalid_move() : info.pv[0];
 
     // search was stopped before depth 1 completed; play any legal move
     if (best == Move::invalid_move()) {
         MoveList<GT_LEGAL> moves(pos);
-        if (moves.size())
+        if (moves.size()) {
             best = *moves.begin();
+        }
     }
 
-    if (best == Move::invalid_move())
+    if (best == Move::invalid_move()) {
         std::cout << "bestmove (none)\n";
-    else
+    } else {
         std::cout << "bestmove " << best.uci_move() << "\n";
+    }
 }
 
 /*
@@ -191,6 +200,7 @@ void uci_loop() {
 
     std::cout << "id name " << NAME << "\n";
     std::cout << "id author " << AUTHOR << "\n";
+    std::cout << "option name Threads type spin default 1 min 1 max 256\n";
     std::cout << "uciok\n";
 
     InfoListPtr infos(new std::deque<MoveInfo>(1));
@@ -209,21 +219,31 @@ void uci_loop() {
         fflush(stdout);
 
         // get user/GUI input
-        if (!fgets(input_buffer, INPUT_BUFFER, stdin))
+        if (!fgets(input_buffer, INPUT_BUFFER, stdin)) {
             break;
+        }
 
         // available input
-        if (input_buffer[0] == '\n')
+        if (input_buffer[0] == '\n') {
             continue;
+        }
 
         // parse UCI "isready" command
         if (strncmp(input_buffer, "isready", 7) == 0) {
             std::cout << "readyok\n";
             continue;
         }
+        // parse UCI "setoption" command
+        else if (strncmp(input_buffer, "setoption", 9) == 0) {
+            const char* val = strstr(input_buffer, "value");
+            if (val && strstr(input_buffer, "Threads")) {
+                Threads.set_count(atoi(val + 6));
+            }
+        }
         // parse UCI "position" command
-        else if (strncmp(input_buffer, "position", 8) == 0)
+        else if (strncmp(input_buffer, "position", 8) == 0) {
             parse_position(input_buffer, pos, infos);
+        }
 
         // parse UCI "ucinewgame" command
         else if (strncmp(input_buffer, "ucinewgame", 10) == 0) {
@@ -232,17 +252,20 @@ void uci_loop() {
         }
 
         // parse UCI "go" command
-        else if (strncmp(input_buffer, "go", 2) == 0)
+        else if (strncmp(input_buffer, "go", 2) == 0) {
             parse_go(input_buffer, pos);
+        }
 
         // parse UCI "quit" command
-        else if (strncmp(input_buffer, "quit", 4) == 0)
+        else if (strncmp(input_buffer, "quit", 4) == 0) {
             break;  // exit loop
+        }
 
         // parse UCI "uci" command
         else if (strncmp(input_buffer, "uci", 3) == 0) {
             std::cout << "\nid name " << NAME << "\n";
             std::cout << "id author " << AUTHOR << "\n";
+            std::cout << "option name Threads type spin default 1 min 1 max 256\n";
             std::cout << "uciok\n";
         }
 
@@ -251,22 +274,24 @@ void uci_loop() {
         else if (strncmp(input_buffer, "eval", 4) == 0) {
             const char* arg = input_buffer + 4;
 
-            if (strstr(arg, "material"))
+            if (strstr(arg, "material")) {
                 Scorer<SC_MATERIAL>().print_stats(pos);
-            else if (strstr(arg, "mobility"))
+            } else if (strstr(arg, "mobility")) {
                 Scorer<SC_MOBILITY>().print_stats(pos);
-            else if (strstr(arg, "king"))
+            } else if (strstr(arg, "king")) {
                 Scorer<SC_KING_SAFETY>().print_stats(pos);
-            else if (strstr(arg, "pawn"))
+            } else if (strstr(arg, "pawn")) {
                 Scorer<SC_PAWN_STRUCTURE>().print_stats(pos);
-            else if (strstr(arg, "coord"))
+            } else if (strstr(arg, "coord")) {
                 Scorer<SC_PIECE_COORDINATION>().print_stats(pos);
-            else
+            } else {
                 Scorer<SC_ALL>().print_stats(pos);
+            }
         }
 
-        else if (!strncmp(input_buffer, "d", 1))
+        else if (!strncmp(input_buffer, "d", 1)) {
             std::cout << pos << std::endl;
+        }
     }
 }
 }  // namespace KhaosChess

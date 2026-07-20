@@ -103,32 +103,36 @@ class Move {
         os << squareToCoordinates[mv.source_square()]
            << squareToCoordinates[mv.target_square()];
 
-        if (mv.move_type() == MT_PROMOTION)
-            os << " PNBRQKpnbrqk"[get_piece(
-                BLACK,
-                mv.promoted())];  // BLACK because we want the lowercase
-                                  // letter of the promoted piece
+        if (mv.move_type() == MT_PROMOTION) {
+            // BLACK because we want the lowercase letter of the promoted piece
+            os << " PNBRQKpnbrqk"[get_piece(BLACK, mv.promoted())];
+        }
 
         return os;
     }
 
     std::string uci_move() const {
-        if (*this == invalid_move())
+        if (*this == invalid_move()) {
             return "(none)";
-        if (*this == null_move())
+        }
+        if (*this == null_move()) {
             return "0000";
+        }
 
         Square source = source_square();
         Square target = target_square();
 
-        if (move_type() == MT_CASTLING)
-            target = make_square(target > source ? FILE_G : FILE_C, rank_of(source));
+        if (move_type() == MT_CASTLING) {
+            target =
+                make_square(target > source ? FILE_G : FILE_C, rank_of(source));
+        }
 
         std::string move_str = squareToCoordinates[source];
         move_str += squareToCoordinates[target];
 
-        if (move_type() == MT_PROMOTION)
+        if (move_type() == MT_PROMOTION) {
             move_str += " PNBRQKpnbrqk"[get_piece(BLACK, promoted())];
+        }
 
         return move_str;
     }

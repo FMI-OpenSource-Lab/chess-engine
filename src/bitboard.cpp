@@ -36,10 +36,12 @@ BITBOARD king_attacks_mask(const Square& square);
 
 void Bitboards::init() {
     // Calculate the square distance
-    for (Square x = A8; x <= H1; ++x)
-        for (Square y = A8; y <= H1; ++y)
+    for (Square x = A8; x <= H1; ++x) {
+        for (Square y = A8; y <= H1; ++y) {
             square_distance[x][y] =
                 std::max(distance<File>(x, y), distance<Rank>(x, y));
+        }
+    }
 
     // Initialize magic squares
     init_magics(ROOK, rook_magic_tbl);
@@ -49,8 +51,8 @@ void Bitboards::init() {
     init_pseudo_attacks();
 
     // Initialize line bitboards
-    for (Square x = A8; x <= H1; ++x)
-        for (PieceType pt : {BISHOP, ROOK})
+    for (Square x = A8; x <= H1; ++x) {
+        for (PieceType pt : {BISHOP, ROOK}) {
             for (Square y = A8; y <= H1; ++y) {
                 if (pseudo_attacks[pt][x] & y) {
                     full_line_bb[x][y] =
@@ -61,6 +63,8 @@ void Bitboards::init() {
 
                 between_points_bb[x][y] |= y;
             }
+        }
+    }
 }
 
 void init_pseudo_attacks() {
@@ -189,24 +193,32 @@ BITBOARD knight_attacks_mask(const Square& square) {
     set_bit(bitboard, square);
 
     // generate attacks
-    if ((bitboard >> 17) & not_H)
+    if ((bitboard >> 17) & not_H) {
         attacks |= (bitboard >> 17);  // up and left
-    if ((bitboard >> 15) & not_A)
+    }
+    if ((bitboard >> 15) & not_A) {
         attacks |= (bitboard >> 15);  // up and right
-    if ((bitboard >> 10) & not_HG)
+    }
+    if ((bitboard >> 10) & not_HG) {
         attacks |= (bitboard >> 10);  // left
-    if ((bitboard >> 6) & not_AB)
+    }
+    if ((bitboard >> 6) & not_AB) {
         attacks |= (bitboard >> 6);  // right
+    }
 
     // flip the offset
-    if ((bitboard << 17) & not_A)
+    if ((bitboard << 17) & not_A) {
         attacks |= (bitboard << 17);  // down and left
-    if ((bitboard << 15) & not_H)
+    }
+    if ((bitboard << 15) & not_H) {
         attacks |= (bitboard << 15);  // down and right
-    if ((bitboard << 10) & not_AB)
+    }
+    if ((bitboard << 10) & not_AB) {
         attacks |= (bitboard << 10);  // left
-    if ((bitboard << 6) & not_HG)
+    }
+    if ((bitboard << 6) & not_HG) {
         attacks |= (bitboard << 6);  // right
+    }
 
     return attacks;
 }
@@ -222,23 +234,31 @@ BITBOARD king_attacks_mask(const Square& square) {
     set_bit(bitboard, square);
 
     // generate king attacks
-    if (bitboard >> 8)
+    if (bitboard >> 8) {
         attacks |= (bitboard >> 8);  // upwards
-    if ((bitboard >> 9) & not_H)
+    }
+    if ((bitboard >> 9) & not_H) {
         attacks |= (bitboard >> 9);  // up left
-    if ((bitboard >> 7) & not_A)
+    }
+    if ((bitboard >> 7) & not_A) {
         attacks |= (bitboard >> 7);  // up right
-    if ((bitboard >> 1) & not_H)
+    }
+    if ((bitboard >> 1) & not_H) {
         attacks |= (bitboard >> 1);  // direct left
+    }
 
-    if (bitboard << 8)
+    if (bitboard << 8) {
         attacks |= (bitboard << 8);  // upwards
-    if ((bitboard << 9) & not_A)
+    }
+    if ((bitboard << 9) & not_A) {
         attacks |= (bitboard << 9);  // up left
-    if ((bitboard << 7) & not_H)
+    }
+    if ((bitboard << 7) & not_H) {
         attacks |= (bitboard << 7);  // up right
-    if ((bitboard << 1) & not_A)
+    }
+    if ((bitboard << 1) & not_A) {
         attacks |= (bitboard << 1);  // direct left
+    }
 
     return attacks;
 }

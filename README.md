@@ -9,14 +9,13 @@ Development continues beyond the thesis with a single goal: make the engine as s
 
 ### Working
 - **Board representation**: bitboards with magic sliding-piece attacks; full legal move generation, verified with a perft test suite against known positions
-- **Search**: iterative-deepening negamax alpha-beta with quiescence search, principal variation search with aspiration windows, a clustered transposition table (Zobrist hashing, depth-preferred replacement with aging, shared by the main and quiescence search), move ordering by killer moves, history heuristic, and static exchange evaluation (SEE), late move reductions, internal iterative reduction, null-move pruning, forward pruning (reverse futility, late move pruning, futility), check extensions, draw detection (fifty-move rule and repetition), and time- or node-based stopping
+- **Search**: iterative-deepening negamax alpha-beta with quiescence search, principal variation search with aspiration windows, a clustered transposition table (Zobrist hashing, depth-preferred replacement with aging, shared by the main and quiescence search), move ordering by killer moves, history heuristic, and static exchange evaluation (SEE), late move reductions, internal iterative reduction, null-move pruning, forward pruning (reverse futility, late move pruning, futility), check extensions, draw detection (fifty-move rule and repetition), time- or node-based stopping, and optional Lazy SMP multi-threaded search sharing the transposition table (UCI `Threads` option)
 - **Evaluation**: tapered middlegame/endgame scoring (material, pawn structure, king safety and more), specialized endgame evaluators keyed by material, and a KPK bitbase
 - **UCI protocol**: plays complete games in GUIs (e.g. Arena) and match runners (e.g. fastchess)
 
 ### Roadmap
 Each item gets validated with engine-vs-engine matches (see [Testing](#testing)) before it lands:
 
-- Lazy SMP: multi-threaded search sharing the transposition table, UCI `Threads` option
 - Countermove and continuation-history move ordering
 - Smarter time management and UCI `stop` support
 - UCI `Hash` option (runtime-resizable transposition table)
@@ -130,8 +129,11 @@ Each row was measured against the frozen baseline binary that preceded it; featu
 | 2.7.0 | Tempo bonus, piece-square tables (CPW-seeded, tapered), full connected-rooks bonus | 400 games, 20k fixed nodes | +59 ± 29 |
 | 2.8.0 | Texel-tuned evaluation weights (829 parameters, coordinate descent over 725k zurichess positions) | 400 games, 20k fixed nodes | +291 ± 41 |
 | 2.9.0 | Clustered transposition table (depth-preferred replacement with aging), internal iterative reduction, quiescence-search TT | 400 games, 20k fixed nodes | +38 ± 26 |
+| 2.10.0 | Lazy SMP: multi-threaded search sharing the transposition table (UCI `Threads` option) | 200 games, tc 8+0.08, 2 threads vs 1 | +44 ± 37 |
 
 Fixed-node matches (`go nodes`) are used for changes where timing noise would drown the signal; they deliberately ignore speed costs, which is why the cumulative timed number runs below the sum of the parts.
+
+The 2.10.0 row is a self-play scaling result: two search threads versus one, not a gain over the frozen baseline. At the default `Threads 1` the engine is behaviourally identical to 2.9.0, so single-threaded strength is unchanged; the second thread is what buys the Elo.
 
 ---
 

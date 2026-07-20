@@ -28,8 +28,9 @@ BITBOARD get_real_possible_moves(const Color c, const Position& pos, Square s,
     // Get all opponent pieces, except pawns
     BITBOARD opp_pieces = pos.get_pieces_bb(~c) ^ pos.get_pieces_bb(PAWN, ~c);
 
-    if (pos.get_king_blockers(c) & s)
+    if (pos.get_king_blockers(c) & s) {
         moves &= in_between_bb(s, ksq);
+    }
 
     // cannot move into square with our piece
     moves &= ~pos.get_pieces_bb(c);
@@ -38,8 +39,9 @@ BITBOARD get_real_possible_moves(const Color c, const Position& pos, Square s,
     BITBOARD opp_pawns = pos.get_pieces_bb(PAWN, ~c);
     BITBOARD opp_pawn_attacks = 0ULL;
 
-    while (opp_pawns)
+    while (opp_pawns) {
         opp_pawn_attacks |= pawn_attacks_bb(~c, pop_ls1b(opp_pawns));
+    }
 
     // Don't count squares attacked by opponents pawns with nothing valuable
     // there
@@ -63,12 +65,14 @@ Score score_pawns(const Position& pos) {
     BITBOARD our_pawns = pos.get_pieces_bb(PAWN, Us);
     BITBOARD opp_pawns = pos.get_pieces_bb(PAWN, Them);
 
-    if (Component == SC_MATERIAL || Component == SC_ALL)
+    if (Component == SC_MATERIAL || Component == SC_ALL) {
         score += MATERIAL_SCORES.piece_value[PAWN] * Value(pos.count<PAWN>(Us));
+    }
 
     // Return early if we only need material evaluation
-    if (Component == SC_MATERIAL)
+    if (Component == SC_MATERIAL) {
         return score;
+    }
 
     // Center controlled squares by side
     BITBOARD center_squares = FileC_Bits | FileD_Bits | FileE_Bits | FileF_Bits;
@@ -79,8 +83,9 @@ Score score_pawns(const Position& pos) {
     while (pawns) {
         Square s = pop_ls1b(pawns);
 
-        if (PSQT_ENABLED && Component == SC_ALL)
+        if (PSQT_ENABLED && Component == SC_ALL) {
             score += psqt_bonus(PAWN, s, Us);
+        }
 
         // Get the pawn structure components
         if (Component == SC_PAWN_STRUCTURE || Component == SC_ALL) {
@@ -119,21 +124,24 @@ Score score_pawns(const Position& pos) {
             score += count_bits(our_attacks & center_squares) *
                      PAWN_STRUCTURE_SCORES.control_center;
 
-            if (are_doubled)
+            if (are_doubled) {
                 score += PAWN_STRUCTURE_SCORES.doubled;
+            }
             if (support | phalanx) {
                 score += Score(PAWN_STRUCTURE_SCORES.connected_bonus[rel_r] *
                                (1 + static_cast<std::int32_t>(bool(phalanx)) -
                                 static_cast<std::int32_t>(bool(opposed))));
                 score += Score(10 * count_bits(support));
-            } else if (!neighbors)
+            } else if (!neighbors) {
                 score += PAWN_STRUCTURE_SCORES.isolated;
-            else if (is_backward)
+            } else if (is_backward) {
                 score += PAWN_STRUCTURE_SCORES.backward;
+            }
 
-            if (is_passed)
+            if (is_passed) {
                 score += PAWN_STRUCTURE_SCORES.passed *
                          PAWN_STRUCTURE_SCORES.passed_rank_weight[rel_r];
+            }
         }
     }
 
@@ -151,23 +159,28 @@ Score score_knights(const Position& pos) {
 
     BITBOARD knights = pos.get_pieces_bb(KNIGHT, Us);
 
-    if (Component == SC_MATERIAL || Component == SC_ALL)
-        score += MATERIAL_SCORES.piece_value[KNIGHT] * Value(pos.count<KNIGHT>(Us));
+    if (Component == SC_MATERIAL || Component == SC_ALL) {
+        score +=
+            MATERIAL_SCORES.piece_value[KNIGHT] * Value(pos.count<KNIGHT>(Us));
+    }
 
-    if (Component == SC_MATERIAL)
+    if (Component == SC_MATERIAL) {
         return score;
+    }
 
     while (knights) {
         Square s = pop_ls1b(knights);
         BITBOARD attacking = attacks_bb_by<KNIGHT>(s);
 
-        if (PSQT_ENABLED && Component == SC_ALL)
+        if (PSQT_ENABLED && Component == SC_ALL) {
             score += psqt_bonus(KNIGHT, s, Us);
+        }
 
         // Piece coordination
         if (Component == SC_PIECE_COORDINATION || Component == SC_ALL) {
-            if (pos.get_attacks_by<PAWN>(Us) & square_to_BB(s))
+            if (pos.get_attacks_by<PAWN>(Us) & square_to_BB(s)) {
                 score += PIECE_SCORES.safe_knight;
+            }
         }
 
         // Mobility and space control
@@ -181,8 +194,11 @@ Score score_knights(const Position& pos) {
 
             // If outpost exists and there is no pawn attacking the knight
             // square
-            if (outpost && !(pawn_attacks_bb(Us, s) & pos.get_pieces_bb(PAWN, Them)))
-                score += PIECE_SCORES.outpost_knight * Value(count_bits(outpost));
+            if (outpost &&
+                !(pawn_attacks_bb(Us, s) & pos.get_pieces_bb(PAWN, Them))) {
+                score +=
+                    PIECE_SCORES.outpost_knight * Value(count_bits(outpost));
+            }
 
             // Control space bonus
             score += PIECE_SCORES.control_space[KNIGHT] *
@@ -217,15 +233,19 @@ Score score_bishops(const Position& pos) {
 
     BITBOARD bishops = pos.get_pieces_bb(BISHOP, Us);
 
-    if (Component == SC_MATERIAL || Component == SC_ALL)
-        score += MATERIAL_SCORES.piece_value[BISHOP] * Value(pos.count<BISHOP>(Us));
+    if (Component == SC_MATERIAL || Component == SC_ALL) {
+        score +=
+            MATERIAL_SCORES.piece_value[BISHOP] * Value(pos.count<BISHOP>(Us));
+    }
 
-    if (Component == SC_MATERIAL)
+    if (Component == SC_MATERIAL) {
         return score;
+    }
 
     if ((Component == SC_PIECE_COORDINATION || Component == SC_ALL) &&
-        pos.count<BISHOP>(Us) >= 2)
+        pos.count<BISHOP>(Us) >= 2) {
         score += PIECE_SCORES.bishop_pair;
+    }
 
     while (bishops) {
         Square s = pop_ls1b(bishops);
@@ -234,8 +254,9 @@ Score score_bishops(const Position& pos) {
             pos.get_all_pieces_bb() &
             ~(pos.get_pieces_bb(BISHOP, QUEEN) & pos.get_pieces_bb(Us));
 
-        if (PSQT_ENABLED && Component == SC_ALL)
+        if (PSQT_ENABLED && Component == SC_ALL) {
             score += psqt_bonus(BISHOP, s, Us);
+        }
 
         // Mobility checks
         if (Component == SC_MOBILITY || Component == SC_ALL) {
@@ -276,8 +297,11 @@ Score score_bishops(const Position& pos) {
 
             // If outpost exists and there is no pawn attacking the bishop
             // square
-            if (outpost && !(pawn_attacks_bb(Us, s) & pos.get_pieces_bb(PAWN, Them)))
-                score += PIECE_SCORES.outpost_bishop * Value(count_bits(outpost));
+            if (outpost &&
+                !(pawn_attacks_bb(Us, s) & pos.get_pieces_bb(PAWN, Them))) {
+                score +=
+                    PIECE_SCORES.outpost_bishop * Value(count_bits(outpost));
+            }
         }
     }
 
@@ -292,11 +316,13 @@ Score score_rooks(const Position& pos) {
     BITBOARD rooks = pos.get_pieces_bb(ROOK, Us);
     BITBOARD opp_ranks = opponent_ranks_for(Us);
 
-    if (Component == SC_MATERIAL || Component == SC_ALL)
+    if (Component == SC_MATERIAL || Component == SC_ALL) {
         score += MATERIAL_SCORES.piece_value[ROOK] * Value(pos.count<ROOK>(Us));
+    }
 
-    if (Component == SC_MATERIAL)
+    if (Component == SC_MATERIAL) {
         return score;
+    }
 
     while (rooks) {
         Square s = pop_ls1b(rooks);
@@ -307,8 +333,9 @@ Score score_rooks(const Position& pos) {
             pos.get_all_pieces_bb() &
             ~(pos.get_pieces_bb(ROOK, QUEEN) & pos.get_pieces_bb(Us));
 
-        if (PSQT_ENABLED && Component == SC_ALL)
+        if (PSQT_ENABLED && Component == SC_ALL) {
             score += psqt_bonus(ROOK, s, Us);
+        }
 
         if (Component == SC_MOBILITY || Component == SC_ALL) {
             BITBOARD control_bb =
@@ -372,17 +399,21 @@ Score score_queens(const Position& pos) {
     BITBOARD queens = pos.get_pieces_bb(QUEEN, Us);
     BITBOARD opp_ranks = opponent_ranks_for(Us);
 
-    if (Component == SC_MATERIAL || Component == SC_ALL)
-        score += MATERIAL_SCORES.piece_value[QUEEN] * Value(pos.count<QUEEN>(Us));
+    if (Component == SC_MATERIAL || Component == SC_ALL) {
+        score +=
+            MATERIAL_SCORES.piece_value[QUEEN] * Value(pos.count<QUEEN>(Us));
+    }
 
-    if (Component == SC_MATERIAL)
+    if (Component == SC_MATERIAL) {
         return score;
+    }
 
     while (queens) {
         Square s = pop_ls1b(queens);
 
-        if (PSQT_ENABLED && Component == SC_ALL)
+        if (PSQT_ENABLED && Component == SC_ALL) {
             score += psqt_bonus(QUEEN, s, Us);
+        }
 
         if (Component == SC_MOBILITY || Component == SC_ALL) {
             // Bishop-like control
@@ -463,10 +494,11 @@ Score score_king_safety(const Position& pos) {
     // destinations still available
     Score shelter = score_king_shelter<Us>(pos, ksq);
 
-    if (pos.can_castle(kingside))
+    if (pos.can_castle(kingside)) {
         shelter = std::max(
             shelter, score_king_shelter<Us>(pos, sq_relative_to_side(G1, Us)),
             compare_scores);
+    }
 
     if (pos.can_castle(queenside)) {
         shelter = std::max(
@@ -483,9 +515,10 @@ Score score_king_safety(const Position& pos) {
     // Tries to bring king closer to the pawns
     BITBOARD pawns = pos.get_pieces_bb(PAWN, Us);
 
-    while (pawns)
+    while (pawns) {
         score += KING_SAFETY_SCORES.pawn_proximity_penalty *
                  Value(distance(pop_ls1b(pawns), ksq));
+    }
 
     return score;
 }
@@ -502,8 +535,9 @@ Score score_king(const Position& pos) {
 
     Score score = 0;
 
-    if (PSQT_ENABLED && Component == SC_ALL)
+    if (PSQT_ENABLED && Component == SC_ALL) {
         score += psqt_bonus(KING, our_ksq, Us);
+    }
 
     // Account for mobility
     if (Component == SC_MOBILITY || Component == SC_ALL) {
@@ -539,8 +573,9 @@ Score score_king(const Position& pos) {
                  pos.get_attacks_by<ROOK>(Them) | pos.get_attacks_by<QUEEN>(Them)) |
                 pos.get_attacks_by<PAWN>(Them) | attacks_bb_by<KING>(enemy_ksq);
 
-            if ((back_rank_area & blocked) == back_rank_area)
+            if ((back_rank_area & blocked) == back_rank_area) {
                 score += KING_SAFETY_SCORES.weak_back_rank;
+            }
         }
 
         // This approach will work becase as we evaluate for the both sides
@@ -567,8 +602,10 @@ Score score_king(const Position& pos) {
         // or a bishop that is the same color as the king's square (the same
         // color complex. Making it a weak diagonal)
         if (pos.get_pieces_bb(QUEEN, Them) ||
-            (pos.get_pieces_bb(BISHOP, Them) & color_complex))
-            score += KING_SAFETY_SCORES.weak_diagonals * Value(count_bits(snipers));
+            (pos.get_pieces_bb(BISHOP, Them) & color_complex)) {
+            score +=
+                KING_SAFETY_SCORES.weak_diagonals * Value(count_bits(snipers));
+        }
 
         // Step 2: Detect weak files and ranks
 
@@ -582,8 +619,9 @@ Score score_king(const Position& pos) {
         snipers = attacks_bb_by<ROOK>(
             our_ksq, pos.get_all_pieces_bb() ^ pos.get_king_blockers(Us));
 
-        if (pos.get_pieces_bb(QUEEN, Them) || pos.get_pieces_bb(ROOK, Them))
+        if (pos.get_pieces_bb(QUEEN, Them) || pos.get_pieces_bb(ROOK, Them)) {
             score += KING_SAFETY_SCORES.weak_lines * Value(count_bits(snipers));
+        }
     }
 
     return score;
@@ -643,8 +681,9 @@ inline Value Scorer<T>::get_score(const Position& pos) {
     // Get the endgame scores
     Value endgame = Endgames::score(pos);
 
-    if (endgame != VALUE_NONE)
+    if (endgame != VALUE_NONE) {
         return endgame;
+    }
 
     // Get the game phase weights
     weight = game_phase_weights(pos);

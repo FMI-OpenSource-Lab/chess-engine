@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 # Project name and version
-project(KhaosChess VERSION 2.9.0 LANGUAGES CXX)
+project(KhaosChess VERSION 2.10.0 LANGUAGES CXX)
 
 # If not explicitly set, default to Release build type
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -23,6 +23,9 @@ list(REMOVE_ITEM SOURCES "${CMAKE_SOURCE_DIR}/src/main.cpp")
 
 add_library(khaos_core STATIC ${SOURCES})
 target_include_directories(khaos_core PUBLIC "${CMAKE_SOURCE_DIR}/include")
+
+find_package(Threads REQUIRED)
+target_link_libraries(khaos_core PUBLIC Threads::Threads)
 
 # Single source of truth for the engine version (reported over UCI)
 target_compile_definitions(khaos_core PUBLIC VERSION="${PROJECT_VERSION}")

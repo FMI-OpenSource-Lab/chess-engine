@@ -4,6 +4,7 @@
 #include <chrono>
 #include <limits>
 #include <vector>
+#include <atomic>
 
 #include "defs.h"
 #include "movegen.h"
@@ -25,7 +26,7 @@ struct SearchInfo {
 
 class SearchEngine {
    public:
-    explicit SearchEngine(Position& pos);
+    explicit SearchEngine(Position& pos, std::int32_t id = 0);
 
     // Search entry point
     Value search(std::int32_t depth, SearchInfo& info);
@@ -35,6 +36,10 @@ class SearchEngine {
     // Cap the search at a node budget; 0 means no limit. Node-limited
     // games are immune to timing noise from CPU contention
     void set_max_nodes(std::uint64_t nodes);
+
+    // Shared stop flag controls for Lazy SMP
+    static void clear_stop();  // lower the flag before a search
+    static void stop();        // raise it to halt every thread
 
    private:
     Position& pos;
@@ -50,6 +55,9 @@ class SearchEngine {
                   SearchInfo& info, bool can_null = true,
                   std::int32_t num_extensions = 0);
     Value quiescence(std::int32_t ply, Value alpha, Value beta, SearchInfo& info);
+
+    static std::atomic<bool> abort_search;
+    int thread_id;  // 0 = main worker (reports, searches every depth)
 
     // Utility functions
     bool is_time_up();

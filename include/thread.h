@@ -1,0 +1,38 @@
+#pragma once
+
+#include <chrono>
+#include <cstdint>
+
+#include "position.h"
+#include "search_engine.h"
+
+namespace KhaosChess {
+
+// Everything a search run is bounded by; a zero field means "no limit"
+struct SearchLimits {
+    std::chrono::milliseconds max_time{0};
+    std::uint64_t node_limit = 0;
+    std::int32_t depth = 64;
+};
+
+// Owns the Lazy SMP dispatch: clones the root per worker, launches the
+// helper threads, runs the main search, and joins them. Returns the main
+// worker's result (its pv[0] is the move to play).
+class ThreadPool {
+   public:
+    void set_count(std::int32_t n) {
+        count_ = n < 1 ? 1 : n;
+    }
+    std::int32_t count() const {
+        return count_;
+    }
+
+    SearchInfo run(Position& root, const SearchLimits& limits);
+
+   private:
+    std::int32_t count_ = 1;
+};
+
+extern ThreadPool Threads;  // global instance, like tt::TT
+
+}  // namespace KhaosChess

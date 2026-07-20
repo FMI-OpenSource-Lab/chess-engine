@@ -41,10 +41,11 @@ std::ostream& operator<<(std::ostream& os, const Position& position) {
         for (File file = FILE_A; file <= FILE_H; ++file) {
             Piece p = position.get_piece_on(make_square(file, rank));
 
-            if (p != NO_PIECE)
+            if (p != NO_PIECE) {
                 os << " " << ascii_pieces[p];
-            else
+            } else {
                 os << " .";
+            }
         }
 
         os << "  " << (8 - rank) << " \n";
@@ -162,12 +163,14 @@ Position& Position::set(const std::string& fen, MoveInfo* mi) {
 
         if (token == 'K') {
             for (r_sq = sq_relative_to_side(H1, c); get_piece_on(r_sq) != rook;
-                 --r_sq)
+                 --r_sq) {
                 ;
+            }
         } else if (token == 'Q') {
             for (r_sq = sq_relative_to_side(A1, c); get_piece_on(r_sq) != rook;
-                 ++r_sq)
+                 ++r_sq) {
                 ;
+            }
         } else if (token >= 'A' && token <= 'H') {
             r_sq = make_square(File(token - 'A'), rank_relative_to_side(c, RANK_1));
         } else {
@@ -186,8 +189,9 @@ Position& Position::set(const std::string& fen, MoveInfo* mi) {
             make_square(File(fen[idx] - 'a'), Rank(8 - (fen[idx] - '0')));
 
         idx += 2;  // skip the en passant square and space
-    } else
+    } else {
         move_info->en_passant = NONE, idx++;
+    }
 
     // Skip to halfmove and fullmove
     idx++;
@@ -220,37 +224,46 @@ std::string Position::get_fen() const {
     for (Rank rank = RANK_8; rank <= RANK_1; ++rank) {
         for (File file = FILE_A; file <= FILE_H; ++file) {
             for (empty_sq_count = 0;
-                 file <= FILE_H && is_empty(make_square(file, rank)); ++file)
+                 file <= FILE_H && is_empty(make_square(file, rank)); ++file) {
                 ++empty_sq_count;
+            }
 
             // means print empty square count
-            if (empty_sq_count)
+            if (empty_sq_count) {
                 ss << empty_sq_count;
+            }
 
             // print piece on the square
-            if (file <= FILE_H)
+            if (file <= FILE_H) {
                 ss << ascii_pieces[get_piece_on(make_square(file, rank))];
+            }
         }
 
-        if (rank < RANK_1)
+        if (rank < RANK_1) {
             ss << '/';
+        }
     }
 
     // Side to move
     ss << (side == WHITE ? " w " : " b ");
 
     // Castling rights
-    if (can_castle(WK))
+    if (can_castle(WK)) {
         ss << 'K';
-    if (can_castle(WQ))
+    }
+    if (can_castle(WQ)) {
         ss << 'Q';
-    if (can_castle(BK))
+    }
+    if (can_castle(BK)) {
         ss << 'k';
-    if (can_castle(BQ))
+    }
+    if (can_castle(BQ)) {
         ss << 'q';
+    }
 
-    if (!can_castle(ANY))
+    if (!can_castle(ANY)) {
         ss << '-';
+    }
 
     ss << " "
        << (ep_square() == NONE  // En passant square
@@ -285,17 +298,21 @@ void Position::print_attacked_squares(Color c) const {
 BITBOARD Position::compute_key() const {
     BITBOARD k = 0;
 
-    for (Square s = A8; s <= H1; ++s)
-        if (get_piece_on(s) != NO_PIECE)
+    for (Square s = A8; s <= H1; ++s) {
+        if (get_piece_on(s) != NO_PIECE) {
             k ^= Zobrist::psq[get_piece_on(s)][s];
+        }
+    }
 
-    if (ep_square() != NONE)
+    if (ep_square() != NONE) {
         k ^= Zobrist::en_passant[file_of(ep_square())];
+    }
 
     k ^= Zobrist::castling[move_info->castling_rights];
 
-    if (side == BLACK)
+    if (side == BLACK) {
         k ^= Zobrist::side;
+    }
 
     return k;
 }
@@ -345,8 +362,9 @@ bool Position::gives_check(Move m) const {
     // then intersect with the target
     // if its king, result will be greater than 0, hence a check
     // else result will be 0, hence not a check
-    if (get_threats(type_of_piece(get_piece_on(source))) & target)
+    if (get_threats(type_of_piece(get_piece_on(source))) & target) {
         return true;
+    }
 
     // Discovered check
     //  Get the pieces that block cheks (that are pinned)
@@ -354,9 +372,10 @@ bool Position::gives_check(Move m) const {
 
     //	Already checked if a possible true result
     //  is not caused by direct check of sliding capture
-    if (get_king_blockers(~us) & source)
+    if (get_king_blockers(~us) & source) {
         return !are_squares_aligned(source, target, opp_king_square) ||
                m.move_type() == MT_CASTLING;
+    }
 
     // On move types
     // In case of NORMAL move (a check cannot be given)
@@ -692,9 +711,11 @@ bool Position::is_legal(Move m) const {
         target = sq_relative_to_side(target > source ? G1 : C1, us);
         Direction step = target > source ? LEFT : RIGHT;
 
-        for (Square s = target; s != source; s += step)
-            if (is_square_attacked(s, ~us))
+        for (Square s = target; s != source; s += step) {
+            if (is_square_attacked(s, ~us)) {
                 return false;
+            }
+        }
 
         return true;
     }
@@ -702,8 +723,9 @@ bool Position::is_legal(Move m) const {
     // moving the king
     if (type_of_piece(get_piece_on(source)) == KING) {
         // Check if the target square is attacked by the enemy
-        if (is_square_attacked(target, ~side))
+        if (is_square_attacked(target, ~side)) {
             return false;
+        }
 
         // Check if moving the king exposes it to attacks from sliding pieces
         BITBOARD occ = get_all_pieces_bb() ^ source;  // remove the king
@@ -756,9 +778,10 @@ BITBOARD Position::get_least_valuable_piece(BITBOARD attacks, Color by_side,
 
         // Order of the pieces in the enumerator are
         // from least to most valuable piece
-        if (subset)
+        if (subset) {
             // return this piece's bitboard
             return subset & -subset;  // single bit
+        }
     }
 
     // the set is empty
@@ -832,8 +855,9 @@ void Position::update_blocks_and_pins(Color c) {
 
             // If the blocking piece is of the opposite colour
             // the blocker is pinned by the pinner (the sniper)
-            if (btw & color_pieces)
+            if (btw & color_pieces) {
                 pinning_pieces[~c] |= sniper_sq;
+            }
         }
     }
 }
@@ -842,8 +866,9 @@ void Position::update_blocks_and_pins(Color c) {
 // repetition as a draw is intentional: if repeating once is best play,
 // repeating twice more changes nothing
 bool Position::is_draw() const {
-    if (move_info->fifty_move >= 100)
+    if (move_info->fifty_move >= 100) {
         return true;
+    }
 
     // Only positions since the last irreversible move (capture or pawn
     // move) can repeat — fifty_move is exactly that distance. Step 2 plies
@@ -853,11 +878,13 @@ bool Position::is_draw() const {
     for (std::int32_t i = 2; i <= move_info->fifty_move; i += 2) {
         info = info->prev ? info->prev->prev : nullptr;
 
-        if (!info)
+        if (!info) {
             break;
+        }
 
-        if (info->key == move_info->key)
+        if (info->key == move_info->key) {
             return true;
+        }
     }
 
     return false;

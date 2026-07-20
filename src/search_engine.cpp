@@ -95,12 +95,23 @@ static void init_lmr_table() {
     }
 }
 
-SearchEngine::SearchEngine(Position& pos)
+std::atomic<bool> SearchEngine::abort_search{false};
+
+void SearchEngine::clear_stop() {
+    abort_search.store(false, std::memory_order_relaxed);
+}
+
+void SearchEngine::stop() {
+    abort_search.store(true, std::memory_order_relaxed);
+}
+
+SearchEngine::SearchEngine(Position& pos, std::int32_t id)
     : pos(pos),
       max_time(std::chrono::milliseconds(3000)),  // Default 3 seconds
       max_nodes(0),
       should_stop(false),
-      time_checks(0) {
+      time_checks(0),
+      thread_id(id) {
     [[maybe_unused]] static bool lmr_ready = (init_lmr_table(), true);
 }
 
@@ -111,7 +122,6 @@ Value SearchEngine::search(std::int32_t depth, SearchInfo& info) {
     start_time = std::chrono::high_resolution_clock::now();
     should_stop = false;
     time_checks = 0;
-    tt::TT.new_search();
 
     // Fresh ordering state per search
     for (std::int32_t i = 0; i < MAX_PLY; ++i) {
@@ -125,6 +135,15 @@ Value SearchEngine::search(std::int32_t depth, SearchInfo& info) {
     // Iterative deepening
     for (std::int32_t current_depth = 1; current_depth <= depth;
          ++current_depth) {
+        // Lazy SMP staggering: helper threads skip a ply on a per-thread
+        // schedule, so they run at different depths than the main thread
+        // and fill the shared TT with a wider spread of results. Helpers
+        // still search the final target depth.
+        if ((thread_id > 0) && (current_depth < depth) &&
+            (((current_depth + thread_id) % 2) == 0)) {
+            continue;
+        }
+
         Value score = aspiration_search(current_depth, best_score, info);
 
         if (should_stop && (current_depth > 1)) {
@@ -139,7 +158,9 @@ Value SearchEngine::search(std::int32_t depth, SearchInfo& info) {
             info.pv.assign(pv_table[0], pv_table[0] + pv_length[0]);
             best_score = score;
 
-            report_iteration(info, current_depth, score);
+            if (thread_id == 0) {
+                report_iteration(info, current_depth, score);
+            }
         }
     }
 
@@ -492,10 +513,15 @@ bool SearchEngine::is_time_up() {
         return true;
     }
 
+    if (abort_search.load(std::memory_order_relaxed)) {
+        return should_stop = true;
+    }
+
     ++time_checks;
 
     if ((max_nodes != 0) && (time_checks >= max_nodes)) {
-        return true;
+        abort_search.store(true, std::memory_order_relaxed);
+        return should_stop = true;
     }
 
     // The clock read is costly; poll it once every (time check interval - 1) calls
@@ -507,7 +533,12 @@ bool SearchEngine::is_time_up() {
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
         current_time - start_time);
 
-    return elapsed >= max_time;
+    if (elapsed >= max_time) {
+        abort_search.store(true, std::memory_order_relaxed);
+        return should_stop = true;
+    }
+
+    return false;
 }
 
 void SearchEngine::set_max_time(std::chrono::milliseconds max_time) {

@@ -24,10 +24,18 @@ function print-green() {
 }
 
 function print-orange() {
-    local GREEN='\033[0;33m'
+    local ORANGE='\033[0;33m'
     local NC='\033[0m'
 
-    printf "${GREEN}${@}${NC}"
+    printf "${ORANGE}${@}${NC}"
+}
+
+
+function print-blue() {
+    local BLUE='\033[0;34m'
+    local NC='\033[0m'
+
+    printf "${BLUE}${@}${NC}"
 }
 
 function debug() {
@@ -85,10 +93,63 @@ function incremental-build() {
     }
 }
 
+function ktest() {
+    local build_dir="${SCRIPT_DIR}/build"
+    local tests_dir="${SCRIPT_DIR}/tests"
+
+    list_suites() {
+        print-yellow "Available test suites:\n"
+        for f in "${tests_dir}"/*_tests.cpp; do
+            print-orange "  $(basename "${f}" .cpp)\n"
+        done
+    }
+
+    # Configure a build dir on first use (Release, tests included).
+    [ -d "${build_dir}" ] || {
+        print-yellow "No build dir - configuring Release...\n"
+        mkdir -p "${build_dir}"
+        ( cd "${build_dir}" && cmake -DCMAKE_BUILD_TYPE=Release .. ) || {
+            print-red "Configure failed!\n"; return 1
+        }
+    }
+
+    # No argument: list the discoverable suites and bail.
+    [ -n "${1}" ] || { list_suites; return 0; }
+
+    # "ktest all": build everything and run the whole CTest set.
+    [ "${1}" = "all" ] && {
+        ( cd "${build_dir}" && cmake --build . --parallel && ctest --output-on-failure )
+        return ${?}
+    }
+
+    # The suite name is the binary name, e.g. perft_tests.
+    local target="${1}"
+    [ -f "${tests_dir}/${target}.cpp" ] || {
+        print-red "No test suite matching '${1}'\n"
+        list_suites
+        return 1
+    }
+
+    # Build just that suite (pulls in khaos_core), then run its binary.
+    ( cd "${build_dir}" && cmake --build . --parallel --target "${target}" ) || {
+        print-red "Build failed!\n"; return 1
+    }
+
+    print-green "Running ${target}...\n"
+    "${SCRIPT_DIR}/bin/tests/${target}" "${@:2}"
+}
+
+
 print-yellow "debug\n"
-print-orange "  Builds with Debug mode\n"
+print-blue "  Builds with Debug mode\n"
 print-yellow "release\n"
-print-orange "  Builds with Release mode\n"
+print-blue "  Builds with Release mode\n"
 print-yellow "incremental-build\n"
-print-orange "  Does incremental build with last build mode\n"
-print-orange "  Can be built with a specific flags passed as arguments\n"
+print-blue "  Does incremental build with last build mode\n"
+print-blue "  Can be built with a specific flags passed as arguments\n"
+print-yellow "ktest\n"
+print-blue "  Lists the available gtest suites\n"
+print-yellow "ktest <suite>\n"
+print-blue "  Builds and runs one suite by name, e.g. 'ktest perft_tests'\n"
+print-yellow "ktest all\n"
+print-blue "  Builds everything and runs the full ctest sweep\n"

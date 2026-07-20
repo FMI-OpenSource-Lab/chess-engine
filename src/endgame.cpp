@@ -153,8 +153,9 @@ void init() {
     memset(BITBASE, 0, sizeof(BITBASE));
     std::vector<Result> results(MAX_INDEX, R_UNKNOWN);
 
-    for (std::uint32_t idx = 0; idx < MAX_INDEX; ++idx)
+    for (std::uint32_t idx = 0; idx < MAX_INDEX; ++idx) {
         results[idx] = initial_score(idx);
+    }
 
     bool repeat = true;
     while (repeat) {
@@ -389,8 +390,9 @@ Value Endgame<ET_KPsK>::strong_side_score(const Position& pos) const {
     // 2. Weak king can reach the promotion square
 
     if ((pawns == (pawns & FileA_Bits) || pawns == (pawns & FileH_Bits)) &&
-        distance(weak_ksq, promotion_sq) <= 1)
+        distance(weak_ksq, promotion_sq) <= 1) {
         return VALUE_POSITIVE_DRAW;
+    }
 
     // Make a pawn strife for the promotion square
     return VALUE_KNOWN_WIN +
@@ -441,8 +443,9 @@ Value Endgame<ET_KXK>::strong_side_score(const Position& pos) const {
     Value v = VALUE_DRAW;
 
     // Add strong piece value endgame score + their count
-    for (const auto& pt : {PAWN, KNIGHT, BISHOP, ROOK, QUEEN})
+    for (const auto& pt : {PAWN, KNIGHT, BISHOP, ROOK, QUEEN}) {
         v += MATERIAL_SCORES.piece_value[pt].eg * pos.count(strong_side, pt);
+    }
 
     v += PUSH_TO_EDGE_BONUS[weak_ksq] +
          PUSH_CLOSER[distance(
@@ -485,8 +488,9 @@ Value Endgame<ET_KBPsK>::strong_side_score(const Position& pos) const {
     if ((pawns == (pawns & FileA_Bits) ||
          pawns == (pawns & FileH_Bits)) &&  // Rule 1
         square_color(bishop_sq) != square_color(promotion_sq) &&
-        distance(weak_ksq, promotion_sq) <= 1)  // Rule 2 and 3
+        distance(weak_ksq, promotion_sq) <= 1) {  // Rule 2 and 3
         return VALUE_POSITIVE_DRAW;
+    }
 
     // Make a pawn strife for the promotion square
     return VALUE_KNOWN_WIN +
@@ -535,14 +539,16 @@ Value Endgame<ET_KRKP>::strong_side_score(const Position& pos) const {
         make_square(file_of(pawn_sq), RANK_8);  // Promotion square
 
     // if strong king is directly in front of the pawn
-    if (strong_ksq < pawn_sq && distance(strong_ksq, pawn_sq) <= 1)
+    if (strong_ksq < pawn_sq && distance(strong_ksq, pawn_sq) <= 1) {
         return VALUE_KNOWN_WIN + PUSH_CLOSER[distance(strong_ksq, weak_ksq)];
+    }
 
     // If pawn is advanced and supported by the king while the strong king is
     // far away
     if (rank_of(pawn_sq) < RANK_5 && distance(weak_ksq, pawn_sq) <= 1 &&
-        distance(strong_ksq, pawn_sq) > 2)
+        distance(strong_ksq, pawn_sq) > 2) {
         return VALUE_POSITIVE_DRAW + Value(rank_of(pawn_sq));
+    }
 
     return (MATERIAL_SCORES.piece_value[ROOK] - MATERIAL_SCORES.piece_value[PAWN])
                .eg -
@@ -604,10 +610,11 @@ Value Endgame<ET_KBPsKB>::strong_side_score(const Position& pos) const {
     if (on_same_file) {
         if (file_of(weak_ksq) == file_of(furthest_pawn_sq) &&
             rank_of(weak_ksq) > rank_of(furthest_pawn_sq) &&
-            square_color(weak_ksq) != square_color(strong_bishop_sq))
+            square_color(weak_ksq) != square_color(strong_bishop_sq)) {
             return VALUE_POSITIVE_DRAW +
                    2 * (5 * Value(pos.count<PAWN>(strong_side)) +
                         Value(rank_of(furthest_pawn_sq)));
+        }
     } else if (square_color(strong_bishop_sq) != square_color(weak_ksq)) {
         bool pawn_on_file[FILE_NB] = {false};
         File furthest_pawn_file = file_of(furthest_pawn_sq);
@@ -618,8 +625,9 @@ Value Endgame<ET_KBPsKB>::strong_side_score(const Position& pos) const {
         while (pp) {
             File current_pawn_file = file_of(pop_ls1b(pp));
 
-            if (current_pawn_file != furthest_pawn_file)
+            if (current_pawn_file != furthest_pawn_file) {
                 f2 = current_pawn_file;
+            }
 
             pawn_on_file[current_pawn_file] = true;
         }
@@ -704,10 +712,11 @@ Value Endgame<ET_KQKRPs>::strong_side_score(const Position& pos) const {
 
     // Pawns defends the rook and king defends some pawns
     if ((pawn_attacks_bb(weak_side, pawns) & rook_sq) &&
-        attacks_bb_by<KING>(weak_ksq) & pawns)
+        attacks_bb_by<KING>(weak_ksq) & pawns) {
         return VALUE_POSITIVE_DRAW +
                10 * Value(rank_of(sq_relative_to_side(
                         first_pawn_square(pawns, weak_side), strong_side)));
+    }
 
     return (MATERIAL_SCORES.piece_value[QUEEN] -
             MATERIAL_SCORES.piece_value[ROOK])
@@ -718,8 +727,9 @@ Value Endgame<ET_KQKRPs>::strong_side_score(const Position& pos) const {
 template <>
 Value Endgame<ET_KmmKm>::strong_side_score(const Position& pos) const {
     if (!(pos.count<BISHOP>(strong_side) == 2 &&
-          pos.count<KNIGHT>(weak_side) == 1))
+          pos.count<KNIGHT>(weak_side) == 1)) {
         return VALUE_POSITIVE_DRAW;  // Theoretical draw
+    }
 
     BITBOARD bishops = pos.get_pieces_bb(BISHOP, strong_side);
 
@@ -852,11 +862,12 @@ void init() {
 }
 
 Value score(const Position& pos) {
-    for (const EndgameBasePtr& e : endgames)
+    for (const EndgameBasePtr& e : endgames) {
         if (e->is_applicable(pos)) {
             // std::cout << "[Endgame] : ";
             return e->score(pos);
         }
+    }
 
     return VALUE_NONE;
 }

@@ -15,15 +15,19 @@ BITBOARD side;
 void init() {
     PRNG rng(1070372);
 
-    for (Piece p = WHITE_PAWN; p <= BLACK_KING; ++p)
-        for (Square s = A8; s <= H1; ++s)
+    for (Piece p = WHITE_PAWN; p <= BLACK_KING; ++p) {
+        for (Square s = A8; s <= H1; ++s) {
             psq[p][s] = rng.rand<BITBOARD>();
+        }
+    }
 
-    for (File f = FILE_A; f <= FILE_H; ++f)
+    for (File f = FILE_A; f <= FILE_H; ++f) {
         en_passant[f] = rng.rand<BITBOARD>();
+    }
 
-    for (std::int32_t cr = 0; cr < CASTLING_RIGHT_NB; ++cr)
+    for (std::int32_t cr = 0; cr < CASTLING_RIGHT_NB; ++cr) {
         castling[cr] = rng.rand<BITBOARD>();
+    }
 
     side = rng.rand<BITBOARD>();
 }

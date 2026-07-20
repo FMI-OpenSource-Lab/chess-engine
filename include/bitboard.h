@@ -313,8 +313,9 @@ inline BITBOARD attacks_bb_by(Square s) {
 // Compiler specific functions, taken from Stockfish
 // https://github.com/official-stockfish/Stockfish GCC, Clang, ICC
 constexpr Square get_ls1b(BITBOARD bitboard) {
-    if (!bitboard)
+    if (!bitboard) {
         return NONE;
+    }
 
 #if defined(__GNUC__)
     return Square(__builtin_ctzll(bitboard));
@@ -349,8 +350,9 @@ constexpr Square get_ls1b(BITBOARD bitboard) {
 }
 
 constexpr Square get_msb(BITBOARD bitboard) {
-    if (!bitboard)
+    if (!bitboard) {
         return NONE;
+    }
 
 #if defined(__GNUC__)  // GCC, Clang, ICX
 

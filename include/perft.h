@@ -12,8 +12,9 @@
 
 namespace KhaosChess {
 inline std::uint64_t perft_driver(Position& pos, std::int32_t depth) {
-    if (depth == 0)
+    if (depth == 0) {
         return 1ULL;
+    }
 
     BITBOARD nodes = 0;
 

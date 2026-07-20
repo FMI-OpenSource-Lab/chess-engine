@@ -77,24 +77,27 @@ ScoredMoves* generate_pawn_moves(const Position& pos, ScoredMoves* move_list,
             Square target = pop_ls1b(left_attacks);
             Square source = target - up_left;
 
-            if (promotion_rank & source)  // in case of promotions
+            if (promotion_rank & source) {  // in case of promotions
                 move_list = make_promotions<up_left>(move_list, target);
-            else
+            } else {
                 *move_list++ = Move{source, target};
+            }
         }
 
         while (right_attacks) {
             Square target = pop_ls1b(right_attacks);
             Square source = target - up_right;
 
-            if (promotion_rank & source)  // in case of promotions
+            if (promotion_rank & source) {  // in case of promotions
                 move_list = make_promotions<up_right>(move_list, target);
-            else
+            } else {
                 *move_list++ = Move{source, target};
+            }
         }
 
-        while (promote)
+        while (promote) {
             move_list = make_promotions<up>(move_list, pop_ls1b(promote));
+        }
 
         Square ep_square = pos.ep_square();
 
@@ -103,8 +106,9 @@ ScoredMoves* generate_pawn_moves(const Position& pos, ScoredMoves* move_list,
 
             // if pawn is blocking a check when we are supposed to be evading
             // the check we cannot capture with en passant
-            if ((Type == GT_EVADE) && (block & (ep_square + up)))
+            if ((Type == GT_EVADE) && (block & (ep_square + up))) {
                 return move_list;
+            }
 
             // Every pawn that is not promoting and can be captured via ep
             BITBOARD ep_pawns =
@@ -112,8 +116,10 @@ ScoredMoves* generate_pawn_moves(const Position& pos, ScoredMoves* move_list,
 
             assert(ep_pawns);  // ensure that there exist ep attack
 
-            while (ep_pawns)
-                *move_list++ = Move{pop_ls1b(ep_pawns), ep_square, MT_EN_PASSANT};
+            while (ep_pawns) {
+                *move_list++ =
+                    Move{pop_ls1b(ep_pawns), ep_square, MT_EN_PASSANT};
+            }
         }
     }
 
@@ -133,8 +139,9 @@ ScoredMoves* generate_piece_moves(const Position& pos, ScoredMoves* move_list,
         Square source = pop_ls1b(bb);
         BITBOARD attacks = attacks_bb_by<Pt>(source, all) & block_or_cap;
 
-        while (attacks)
+        while (attacks) {
             *move_list++ = Move{source, pop_ls1b(attacks)};
+        }
     }
 
     return move_list;
@@ -182,10 +189,14 @@ ScoredMoves* generate_all_pseudo_legal(const Position& pos,
     // Gives WK and/or WQ if white
     // and BK and/or BQ if black
     if ((Type == GT_QUIET || Type == GT_ALL) &&
-        !pos.is_square_attacked(ksq, ~Us) && pos.can_castle(Us & ANY))
-        for (CastlingRights cr : {Us & KINGSIDE, Us & QUEENSIDE})
-            if (pos.can_castle(cr) && !pos.is_castling_interrupted(cr))
-                *move_list++ = Move{ksq, pos.castling_rook_square(cr), MT_CASTLING};
+        !pos.is_square_attacked(ksq, ~Us) && pos.can_castle(Us & ANY)) {
+        for (CastlingRights cr : {Us & KINGSIDE, Us & QUEENSIDE}) {
+            if (pos.can_castle(cr) && !pos.is_castling_interrupted(cr)) {
+                *move_list++ =
+                    Move{ksq, pos.castling_rook_square(cr), MT_CASTLING};
+            }
+        }
+    }
 
     return move_list;
 }
@@ -243,8 +254,9 @@ ScoredMoves* generate_moves<GT_LEGAL>(const Position& pos,
 
         // Assuming other moves are legal
         // if the preconditions pass we might be dealing with an illegal move
-        if ((is_pinned || is_king_move || is_ep) && !pos.is_legal(*move))
+        if ((is_pinned || is_king_move || is_ep) && !pos.is_legal(*move)) {
             continue;
+        }
 
         *legal_move_list++ = *move;
     }

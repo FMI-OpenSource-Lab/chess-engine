@@ -389,15 +389,17 @@ inline Square Position::castling_rook_square(CastlingRights cr) const {
 
 template <PieceType pt>
 inline BITBOARD Position::get_attacks_by(Color c) const {
-    if (pt == PAWN)
+    if (pt == PAWN) {
         return c == WHITE ? pawn_attacks_bb<WHITE>(get_pieces_bb(PAWN, WHITE))
                           : pawn_attacks_bb<BLACK>(get_pieces_bb(PAWN, BLACK));
+    }
 
     BITBOARD attacks = 0ULL;
     BITBOARD attackers = get_pieces_bb(pt, c);
 
-    while (attackers)
+    while (attackers) {
         attacks |= attacks_bb_by<pt>(pop_ls1b(attackers), get_all_pieces_bb());
+    }
 
     return attacks;
 }

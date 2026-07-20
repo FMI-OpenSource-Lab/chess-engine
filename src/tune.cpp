@@ -21,19 +21,22 @@ void add(std::vector<TunableParam>& reg, const std::string& name, Score& s) {
 std::vector<TunableParam> build_registry() {
     std::vector<TunableParam> reg;
 
-    for (PieceType pt = PAWN; pt <= QUEEN; ++pt)
+    for (PieceType pt = PAWN; pt <= QUEEN; ++pt) {
         add(reg, std::string("material.") + PIECE_NAMES[pt],
             MATERIAL_SCORES.piece_value[pt]);
+    }
 
     // mobility[PAWN], control_space[PAWN] and pinned_penalty are never
     // read by the eval, so they are not registered.
-    for (PieceType pt = KNIGHT; pt <= KING; ++pt)
+    for (PieceType pt = KNIGHT; pt <= KING; ++pt) {
         add(reg, std::string("mobility.") + PIECE_NAMES[pt],
             PIECE_SCORES.mobility[pt]);
+    }
 
-    for (PieceType pt = KNIGHT; pt <= QUEEN; ++pt)
+    for (PieceType pt = KNIGHT; pt <= QUEEN; ++pt) {
         add(reg, std::string("control_space.") + PIECE_NAMES[pt],
             PIECE_SCORES.control_space[pt]);
+    }
 
     add(reg, "piece.bishop_pair", PIECE_SCORES.bishop_pair);
     add(reg, "piece.connected_rooks", PIECE_SCORES.connected_rooks);
@@ -46,7 +49,7 @@ std::vector<TunableParam> build_registry() {
     add(reg, "piece.rook_semi_open_file", PIECE_SCORES.rook_semi_open_file);
     add(reg, "piece.trapped_rook", PIECE_SCORES.trapped_rook);
 
-    for (int r = 1; r <= 6; ++r) {
+    for (std::int32_t r = 1; r <= 6; ++r) {
         add(reg, "pawn.passed_rank_weight." + std::to_string(r),
             PAWN_STRUCTURE_SCORES.passed_rank_weight[r]);
         add(reg, "pawn.connected_bonus." + std::to_string(r),
@@ -78,15 +81,17 @@ std::vector<TunableParam> build_registry() {
 
     add(reg, "tempo", TEMPO);
 
-    for (PieceType pt = PAWN; pt <= KING; ++pt)
+    for (PieceType pt = PAWN; pt <= KING; ++pt) {
         for (Square s = A8; s <= H1; ++s) {
-            if (pt == PAWN && (s <= H8 || s >= A1))
+            if (pt == PAWN && (s <= H8 || s >= A1)) {
                 continue;  // pawns never stand on the back ranks
+            }
             add(reg,
                 std::string("psqt.") + PIECE_NAMES[pt] + "." +
-                    std::to_string(int(s)),
+                    std::to_string(std::int32_t(s)),
                 PSQT[pt][s]);
         }
+    }
 
     return reg;
 }
