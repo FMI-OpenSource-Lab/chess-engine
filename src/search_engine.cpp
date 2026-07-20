@@ -59,10 +59,9 @@ constexpr std::int32_t ASPIRATION_MIN_DEPTH = 4;
 constexpr std::int32_t MAX_EXTENSION = 16;
 
 constexpr bool MATE_DISTANCE_PRUNING = true;
-constexpr bool QSEARCH_TT = false;
+constexpr bool QSEARCH_TT = true;
 
-constexpr std::int32_t NULL_MOVE_DIVISOR = 1000;
-constexpr std::int32_t IIR_MIN_DEPTH = 1000;
+constexpr std::int32_t IIR_MIN_DEPTH = 4;
 
 static Value score_to_tt(Value score, std::int32_t ply) {
     if (score >= VALUE_MATE - MAX_PLY) {
@@ -112,6 +111,7 @@ Value SearchEngine::search(std::int32_t depth, SearchInfo& info) {
     start_time = std::chrono::high_resolution_clock::now();
     should_stop = false;
     time_checks = 0;
+    tt::TT.new_search();
 
     // Fresh ordering state per search
     for (std::int32_t i = 0; i < MAX_PLY; ++i) {
@@ -192,9 +192,9 @@ Value SearchEngine::negamax(std::int32_t depth, std::int32_t ply, Value alpha, V
     if (is_tt_hit && (ply > 0) && (tte->depth >= depth)) {
         Value tt_score = score_from_tt(tte->score, ply);
 
-        if ((tte->flag == tt::Flag::F_EXACT) ||
-            ((tte->flag == tt::Flag::F_LOWER_BOUND) && (tt_score >= beta)) ||
-            ((tte->flag == tt::Flag::F_UPPER_BOUND) && (tt_score <= alpha))) {
+        if ((tte->flag() == tt::Flag::F_EXACT) ||
+            ((tte->flag() == tt::Flag::F_LOWER_BOUND) && (tt_score >= beta)) ||
+            ((tte->flag() == tt::Flag::F_UPPER_BOUND) && (tt_score <= alpha))) {
             return tt_score;
         }
     }
@@ -338,9 +338,9 @@ Value SearchEngine::quiescence(std::int32_t ply, Value alpha, Value beta, Search
         if (is_tt_hit) {
             Value tt_score = score_from_tt(tte->score, ply);
 
-            if ((tte->flag == tt::Flag::F_EXACT) ||
-                ((tte->flag == tt::Flag::F_LOWER_BOUND) && (tt_score >= beta)) ||
-                ((tte->flag == tt::Flag::F_UPPER_BOUND) && (tt_score <= alpha))) {
+            if ((tte->flag() == tt::Flag::F_EXACT) ||
+                ((tte->flag() == tt::Flag::F_LOWER_BOUND) && (tt_score >= beta)) ||
+                ((tte->flag() == tt::Flag::F_UPPER_BOUND) && (tt_score <= alpha))) {
                 return tt_score;
             }
         }
@@ -602,9 +602,7 @@ bool SearchEngine::null_move_cuts(std::int32_t depth, std::int32_t ply, Value be
     MoveInfo null_info;
     pos.do_null_move(null_info);
 
-    std::int32_t reduction = NULL_MOVE_REDUCTION + depth / NULL_MOVE_DIVISOR;
-
-    Value null_score = -negamax(depth - 1 - reduction, ply + 1, -beta, -beta + 1, info,
+    Value null_score = -negamax(depth - 1 - NULL_MOVE_REDUCTION, ply + 1, -beta, -beta + 1, info,
                                 false, num_extensions);
 
     pos.undo_null_move();
