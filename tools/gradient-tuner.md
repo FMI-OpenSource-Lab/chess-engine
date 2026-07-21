@@ -37,8 +37,12 @@ of the 829-vector of weights `w`):
 
 ```
 σ(e)  = 1 / (1 + 10^(−K·e/400))        logistic: eval → win probability
-E(w)  = (1/N) Σₛ ( rₛ − σ(K·eₛ) )²      mean squared error
+E(w)  = (1/N) Σₛ ( rₛ − σ(eₛ) )²        mean squared error
 ```
+
+(`K` lives *inside* `σ` here; the code applies it once - `sigmoid(eval, k)`.
+Earlier drafts wrote `σ(K·eₛ)`, which reads as applying `K` twice. Same
+computation, clearer notation.)
 
 We want the `w` minimizing `E`. `K` is fit once by a 1-D grid search
 (`fit_k`) to whatever weights are loaded, then **frozen** for the run - exactly
@@ -175,9 +179,15 @@ across the whole vector without per-weight tuning. `β₁=0.9`, `β₂=0.999`, `
 ## 6. Re-extraction / trust region
 
 The linear model is exact at the extraction point but the eval has mild
-second-order curvature (a bilinear king-safety term, almost certainly). Measured:
-the linearisation error grows as **step²** (quadratic) - at ±2 per weight the mean
-error is ~1 eval unit; at ±40 it is ~294. So the features are trustworthy only
+second-order curvature. There is exactly one weight×weight product in the whole
+eval: the passed-pawn term `passed * passed_rank_weight[rel_r]`
+(`src/score.cpp`, `score_pawns`), where both operands are tunable weights. Every
+other term (king safety included) is weight × a position-derived integer, hence
+linear. Measured: the linearisation error grows as **step²** (quadratic) - at ±2
+per weight the mean error is ~1 eval unit; at ±40 it is ~294. Because that lone
+bilinear term fires in only a minority of positions, per-position drift can reach
+~150 units at drift 30 while the aggregate MSE stays ~1e-4 - which is why a trust
+radius this large still keeps model ≈ real. So the features are trustworthy only
 *near* the anchor.
 
 Hence the outer loop (`optimize`, milestone 2b):
@@ -289,10 +299,11 @@ Notes for future work - untested unless stated:
 - **Re-fit K** every few outer iterations instead of freezing it, once the eval
   scale has shifted a lot (note: coordinate descent freezes K, so for the race
   keep it frozen; this is a post-race idea).
-- **Model the bilinear term explicitly** - if the king-safety product is the only
-  real nonlinearity, capturing it directly would let the trust radius grow and
-  cut re-extractions.
-- **Atomic save** - `save_params` (in `tuner.cpp`) truncates in place; a `.tmp` +
-  `std::rename` would make interrupted runs safe. Same idea applies here.
+- **Model the passed-pawn bilinear term explicitly** - it is the only real
+  nonlinearity, so capturing it directly would let the trust radius grow and cut
+  re-extractions. Low payoff, though: it fires in only a minority of positions.
+- **Atomic save** - *done*: `save_params_atomic` writes `gradient_params.txt.tmp`
+  then `std::rename`s it into place, so an interrupted run can't corrupt the
+  best-weights file.
 - **Sparse Hessian** - most feature pairs never co-occur, so `H` is sparse;
   a sparse Cholesky would scale further if the weight count grows.

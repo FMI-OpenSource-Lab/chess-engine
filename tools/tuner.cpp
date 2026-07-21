@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdio>
 #include <deque>
 #include <execution>
 #include <fstream>
@@ -83,10 +84,8 @@ bool parse_line(const std::string& line, std::string& fen, double& result) {
 // expects all six, so append neutral move counters when missing
 std::string normalized(std::string fen) {
     int fields = 1;
-    for (char c : fen)
-        fields += (c == ' ');
-    if (fields == 4)
-        fen += " 0 1";
+    for (char c : fen) fields += (c == ' ');
+    if (fields == 4) fen += " 0 1";
     return fen;
 }
 
@@ -101,10 +100,8 @@ size_t load_dataset(const char* path, size_t limit) {
     std::string line, fen;
     double result;
     while (std::getline(in, line)) {
-        if (limit && samples.size() >= limit)
-            break;
-        if (!parse_line(line, fen, result))
-            continue;
+        if (limit && samples.size() >= limit) break;
+        if (!parse_line(line, fen, result)) continue;
         samples.emplace_back();
         Sample& s = samples.back();
         s.result = result;
@@ -133,15 +130,13 @@ size_t load_params(const char* path) {
 std::vector<double> current_weights() {
     const auto& reg = tunable_params();
     std::vector<double> w(reg.size());
-    for (size_t i = 0; i < reg.size(); ++i)
-        w[i] = double(*reg[i].slot);
+    for (size_t i = 0; i < reg.size(); ++i) w[i] = double(*reg[i].slot);
     return w;
 }
 
 double model_eval(const Sample& s, const std::vector<double>& w) {
     double v = s.base;
-    for (const Feature& f : s.feats)
-        v += f.coef * w[f.idx];
+    for (const Feature& f : s.feats) v += f.coef * w[f.idx];
     return v;
 }
 
@@ -170,8 +165,7 @@ void extract_features() {
         std::for_each(std::execution::par, samples.begin(), samples.end(),
                       [i](Sample& s) {
                           double coef = (s.tmp_plus - s.tmp_minus) / (2.0 * D);
-                          if (coef != 0.0)
-                              s.feats.push_back({int(i), coef});
+                          if (coef != 0.0) s.feats.push_back({int(i), coef});
                       });
     }
 
@@ -179,22 +173,25 @@ void extract_features() {
     std::for_each(std::execution::par, samples.begin(), samples.end(),
                   [&w](Sample& s) {
                       double dot = 0.0;
-                      for (const Feature& f : s.feats)
-                          dot += f.coef * w[f.idx];
+                      for (const Feature& f : s.feats) dot += f.coef * w[f.idx];
                       s.base = s.eval0 - dot;
                   });
 }
 
 double sigmoid(double eval, double k) {
-    return 1.0 / (1.0 + std::pow(10.0, -k * eval / 400.0));
+    // 10^x == exp(x * ln10); exp is materially faster than base-10 pow, and
+    // this runs across every position on every MSE / gradient pass.
+    constexpr double ln10 = 2.302585092994045901;
+    return 1.0 / (1.0 + std::exp(-k * eval * ln10 / 400.0));
 }
 
 // Real-eval MSE over the registry's current weights: the honest number
-// reported at every outer anchor.
-double real_mse(double k) {
+// reported at every outer anchor. Kept as a standalone reference check even
+// though fit_k now caches evals; unused in the default path.
+[[maybe_unused]] double real_mse(double k) {
     double total = std::transform_reduce(
-        std::execution::par, samples.begin(), samples.end(), 0.0,
-        std::plus<>(), [k](const Sample& s) {
+        std::execution::par, samples.begin(), samples.end(), 0.0, std::plus<>(),
+        [k](const Sample& s) {
             double diff = s.result - sigmoid(evaluate_white(s.pos), k);
             return diff * diff;
         });
@@ -202,16 +199,32 @@ double real_mse(double k) {
 }
 
 double fit_k() {
+    // The eval is independent of K, so evaluate every position once (cached in
+    // eval0, which extract_features overwrites later) and let the grid search
+    // re-run only the sigmoid over the cache -- ~38 full real-eval passes
+    // collapse to one.
+    std::for_each(std::execution::par, samples.begin(), samples.end(),
+                  [](Sample& s) { s.eval0 = evaluate_white(s.pos); });
+    auto cached_mse = [](double k) {
+        double total = std::transform_reduce(
+            std::execution::par, samples.begin(), samples.end(), 0.0,
+            std::plus<>(), [k](const Sample& s) {
+                double diff = s.result - sigmoid(s.eval0, k);
+                return diff * diff;
+            });
+        return total / double(samples.size());
+    };
+
     double best_k = 0.05, best_e = 1e18;
     for (double k = 0.05; k <= 2.0; k += 0.05) {
-        double e = real_mse(k);
+        double e = cached_mse(k);
         if (e < best_e) {
             best_e = e;
             best_k = k;
         }
     }
     for (double k = best_k - 0.045; k <= best_k + 0.045; k += 0.005) {
-        double e = real_mse(k);
+        double e = cached_mse(k);
         if (e < best_e) {
             best_e = e;
             best_k = k;
@@ -224,8 +237,8 @@ double fit_k() {
 // MSE using the cached linear model — the cheap inner-loop workhorse.
 double model_mse(const std::vector<double>& w, double k) {
     double total = std::transform_reduce(
-        std::execution::par, samples.begin(), samples.end(), 0.0,
-        std::plus<>(), [&w, k](const Sample& s) {
+        std::execution::par, samples.begin(), samples.end(), 0.0, std::plus<>(),
+        [&w, k](const Sample& s) {
             double diff = s.result - sigmoid(model_eval(s, w), k);
             return diff * diff;
         });
@@ -241,12 +254,29 @@ std::vector<double> gradient(const std::vector<double>& w, double k) {
                       double sig = sigmoid(model_eval(s, w), k);
                       s.g = 2.0 * (sig - s.result) * sig * (1.0 - sig) * c;
                   });
-    std::vector<double> grad(w.size(), 0.0);
-    for (const Sample& s : samples)  // serial scatter: sparse, cheap
-        for (const Feature& f : s.feats)
-            grad[f.idx] += s.g * f.coef;
-    for (double& gj : grad)
-        gj /= double(samples.size());
+    // Parallel scatter: ~40M (idx, coef) updates per call over 725k positions.
+    // Split the samples into chunks, accumulate a thread-local gradient per
+    // chunk, then reduce -- the reduce copies only `chunks` vectors.
+    const size_t n = samples.size();
+    const size_t chunks = std::min<size_t>(256, std::max<size_t>(1, n));
+    std::vector<size_t> ids(chunks);
+    std::iota(ids.begin(), ids.end(), 0);
+    std::vector<double> grad = std::transform_reduce(
+        std::execution::par, ids.begin(), ids.end(),
+        std::vector<double>(w.size(), 0.0),
+        [](std::vector<double> a, const std::vector<double>& b) {
+            for (size_t j = 0; j < a.size(); ++j) a[j] += b[j];
+            return a;
+        },
+        [&](size_t c) {
+            std::vector<double> local(w.size(), 0.0);
+            for (size_t i = c * n / chunks; i < (c + 1) * n / chunks; ++i) {
+                const Sample& s = samples[i];
+                for (const Feature& f : s.feats) local[f.idx] += s.g * f.coef;
+            }
+            return local;
+        });
+    for (double& gj : grad) gj /= double(n);
     return grad;
 }
 
@@ -254,6 +284,17 @@ void push_weights(const std::vector<double>& w) {
     const auto& reg = tunable_params();
     for (size_t i = 0; i < reg.size(); ++i)
         *reg[i].slot = Value(std::lround(w[i]));
+}
+
+// Write the registry to `path` atomically: full write to a temp file, then
+// rename. An interrupt mid-write leaves the previous good file untouched.
+void save_params_atomic(const char* path) {
+    const std::string tmp = std::string(path) + ".tmp";
+    {
+        std::ofstream out(tmp);
+        print_params(out);
+    }
+    std::rename(tmp.c_str(), path);
 }
 
 // Re-extraction outer loop.
@@ -335,8 +376,7 @@ void optimize(double k, int max_outer, double trust) {
             } else if (++stale >= patience) {
                 break;
             }
-            if (drift >= trust)
-                break;
+            if (drift >= trust) break;
         }
         w = best_inner_w;  // carry on from the best point, not the last one
 
@@ -346,13 +386,11 @@ void optimize(double k, int max_outer, double trust) {
         // checkpoint after every outer step so an interrupted overnight run
         // still leaves the best weights on disk
         push_weights(best_w);
-        std::ofstream ckpt("gradient_params.txt");
-        print_params(ckpt);
+        save_params_atomic("gradient_params.txt");
     }
 
     push_weights(best_w);
-    std::ofstream out("gradient_params.txt");
-    print_params(out);
+    save_params_atomic("gradient_params.txt");
     std::cout << "wrote gradient_params.txt, best real MSE " << best_real
               << " (" << minutes() << " min total)" << std::endl;
 }
