@@ -131,6 +131,8 @@ Each row was measured against the frozen baseline binary that preceded it; featu
 | 2.9.0 | Clustered transposition table (depth-preferred replacement with aging), internal iterative reduction, quiescence-search TT | 400 games, 20k fixed nodes | +38 ± 26 |
 | 2.10.0 | Lazy SMP: multi-threaded search sharing the transposition table (UCI `Threads` option) | 200 games, tc 8+0.08, 2 threads vs 1 | +44 ± 37 |
 | 2.11.0 | Quiet-move classification fix: re-enables killer/history ordering, late move reductions, late move pruning, and futility pruning (all were silently disabled by a misused promotion test) | 400 games, tc 8+0.08, single thread | +263 ± 34 |
+| 2.12.0 | Countermove ordering: the quiet reply that last refuted a given previous move is tried just below the killers | 400 games, tc 8+0.08, single thread | +23 ± 25 |
+| 2.12.0 | Continuation-history ordering (context-aware quiet scores keyed by the previous move, summed with the main history) and gravity-with-malus updates for both the main and continuation history tables (a cutoff rewards the move that caused it and penalizes the quiets tried before it, with a self-limiting update that never saturates) | 400 games, tc 8+0.08, single thread | +52 ± 24 |
 
 Fixed-node matches (`go nodes`) are used for changes where timing noise would drown the signal; they deliberately ignore speed costs, which is why the cumulative timed number runs below the sum of the parts.
 

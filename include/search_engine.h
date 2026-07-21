@@ -20,8 +20,7 @@ struct SearchInfo {
     std::chrono::milliseconds time;  // Time spent searching
     bool stopped;                    // Whether search was stopped early
 
-    SearchInfo() : nodes(0), q_nodes(0), depth(0), stopped(false) {
-    }
+    SearchInfo() : nodes(0), q_nodes(0), depth(0), stopped(false) {}
 };
 
 class SearchEngine {
@@ -55,7 +54,8 @@ class SearchEngine {
                   SearchInfo& info, bool can_null = true,
                   std::int32_t num_extensions = 0,
                   Move prev_move = Move::invalid_move());
-    Value quiescence(std::int32_t ply, Value alpha, Value beta, SearchInfo& info);
+    Value quiescence(std::int32_t ply, Value alpha, Value beta,
+                     SearchInfo& info);
 
     static std::atomic<bool> abort_search;
     int thread_id;  // 0 = main worker (reports, searches every depth)
@@ -73,24 +73,34 @@ class SearchEngine {
                      bool score_quiets = true,
                      Move prev_move = Move::invalid_move());
     void update_quiet_stats(Move move, std::int32_t ply, std::int32_t depth,
-                            Move prev_move);
+                            Move prev_move, Move* searched_quiets,
+                            std::int32_t num_quiets);
     void update_pv(Move move, std::int32_t ply);
-    void report_iteration(const SearchInfo& info, std::int32_t depth, Value score) const;
+    void report_iteration(const SearchInfo& info, std::int32_t depth,
+                          Value score) const;
 
-    Value aspiration_search(std::int32_t depth, Value prev_score, SearchInfo& info);
-    Value pvs_search(std::int32_t depth, std::int32_t ply, Value alpha, Value beta,
-                     SearchInfo& info, std::int32_t moves_searched,
+    Value aspiration_search(std::int32_t depth, Value prev_score,
+                            SearchInfo& info);
+    Value pvs_search(std::int32_t depth, std::int32_t ply, Value alpha,
+                     Value beta, SearchInfo& info, std::int32_t moves_searched,
                      bool in_check, bool is_quiet, std::int32_t num_extensions,
                      Move prev_move);
 
     std::int32_t lmr_reduction(std::int32_t depth, std::int32_t moves_searched,
                                bool in_check, bool is_quiet);
-    std::int32_t calculate_extension_depth(bool in_check, std::int32_t num_extensions) const;
+    std::int32_t calculate_extension_depth(bool in_check,
+                                           std::int32_t num_extensions) const;
 
     // Quiet-move ordering: two killer slots per ply, and a butterfly
     // history table bumped by depth^2 on every quiet beta cutoff
     Move killers[MAX_PLY][2];
     std::int32_t history[BOTH][SQUARE_TOTAL][SQUARE_TOTAL];
+
+    // Continuation history: how well a quiet move did as a reply to the
+    // previous move, keyed by (prev piece, prev target) then (this piece,
+    // this target). The colored Piece index folds in the side to move.
+    std::int16_t continuation_history[PIECE_NB][SQUARE_TOTAL][PIECE_NB]
+                                     [SQUARE_TOTAL];
 
     // Countermove: per side, the quiet move that last produced a beta cutoff
     // in reply to the (from -> to) move the opponent just played

@@ -10,7 +10,10 @@
 namespace KhaosChess {
 // Move-ordering tiers
 constexpr std::int32_t HISTORY_MAX = 16'000;
-constexpr std::int32_t SCORE_COUNTERMOVE = HISTORY_MAX + 1;
+constexpr std::int32_t CONTINUATION_HISTORY_MAX = 16'000;
+constexpr std::int32_t QUIET_SCORE_MAX = HISTORY_MAX + CONTINUATION_HISTORY_MAX;
+constexpr std::int32_t SCORE_COUNTERMOVE = QUIET_SCORE_MAX + 1;
+
 constexpr std::int32_t SCORE_KILLER_SECONDARY = SCORE_COUNTERMOVE + 1;
 constexpr std::int32_t SCORE_KILLER_PRIMARY = SCORE_KILLER_SECONDARY + 1;
 constexpr std::int32_t SCORE_CAPTURE = SCORE_KILLER_PRIMARY + 1;
@@ -26,7 +29,7 @@ constexpr std::int32_t SCORE_SKIP = -1'000'000;
 
 // Countermove heuristic: the quiet reply that last refuted a given previous
 // move is ordered just below the killers. Toggle for A/B measurement.
-constexpr bool COUNTERMOVE = false;
+constexpr bool COUNTERMOVE = true;
 
 // SEE gates
 constexpr bool SEE_ORDER_CAPTURES = true;
@@ -101,6 +104,14 @@ static void init_lmr_table() {
     }
 }
 
+// Gravity update: nudge an entry toward +/- bonus while decaying stale values,
+// so it self-limits within [-max, +max]. Unlike a hard cap it never saturates,
+// which keeps the table responsive as the search revises what a move is worth.
+template <typename T>
+static void apply_gravity(T& entry, std::int32_t bonus, std::int32_t max) {
+    entry += static_cast<T>(bonus - entry * std::abs(bonus) / max);
+}
+
 std::atomic<bool> SearchEngine::abort_search{false};
 
 void SearchEngine::clear_stop() {
@@ -135,6 +146,7 @@ Value SearchEngine::search(std::int32_t depth, SearchInfo& info) {
     }
 
     std::memset(history, 0, sizeof(history));
+    std::memset(continuation_history, 0, sizeof(continuation_history));
     std::memset(countermove, 0,
                 sizeof(countermove));  // 0 == Move::invalid_move()
 
@@ -281,7 +293,9 @@ Value SearchEngine::negamax(std::int32_t depth, std::int32_t ply, Value alpha,
     // Local PV line for this level
     bool found_pv = false;
     Move best_move = Move::invalid_move();
+    Move searched_quiets[MAX_MOVES];
     std::int32_t moves_searched = 0;
+    std::int32_t num_quiets = 0;
 
     // Loop through all moves
     for (const ScoredMoves& scored_move : moves) {
@@ -317,7 +331,8 @@ Value SearchEngine::negamax(std::int32_t depth, std::int32_t ply, Value alpha,
         if (score >= beta) {
             // Quiet cutoff
             if (is_quiet) {
-                update_quiet_stats(move, ply, depth, prev_move);
+                update_quiet_stats(move, ply, depth, prev_move, searched_quiets,
+                                   num_quiets);
             }
 
             tt::TT.store(pos.key(), score_to_tt(beta, ply), depth,
@@ -332,6 +347,10 @@ Value SearchEngine::negamax(std::int32_t depth, std::int32_t ply, Value alpha,
             best_move = move;
 
             update_pv(move, ply);
+        }
+
+        if (is_quiet && num_quiets < MAX_MOVES) {
+            searched_quiets[num_quiets++] = move;
         }
     }
 
@@ -479,6 +498,16 @@ Value SearchEngine::quiescence(std::int32_t ply, Value alpha, Value beta,
 void SearchEngine::score_moves(ScoredMoves* begin, ScoredMoves* end,
                                std::int32_t ply, Move tt_move,
                                bool score_quiets, Move prev_move) {
+    // The previous move is fixed for the whole node, so resolve its inner
+    // continuation-history table once, before the move loop.
+    std::int16_t (*continuation)[SQUARE_TOTAL] = nullptr;
+    if (prev_move != Move::invalid_move()) {
+        // The previous move is already made: its piece sits on its target.
+        Piece prev_piece = pos.get_piece_on(prev_move.target_square());
+        continuation =
+            continuation_history[prev_piece][prev_move.target_square()];
+    }
+
     // Simple move ordering with MVV-LVA
     for (ScoredMoves* it = begin; it != end; ++it) {
         Move move = *it;
@@ -516,8 +545,15 @@ void SearchEngine::score_moves(ScoredMoves* begin, ScoredMoves* end,
                                            [prev_move.target_square()])) {
                 it->score = SCORE_COUNTERMOVE;
             } else {
+                Piece current = pos.get_piece_on(move.source_square());
+
+                std::int32_t ch =
+                    (continuation != nullptr)
+                        ? continuation[current][move.target_square()]
+                        : 0;
                 it->score = history[pos.side_to_move()][move.source_square()]
-                                   [move.target_square()];
+                                   [move.target_square()] +
+                            ch;
             }
         } else {
             // Quiescence discards quiets (except evasions)
@@ -589,7 +625,9 @@ void SearchEngine::update_pv(Move move, std::int32_t ply) {
 
 // A quiet move refuted this node
 void SearchEngine::update_quiet_stats(Move move, std::int32_t ply,
-                                      std::int32_t depth, Move prev_move) {
+                                      std::int32_t depth, Move prev_move,
+                                      Move* searched_quiets,
+                                      std::int32_t num_quiets) {
     if (move != killers[ply][0]) {
         killers[ply][1] = killers[ply][0];
         killers[ply][0] = move;
@@ -600,9 +638,42 @@ void SearchEngine::update_quiet_stats(Move move, std::int32_t ply,
                    [prev_move.target_square()] = move;
     }
 
-    std::int32_t& h =
-        history[pos.side_to_move()][move.source_square()][move.target_square()];
-    h = std::min(h + depth * depth, HISTORY_MAX);
+    std::int32_t bonus = std::min(depth * depth, HISTORY_MAX);
+    Color stm = pos.side_to_move();
+
+    // Resolve the previous move's continuation slot once for the whole update.
+    bool has_prev = (prev_move != Move::invalid_move());
+    Piece prev_piece = NO_PIECE;
+    Square prev_target = NONE;
+    if (has_prev) {
+        prev_target = prev_move.target_square();
+        prev_piece = pos.get_piece_on(prev_target);
+    }
+
+    // Reward the quiet that produced the cutoff, in both tables.
+    apply_gravity(history[stm][move.source_square()][move.target_square()],
+                  bonus, HISTORY_MAX);
+    if (has_prev) {
+        Piece curr_piece = pos.get_piece_on(move.source_square());
+        apply_gravity(continuation_history[prev_piece][prev_target][curr_piece]
+                                          [move.target_square()],
+                      bonus, CONTINUATION_HISTORY_MAX);
+    }
+
+    // Penalize the quiets that were tried first and failed low, in both tables.
+    for (std::int32_t i = 0; i < num_quiets; ++i) {
+        Move q_move = searched_quiets[i];
+        Square q_source = q_move.source_square();
+        Square q_target = q_move.target_square();
+
+        apply_gravity(history[stm][q_source][q_target], -bonus, HISTORY_MAX);
+        if (has_prev) {
+            Piece quiet_piece = pos.get_piece_on(q_source);
+            apply_gravity(continuation_history[prev_piece][prev_target]
+                                              [quiet_piece][q_target],
+                          -bonus, CONTINUATION_HISTORY_MAX);
+        }
+    }
 }
 
 std::int32_t SearchEngine::lmr_reduction(std::int32_t depth,
