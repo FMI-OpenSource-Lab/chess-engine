@@ -10,17 +10,23 @@
 namespace KhaosChess {
 // Move-ordering tiers
 constexpr std::int32_t HISTORY_MAX = 16'000;
-constexpr std::int32_t SCORE_KILLER_SECONDARY = HISTORY_MAX + 1;
+constexpr std::int32_t SCORE_COUNTERMOVE = HISTORY_MAX + 1;
+constexpr std::int32_t SCORE_KILLER_SECONDARY = SCORE_COUNTERMOVE + 1;
 constexpr std::int32_t SCORE_KILLER_PRIMARY = SCORE_KILLER_SECONDARY + 1;
 constexpr std::int32_t SCORE_CAPTURE = SCORE_KILLER_PRIMARY + 1;
 
 // A capture's ceiling: queen victim + promotion bonus + promoted queen
 constexpr std::int32_t SCORE_PROMOTION_BONUS = 900;
 constexpr std::int32_t CAPTURE_CEILING =
-    SCORE_CAPTURE + (2 * Material().piece_value[QUEEN].mg) + SCORE_PROMOTION_BONUS;
+    SCORE_CAPTURE + (2 * Material().piece_value[QUEEN].mg) +
+    SCORE_PROMOTION_BONUS;
 
 constexpr std::int32_t SCORE_TT_MOVE = CAPTURE_CEILING + 1;
 constexpr std::int32_t SCORE_SKIP = -1'000'000;
+
+// Countermove heuristic: the quiet reply that last refuted a given previous
+// move is ordered just below the killers. Toggle for A/B measurement.
+constexpr bool COUNTERMOVE = false;
 
 // SEE gates
 constexpr bool SEE_ORDER_CAPTURES = true;
@@ -129,6 +135,8 @@ Value SearchEngine::search(std::int32_t depth, SearchInfo& info) {
     }
 
     std::memset(history, 0, sizeof(history));
+    std::memset(countermove, 0,
+                sizeof(countermove));  // 0 == Move::invalid_move()
 
     Value best_score = -VALUE_INFINITE;
 
@@ -167,9 +175,9 @@ Value SearchEngine::search(std::int32_t depth, SearchInfo& info) {
     return best_score;
 }
 
-Value SearchEngine::negamax(std::int32_t depth, std::int32_t ply, Value alpha, Value beta,
-                            SearchInfo& info, bool can_null,
-                            std::int32_t num_extensions) {
+Value SearchEngine::negamax(std::int32_t depth, std::int32_t ply, Value alpha,
+                            Value beta, SearchInfo& info, bool can_null,
+                            std::int32_t num_extensions, Move prev_move) {
     pv_length[ply] = ply;
 
     // Check if we're out of time
@@ -202,7 +210,8 @@ Value SearchEngine::negamax(std::int32_t depth, std::int32_t ply, Value alpha, V
         pos.get_attackers_to(pos.square<KING>(stm)) & pos.get_pieces_bb(~stm);
 
     // Check extension: forcing positions get one extra ply
-    std::int32_t extension = calculate_extension_depth(in_check, num_extensions);
+    std::int32_t extension =
+        calculate_extension_depth(in_check, num_extensions);
     depth += extension;
     num_extensions += extension;
 
@@ -222,7 +231,8 @@ Value SearchEngine::negamax(std::int32_t depth, std::int32_t ply, Value alpha, V
 
     // Internal iterative reduction: no TT move at high depth means the node
     // is probably unimportant; search it shallower and let the TT fill in
-    if ((depth >= IIR_MIN_DEPTH) && (!is_tt_hit || (tte->move == Move::invalid_move()))) {
+    if ((depth >= IIR_MIN_DEPTH) &&
+        (!is_tt_hit || (tte->move == Move::invalid_move()))) {
         depth--;
     }
 
@@ -233,7 +243,8 @@ Value SearchEngine::negamax(std::int32_t depth, std::int32_t ply, Value alpha, V
 
     bool is_pv = (beta - alpha) > 1;
 
-    Value static_eval = in_check ? -VALUE_INFINITE : Scorer<SC_ALL>().get_score(pos);
+    Value static_eval =
+        in_check ? -VALUE_INFINITE : Scorer<SC_ALL>().get_score(pos);
 
     // Reverse futility pruning
     if (!is_pv && !in_check && (depth <= RFP_MAX_DEPTH) &&
@@ -259,12 +270,13 @@ Value SearchEngine::negamax(std::int32_t depth, std::int32_t ply, Value alpha, V
 
     // If no legal moves, check for checkmate or stalemate
     if (moves.size() == 0) {
-        return in_check ? -VALUE_MATE + ply : VALUE_DRAW;  // Checkmate or Stalemate
+        return in_check ? -VALUE_MATE + ply
+                        : VALUE_DRAW;  // Checkmate or Stalemate
     }
 
     // Score moves for better ordering
     score_moves(moves.begin(), moves.end(), ply,
-                is_tt_hit ? tte->move : Move::invalid_move());
+                is_tt_hit ? tte->move : Move::invalid_move(), true, prev_move);
 
     // Local PV line for this level
     bool found_pv = false;
@@ -273,22 +285,23 @@ Value SearchEngine::negamax(std::int32_t depth, std::int32_t ply, Value alpha, V
 
     // Loop through all moves
     for (const ScoredMoves& scored_move : moves) {
-        Move move = scored_move;  // Implicit conversion from ScoredMoves to Move
+        Move move = scored_move;
         MoveInfo move_info;
 
         // Read before doing a move, while any victim still sits on the target
-        bool is_quiet = !is_capture(move) && (move.promoted() == NO_PIECE_TYPE);
+        bool is_quiet = !is_capture(move) && (move.move_type() != MT_PROMOTION);
 
-        // Forward pruning: LMP and futility, see should_skip_quiet
-        if (is_quiet && !in_check && should_skip_quiet(depth, moves_searched, alpha, static_eval)) {
+        // Forward pruning: LMP and futility
+        if (is_quiet && !in_check &&
+            should_skip_quiet(depth, moves_searched, alpha, static_eval)) {
             continue;
         }
 
         // Make the move
         pos.do_move(move, move_info);
 
-        Value score = pvs_search(depth, ply, alpha, beta, info, moves_searched, in_check, is_quiet,
-                                 num_extensions);
+        Value score = pvs_search(depth, ply, alpha, beta, info, moves_searched,
+                                 in_check, is_quiet, num_extensions, move);
 
         moves_searched++;
 
@@ -304,7 +317,7 @@ Value SearchEngine::negamax(std::int32_t depth, std::int32_t ply, Value alpha, V
         if (score >= beta) {
             // Quiet cutoff
             if (is_quiet) {
-                update_quiet_stats(move, ply, depth);
+                update_quiet_stats(move, ply, depth, prev_move);
             }
 
             tt::TT.store(pos.key(), score_to_tt(beta, ply), depth,
@@ -329,7 +342,8 @@ Value SearchEngine::negamax(std::int32_t depth, std::int32_t ply, Value alpha, V
     return alpha;
 }
 
-Value SearchEngine::quiescence(std::int32_t ply, Value alpha, Value beta, SearchInfo& info) {
+Value SearchEngine::quiescence(std::int32_t ply, Value alpha, Value beta,
+                               SearchInfo& info) {
     // Check if we're out of time
     if (is_time_up()) {
         info.stopped = should_stop = true;
@@ -360,8 +374,10 @@ Value SearchEngine::quiescence(std::int32_t ply, Value alpha, Value beta, Search
             Value tt_score = score_from_tt(tte->score, ply);
 
             if ((tte->flag() == tt::Flag::F_EXACT) ||
-                ((tte->flag() == tt::Flag::F_LOWER_BOUND) && (tt_score >= beta)) ||
-                ((tte->flag() == tt::Flag::F_UPPER_BOUND) && (tt_score <= alpha))) {
+                ((tte->flag() == tt::Flag::F_LOWER_BOUND) &&
+                 (tt_score >= beta)) ||
+                ((tte->flag() == tt::Flag::F_UPPER_BOUND) &&
+                 (tt_score <= alpha))) {
                 return tt_score;
             }
         }
@@ -371,7 +387,8 @@ Value SearchEngine::quiescence(std::int32_t ply, Value alpha, Value beta, Search
     Move best_move = Move::invalid_move();
 
     Color stm = pos.side_to_move();
-    bool in_check = pos.get_attackers_to(pos.square<KING>(stm)) & pos.get_pieces_bb(~stm);
+    bool in_check =
+        pos.get_attackers_to(pos.square<KING>(stm)) & pos.get_pieces_bb(~stm);
 
     if (!in_check) {
         Value stand_pat = Scorer<SC_ALL>().get_score(pos);
@@ -402,7 +419,8 @@ Value SearchEngine::quiescence(std::int32_t ply, Value alpha, Value beta, Search
     // Score legal moves for better ordering; a quiet TT move is harmless,
     // the capture filter below skips it anyway
     score_moves(legals.begin(), legals.end(), ply,
-                (QSEARCH_TT && is_tt_hit) ? tte->move : Move::invalid_move(), false);
+                (QSEARCH_TT && is_tt_hit) ? tte->move : Move::invalid_move(),
+                false);
 
     // Loop through capture moves
     for (const ScoredMoves& scored_move : legals) {
@@ -450,8 +468,8 @@ Value SearchEngine::quiescence(std::int32_t ply, Value alpha, Value beta, Search
     }
 
     if (QSEARCH_TT) {
-        tt::Flag flag = (alpha > orig_alpha) ? tt::Flag::F_EXACT
-                                             : tt::Flag::F_UPPER_BOUND;
+        tt::Flag flag =
+            (alpha > orig_alpha) ? tt::Flag::F_EXACT : tt::Flag::F_UPPER_BOUND;
         tt::TT.store(pos.key(), score_to_tt(alpha, ply), 0, flag, best_move);
     }
 
@@ -460,7 +478,7 @@ Value SearchEngine::quiescence(std::int32_t ply, Value alpha, Value beta, Search
 
 void SearchEngine::score_moves(ScoredMoves* begin, ScoredMoves* end,
                                std::int32_t ply, Move tt_move,
-                               bool score_quiets) {
+                               bool score_quiets, Move prev_move) {
     // Simple move ordering with MVV-LVA
     for (ScoredMoves* it = begin; it != end; ++it) {
         Move move = *it;
@@ -471,8 +489,9 @@ void SearchEngine::score_moves(ScoredMoves* begin, ScoredMoves* end,
         }
 
         // Captures and promotions
-        if (is_capture(move) || (move.promoted() != NO_PIECE_TYPE)) {
-            PieceType victim = type_of_piece(pos.get_piece_on(move.target_square()));
+        if (is_capture(move) || (move.move_type() == MT_PROMOTION)) {
+            PieceType victim =
+                type_of_piece(pos.get_piece_on(move.target_square()));
             PieceType aggressor =
                 type_of_piece(pos.get_piece_on(move.source_square()));
 
@@ -482,14 +501,20 @@ void SearchEngine::score_moves(ScoredMoves* begin, ScoredMoves* end,
                         MATERIAL_SCORES.piece_value[victim].mg -
                         MATERIAL_SCORES.piece_value[aggressor].mg / 10;
 
-            if (move.promoted() != NO_PIECE_TYPE) {
-                it->score += SCORE_PROMOTION_BONUS + MATERIAL_SCORES.piece_value[move.promoted()].mg;
+            if (move.move_type() == MT_PROMOTION) {
+                it->score += SCORE_PROMOTION_BONUS +
+                             MATERIAL_SCORES.piece_value[move.promoted()].mg;
             }
         } else if (score_quiets) {
             if (move == killers[ply][0]) {
                 it->score = SCORE_KILLER_PRIMARY;
             } else if (move == killers[ply][1]) {
                 it->score = SCORE_KILLER_SECONDARY;
+            } else if (COUNTERMOVE && (prev_move != Move::invalid_move()) &&
+                       (move == countermove[pos.side_to_move()]
+                                           [prev_move.source_square()]
+                                           [prev_move.target_square()])) {
+                it->score = SCORE_COUNTERMOVE;
             } else {
                 it->score = history[pos.side_to_move()][move.source_square()]
                                    [move.target_square()];
@@ -524,7 +549,8 @@ bool SearchEngine::is_time_up() {
         return should_stop = true;
     }
 
-    // The clock read is costly; poll it once every (time check interval - 1) calls
+    // The clock read is costly; poll it once every (time check interval - 1)
+    // calls
     if ((time_checks & (TIME_CHECK_INTERVAL - 1)) != 0) {
         return false;
     }
@@ -549,7 +575,8 @@ void SearchEngine::set_max_nodes(std::uint64_t nodes) {
     this->max_nodes = nodes;
 }
 
-// Prepend `move` to the child's line: pv_table[ply] becomes move + pv_table[ply+1]
+// Prepend `move` to the child's line: pv_table[ply] becomes move +
+// pv_table[ply+1]
 void SearchEngine::update_pv(Move move, std::int32_t ply) {
     pv_table[ply][ply] = move;
 
@@ -561,19 +588,25 @@ void SearchEngine::update_pv(Move move, std::int32_t ply) {
 }
 
 // A quiet move refuted this node
-void SearchEngine::update_quiet_stats(Move move, std::int32_t ply, std::int32_t depth) {
+void SearchEngine::update_quiet_stats(Move move, std::int32_t ply,
+                                      std::int32_t depth, Move prev_move) {
     if (move != killers[ply][0]) {
         killers[ply][1] = killers[ply][0];
         killers[ply][0] = move;
     }
 
-    std::int32_t& h = history[pos.side_to_move()]
-                             [move.source_square()]
-                             [move.target_square()];
+    if (COUNTERMOVE && (prev_move != Move::invalid_move())) {
+        countermove[pos.side_to_move()][prev_move.source_square()]
+                   [prev_move.target_square()] = move;
+    }
+
+    std::int32_t& h =
+        history[pos.side_to_move()][move.source_square()][move.target_square()];
     h = std::min(h + depth * depth, HISTORY_MAX);
 }
 
-std::int32_t SearchEngine::lmr_reduction(std::int32_t depth, std::int32_t moves_searched,
+std::int32_t SearchEngine::lmr_reduction(std::int32_t depth,
+                                         std::int32_t moves_searched,
                                          bool in_check, bool is_quiet) {
     if ((moves_searched < LMR_MIN_MOVES) || (depth < LMR_MIN_DEPTH) ||
         in_check || !is_quiet) {
@@ -592,8 +625,9 @@ std::int32_t SearchEngine::lmr_reduction(std::int32_t depth, std::int32_t moves_
     return std::min(reduction, depth - 2);  // keep the scout at depth >= 1
 }
 
-bool SearchEngine::should_skip_quiet(std::int32_t depth, std::int32_t moves_searched,
-                                     Value alpha, Value static_eval) {
+bool SearchEngine::should_skip_quiet(std::int32_t depth,
+                                     std::int32_t moves_searched, Value alpha,
+                                     Value static_eval) {
     if ((depth <= LMP_MAX_DEPTH) &&
         (moves_searched >= LMP_BASE + depth * depth)) {
         return true;
@@ -604,37 +638,44 @@ bool SearchEngine::should_skip_quiet(std::int32_t depth, std::int32_t moves_sear
            (static_eval + FUTILITY_MARGIN * depth <= alpha);
 }
 
-Value SearchEngine::pvs_search(std::int32_t depth, std::int32_t ply, Value alpha, Value beta,
-                               SearchInfo& info, std::int32_t moves_searched,
-                               bool in_check, bool is_quiet, std::int32_t num_extensions) {
+Value SearchEngine::pvs_search(std::int32_t depth, std::int32_t ply,
+                               Value alpha, Value beta, SearchInfo& info,
+                               std::int32_t moves_searched, bool in_check,
+                               bool is_quiet, std::int32_t num_extensions,
+                               Move prev_move) {
     if (moves_searched == 0) {
-        return -negamax(depth - 1, ply + 1, -beta, -alpha, info, true, num_extensions);
+        return -negamax(depth - 1, ply + 1, -beta, -alpha, info, true,
+                        num_extensions, prev_move);
     }
 
-    std::int32_t reduction = lmr_reduction(depth, moves_searched, in_check, is_quiet);
+    std::int32_t reduction =
+        lmr_reduction(depth, moves_searched, in_check, is_quiet);
 
     // Null-window
-    Value score =
-        -negamax(depth - 1 - reduction, ply + 1, -alpha - 1, -alpha, info, true, num_extensions);
+    Value score = -negamax(depth - 1 - reduction, ply + 1, -alpha - 1, -alpha,
+                           info, true, num_extensions, prev_move);
 
     if ((score > alpha) && (reduction > 0)) {
-        score = -negamax(depth - 1, ply + 1, -alpha - 1, -alpha, info, true, num_extensions);
+        score = -negamax(depth - 1, ply + 1, -alpha - 1, -alpha, info, true,
+                         num_extensions, prev_move);
     }
 
     if ((score > alpha) && (score < beta)) {
-        score = -negamax(depth - 1, ply + 1, -beta, -alpha, info, true, num_extensions);
+        score = -negamax(depth - 1, ply + 1, -beta, -alpha, info, true,
+                         num_extensions, prev_move);
     }
 
     return score;
 }
 
-bool SearchEngine::null_move_cuts(std::int32_t depth, std::int32_t ply, Value beta,
-                                  SearchInfo& info, std::int32_t num_extensions) {
+bool SearchEngine::null_move_cuts(std::int32_t depth, std::int32_t ply,
+                                  Value beta, SearchInfo& info,
+                                  std::int32_t num_extensions) {
     MoveInfo null_info;
     pos.do_null_move(null_info);
 
-    Value null_score = -negamax(depth - 1 - NULL_MOVE_REDUCTION, ply + 1, -beta, -beta + 1, info,
-                                false, num_extensions);
+    Value null_score = -negamax(depth - 1 - NULL_MOVE_REDUCTION, ply + 1, -beta,
+                                -beta + 1, info, false, num_extensions);
 
     pos.undo_null_move();
 
@@ -693,7 +734,8 @@ void SearchEngine::report_iteration(const SearchInfo& info, std::int32_t depth,
     std::cout << std::endl;
 }
 
-std::int32_t SearchEngine::calculate_extension_depth(bool in_check, std::int32_t num_extensions) const {
+std::int32_t SearchEngine::calculate_extension_depth(
+    bool in_check, std::int32_t num_extensions) const {
     std::int32_t extension = 0;
 
     if (num_extensions < MAX_EXTENSION) {

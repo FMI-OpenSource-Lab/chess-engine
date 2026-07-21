@@ -53,7 +53,8 @@ class SearchEngine {
     // Core search functions
     Value negamax(std::int32_t depth, std::int32_t ply, Value alpha, Value beta,
                   SearchInfo& info, bool can_null = true,
-                  std::int32_t num_extensions = 0);
+                  std::int32_t num_extensions = 0,
+                  Move prev_move = Move::invalid_move());
     Value quiescence(std::int32_t ply, Value alpha, Value beta, SearchInfo& info);
 
     static std::atomic<bool> abort_search;
@@ -69,15 +70,18 @@ class SearchEngine {
 
     void score_moves(ScoredMoves* begin, ScoredMoves* end, std::int32_t ply,
                      Move tt_move = Move::invalid_move(),
-                     bool score_quiets = true);
-    void update_quiet_stats(Move move, std::int32_t ply, std::int32_t depth);
+                     bool score_quiets = true,
+                     Move prev_move = Move::invalid_move());
+    void update_quiet_stats(Move move, std::int32_t ply, std::int32_t depth,
+                            Move prev_move);
     void update_pv(Move move, std::int32_t ply);
     void report_iteration(const SearchInfo& info, std::int32_t depth, Value score) const;
 
     Value aspiration_search(std::int32_t depth, Value prev_score, SearchInfo& info);
     Value pvs_search(std::int32_t depth, std::int32_t ply, Value alpha, Value beta,
                      SearchInfo& info, std::int32_t moves_searched,
-                     bool in_check, bool is_quiet, std::int32_t num_extensions);
+                     bool in_check, bool is_quiet, std::int32_t num_extensions,
+                     Move prev_move);
 
     std::int32_t lmr_reduction(std::int32_t depth, std::int32_t moves_searched,
                                bool in_check, bool is_quiet);
@@ -87,6 +91,10 @@ class SearchEngine {
     // history table bumped by depth^2 on every quiet beta cutoff
     Move killers[MAX_PLY][2];
     std::int32_t history[BOTH][SQUARE_TOTAL][SQUARE_TOTAL];
+
+    // Countermove: per side, the quiet move that last produced a beta cutoff
+    // in reply to the (from -> to) move the opponent just played
+    Move countermove[BOTH][SQUARE_TOTAL][SQUARE_TOTAL];
 
     // Triangular PV table: pv_table[ply] is the best line found from that
     // ply, ending at pv_length[ply]. Copied into SearchInfo at the root.
