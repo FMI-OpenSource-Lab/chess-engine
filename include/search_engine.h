@@ -17,10 +17,18 @@ struct SearchInfo {
     std::uint64_t nodes;             // Number of nodes searched
     std::uint64_t q_nodes;           // Number of quiescence nodes searched
     std::int32_t depth;              // Current search depth
+    std::int32_t completed_depth;    // Deepest fully-searched iteration
+    Value score;                     // Root score at completed_depth
     std::chrono::milliseconds time;  // Time spent searching
     bool stopped;                    // Whether search was stopped early
 
-    SearchInfo() : nodes(0), q_nodes(0), depth(0), stopped(false) {}
+    SearchInfo()
+        : nodes(0),
+          q_nodes(0),
+          depth(0),
+          completed_depth(0),
+          score(0),
+          stopped(false) {}
 };
 
 class SearchEngine {

@@ -24,6 +24,25 @@ struct WorkerGuard {
         }
     }
 };
+
+// Lazy SMP move selection: prefer the worker that finished the deepest
+// iteration, breaking ties on score. Workers that never completed depth 1
+// (empty pv) are skipped. With a single worker this returns the main result.
+const SearchInfo& pick_best_thread(const std::vector<SearchInfo>& results) {
+    const SearchInfo* best = &results[0];
+    for (const SearchInfo& candidate : results) {
+        if (candidate.pv.empty()) {
+            continue;
+        }
+        if (best->pv.empty() ||
+            candidate.completed_depth > best->completed_depth ||
+            (candidate.completed_depth == best->completed_depth &&
+             candidate.score > best->score)) {
+            best = &candidate;
+        }
+    }
+    return *best;
+}
 }  // namespace
 
 ThreadPool Threads;
@@ -36,13 +55,15 @@ SearchInfo ThreadPool::run(Position& root, const SearchLimits& limits) {
     tt::TT.new_search();  // one generation bump per search, shared by all workers
 
     // Helpers search the same root in parallel, sharing only the
-    // transposition table; each gets its own board cloned via FEN.
+    // transposition table; each gets its own board cloned via FEN and writes
+    // its result into its own slot for the best-thread vote below.
     std::string root_fen = root.get_fen();
     std::vector<std::thread> helpers;
-    WorkerGuard guard{helpers};  // stops + joins on return or exception
+    std::vector<SearchInfo> results(static_cast<std::size_t>(count_));
+    WorkerGuard guard{helpers};  // stops + joins on an exception path
 
     for (std::int32_t i = 1; i < count_; ++i) {
-        helpers.emplace_back([root_fen, limits, i]() {
+        helpers.emplace_back([root_fen, limits, i, &results]() {
             MoveInfo mi;
             Position p;
             p.set(root_fen, &mi);
@@ -54,8 +75,7 @@ SearchInfo ThreadPool::run(Position& root, const SearchLimits& limits) {
                 helper.set_max_nodes(limits.node_limit);
             }
 
-            SearchInfo hinfo;
-            helper.search(limits.depth, hinfo);
+            helper.search(limits.depth, results[i]);
         });
     }
 
@@ -67,10 +87,18 @@ SearchInfo ThreadPool::run(Position& root, const SearchLimits& limits) {
         engine.set_max_nodes(limits.node_limit);
     }
 
-    SearchInfo info;
-    engine.search(limits.depth, info);
+    engine.search(limits.depth, results[0]);
 
-    return info;  // guard stops the helpers and joins them here
+    // The main worker is done: halt the helpers and join them before reading
+    // their slots (the join synchronises those writes into this thread).
+    SearchEngine::stop();
+    for (std::thread& t : helpers) {
+        if (t.joinable()) {
+            t.join();
+        }
+    }
+
+    return pick_best_thread(results);
 }
 
 }  // namespace KhaosChess

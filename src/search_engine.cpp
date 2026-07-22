@@ -191,6 +191,8 @@ Value SearchEngine::search(std::int32_t depth, SearchInfo& info) {
         if (!should_stop) {
             info.pv.assign(pv_table[0], pv_table[0] + pv_length[0]);
             best_score = score;
+            info.completed_depth = current_depth;
+            info.score = score;
 
             if (thread_id == 0) {
                 report_iteration(info, current_depth, score);
