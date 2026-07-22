@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <mutex>
+#include <thread>
 
 #include "thread.h"
 #include "tt.h"
@@ -104,6 +105,15 @@ static void apply_gravity(T& entry, std::int32_t bonus, std::int32_t max) {
 }
 
 std::atomic<bool> SearchEngine::abort_search{false};
+std::atomic<std::int64_t> SearchEngine::deadline_ms{
+    std::numeric_limits<std::int64_t>::max()};
+
+// Steady-clock "now" in milliseconds, the unit the shared deadline is kept in.
+static std::int64_t now_ms() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+               std::chrono::steady_clock::now().time_since_epoch())
+        .count();
+}
 
 void SearchEngine::clear_stop() {
     abort_search.store(false, std::memory_order_relaxed);
@@ -111,6 +121,12 @@ void SearchEngine::clear_stop() {
 
 void SearchEngine::stop() {
     abort_search.store(true, std::memory_order_relaxed);
+}
+
+void SearchEngine::ponderhit(std::chrono::milliseconds budget) {
+    // The guessed move was played: give the already-running ponder search a
+    // real deadline measured from now, turning it into a normal timed search.
+    deadline_ms.store(now_ms() + budget.count(), std::memory_order_relaxed);
 }
 
 SearchEngine::SearchEngine(Position& pos, std::int32_t id)
@@ -130,6 +146,13 @@ Value SearchEngine::search(std::int32_t depth, SearchInfo& info) {
     start_time = std::chrono::high_resolution_clock::now();
     should_stop = false;
     time_checks = 0;
+
+    // Arm the shared deadline. While pondering there is none (ponderhit() sets
+    // it later); otherwise the hard limit applies from now. Every worker sets
+    // it to ~the same value, which is fine.
+    deadline_ms.store(ponder_ ? std::numeric_limits<std::int64_t>::max()
+                              : now_ms() + max_time.count(),
+                      std::memory_order_relaxed);
 
     // Fresh ordering state per search
     for (std::int32_t i = 0; i < MAX_PLY; ++i) {
@@ -178,10 +201,21 @@ Value SearchEngine::search(std::int32_t depth, SearchInfo& info) {
         // costs more than every previous one combined, so once we have spent
         // the soft budget there is no point starting another one. The hard
         // limit still aborts an iteration already in flight.
-        if ((thread_id == 0) && (soft_time.count() > 0) &&
+        if ((thread_id == 0) && !ponder_ && (soft_time.count() > 0) &&
             (info.time >= soft_time)) {
             break;
         }
+    }
+
+    // A ponder search that exhausts its depth budget before the opponent moves
+    // must not emit a move yet: UCI forbids reporting bestmove during pondering
+    // until ponderhit or stop. Hold here until ponderhit arms the deadline or
+    // stop raises the abort flag.
+    while (ponder_ && !should_stop &&
+           (deadline_ms.load(std::memory_order_relaxed) ==
+            std::numeric_limits<std::int64_t>::max()) &&
+           !abort_search.load(std::memory_order_relaxed)) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
     return best_score;
@@ -581,11 +615,9 @@ bool SearchEngine::is_time_up() {
         return false;
     }
 
-    auto current_time = std::chrono::high_resolution_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-        current_time - start_time);
-
-    if (elapsed >= max_time) {
+    // Stop once we pass the shared deadline. It is INT64_MAX while pondering,
+    // so this never fires until ponderhit() arms it.
+    if (now_ms() >= deadline_ms.load(std::memory_order_relaxed)) {
         abort_search.store(true, std::memory_order_relaxed);
         return should_stop = true;
     }
@@ -603,6 +635,10 @@ void SearchEngine::set_soft_time(std::chrono::milliseconds soft_time) {
 
 void SearchEngine::set_max_nodes(std::uint64_t nodes) {
     this->max_nodes = nodes;
+}
+
+void SearchEngine::set_ponder(bool on) {
+    ponder_ = on;
 }
 
 // Prepend `move` to the child's line: pv_table[ply] becomes move +

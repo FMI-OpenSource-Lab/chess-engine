@@ -180,8 +180,14 @@ bool parse_go(const char* cmd, Position& pos, SearchLimits& limits) {
         }
     }
 
-    // bare "go" or "go infinite": no explicit limit, fall back to a fixed depth
-    if (!depth && !movetime && !soft_time && !max_nodes) {
+    // "go ponder ...": search the predicted position on the opponent's clock.
+    // The clock/movetime is still parsed above and becomes the budget once
+    // ponderhit arrives; until then the search ignores it.
+    bool ponder = strstr(cmd, "ponder") != nullptr;
+
+    // bare "go" or "go infinite": no explicit limit, fall back to a fixed
+    // depth. A ponder search has no limit by design, so skip the fallback.
+    if (!ponder && !depth && !movetime && !soft_time && !max_nodes) {
         depth = 6;
     }
 
@@ -192,6 +198,7 @@ bool parse_go(const char* cmd, Position& pos, SearchLimits& limits) {
     limits.soft_time = std::chrono::milliseconds(soft_time);  // 0 => no cutoff
     limits.node_limit = static_cast<std::uint64_t>(max_nodes);
     limits.depth = depth ? depth : 64;
+    limits.ponder = ponder;
 
     return true;
 }
@@ -204,19 +211,28 @@ void run_search(Position& pos, SearchLimits limits) {
 
     Move best = info.pv.empty() ? Move::invalid_move() : info.pv[0];
 
+    // The second PV move is what we expect the opponent to reply; hand it to
+    // the GUI as the ponder move so it can have us think on their clock.
+    Move ponder = info.pv.size() >= 2 ? info.pv[1] : Move::invalid_move();
+
     // search was stopped before depth 1 completed; play any legal move
     if (best == Move::invalid_move()) {
         MoveList<GT_LEGAL> moves(pos);
         if (moves.size()) {
             best = *moves.begin();
         }
+        ponder = Move::invalid_move();
     }
 
     std::lock_guard<std::mutex> io_lock(io_mutex);
     if (best == Move::invalid_move()) {
         std::cout << "bestmove (none)\n" << std::flush;
-    } else {
+    } else if (ponder == Move::invalid_move()) {
         std::cout << "bestmove " << best.uci_move() << "\n" << std::flush;
+    } else {
+        std::cout << "bestmove " << best.uci_move() << " ponder "
+                  << ponder.uci_move() << "\n"
+                  << std::flush;
     }
 }
 
@@ -239,6 +255,7 @@ void uci_loop() {
     std::cout << "id author " << AUTHOR << "\n";
     std::cout << "option name Threads type spin default 1 min 1 max 256\n";
     std::cout << "option name Hash type spin default 64 min 1 max 4096\n";
+    std::cout << "option name Ponder type check default false\n";
     std::cout << "uciok\n";
 
     InfoListPtr infos(new std::deque<MoveInfo>(1));
@@ -249,8 +266,9 @@ void uci_loop() {
     pos.set(EMPTY_FEN, &infos->back());
 
     // The active search runs on its own thread so this loop can keep reading
-    // "stop", "isready" and "quit" while the engine is thinking.
+    // "stop", "isready", "ponderhit" and "quit" while the engine is thinking.
     std::thread search_thread;
+    SearchLimits current_limits;  // limits of the running search (for ponderhit)
     auto stop_and_join = [&search_thread]() {
         if (search_thread.joinable()) {
             SearchEngine::stop();  // raise the abort flag every worker polls
@@ -309,14 +327,23 @@ void uci_loop() {
         // parse UCI "go" command: launch the search on a background thread
         else if (strncmp(input_buffer, "go", 2) == 0) {
             stop_and_join();  // finish any search already in progress
-            SearchLimits limits;
-            if (parse_go(input_buffer, pos, limits)) {
+            if (parse_go(input_buffer, pos, current_limits)) {
                 // Lower the abort flag here, on the UCI thread, before the
                 // search thread exists. Clearing it inside the search thread
                 // would race with a "stop" arriving on this thread.
                 SearchEngine::clear_stop();
-                search_thread = std::thread(run_search, std::ref(pos), limits);
+                search_thread =
+                    std::thread(run_search, std::ref(pos), current_limits);
             }
+        }
+
+        // parse UCI "ponderhit": the opponent played our predicted move, so the
+        // running ponder search becomes a normal timed move. Arm the deadline
+        // with the soft budget if we have one, otherwise the hard limit.
+        else if (strncmp(input_buffer, "ponderhit", 9) == 0) {
+            SearchEngine::ponderhit(current_limits.soft_time.count() > 0
+                                        ? current_limits.soft_time
+                                        : current_limits.max_time);
         }
 
         // parse UCI "stop" command: halt the current search. run_search then
@@ -337,6 +364,7 @@ void uci_loop() {
             std::cout << "id author " << AUTHOR << "\n";
             std::cout << "option name Threads type spin default 1 min 1 max 256\n";
     std::cout << "option name Hash type spin default 64 min 1 max 4096\n";
+    std::cout << "option name Ponder type check default false\n";
             std::cout << "uciok\n";
         }
 

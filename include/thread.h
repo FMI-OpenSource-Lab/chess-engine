@@ -20,6 +20,7 @@ struct SearchLimits {
     std::chrono::milliseconds soft_time{0};  // soft: don't start a new iteration
     std::uint64_t node_limit = 0;
     std::int32_t depth = 64;
+    bool ponder = false;                     // search on the opponent's clock
 };
 
 // Owns the Lazy SMP dispatch: clones the root per worker, launches the

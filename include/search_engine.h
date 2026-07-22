@@ -41,9 +41,17 @@ class SearchEngine {
     // games are immune to timing noise from CPU contention
     void set_max_nodes(std::uint64_t nodes);
 
+    // Ponder mode: search the predicted position on the opponent's clock,
+    // ignoring the time limit until told otherwise.
+    void set_ponder(bool on);
+
     // Shared stop flag controls for Lazy SMP
     static void clear_stop();  // lower the flag before a search
     static void stop();        // raise it to halt every thread
+
+    // A pondered guess was confirmed: convert the running infinite ponder
+    // search into a normal timed one by arming the deadline from now.
+    static void ponderhit(std::chrono::milliseconds budget);
 
    private:
     Position& pos;
@@ -51,9 +59,15 @@ class SearchEngine {
     std::chrono::milliseconds max_time;
     std::chrono::milliseconds soft_time{0};  // 0 = no soft limit
     std::uint64_t max_nodes;  // 0 = no node limit
+    bool ponder_ = false;     // searching on the opponent's clock
 
     bool should_stop;
     std::uint64_t time_checks;
+
+    // Absolute stop time shared by every worker, in steady-clock ms; a value
+    // of INT64_MAX means "no deadline" (used while pondering). ponderhit()
+    // arms it from the UCI thread, so it lives in a static like the stop flag.
+    static std::atomic<std::int64_t> deadline_ms;
 
     // Core search functions
     Value negamax(std::int32_t depth, std::int32_t ply, Value alpha, Value beta,

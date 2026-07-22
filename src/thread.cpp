@@ -49,6 +49,7 @@ SearchInfo ThreadPool::run(Position& root, const SearchLimits& limits) {
 
             SearchEngine helper(p, i);
             helper.set_max_time(limits.max_time);
+            helper.set_ponder(limits.ponder);
             if (limits.node_limit) {
                 helper.set_max_nodes(limits.node_limit);
             }
@@ -61,6 +62,7 @@ SearchInfo ThreadPool::run(Position& root, const SearchLimits& limits) {
     SearchEngine engine(root);
     engine.set_max_time(limits.max_time);
     engine.set_soft_time(limits.soft_time);
+    engine.set_ponder(limits.ponder);
     if (limits.node_limit) {
         engine.set_max_nodes(limits.node_limit);
     }
