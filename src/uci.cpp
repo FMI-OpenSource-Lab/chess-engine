@@ -365,8 +365,12 @@ void uci_loop() {
         }
     }
 
-    // Reached on "quit" or EOF: make sure the search thread is stopped and
-    // joined before its handle goes out of scope.
-    stop_and_join();
+    // Reached on "quit" or EOF. "quit" already stopped and joined the search
+    // above. On EOF (stdin closed without a "quit") let an in-flight search
+    // finish naturally and print its bestmove instead of aborting it, so a
+    // piped "position ... / go depth N" still shows the full search.
+    if (search_thread.joinable()) {
+        search_thread.join();
+    }
 }
 }  // namespace KhaosChess
