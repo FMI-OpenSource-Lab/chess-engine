@@ -152,16 +152,21 @@ The pipeline lives in `tools/`:
 
    Every finished game donates its quiet positions, each labeled with the game's final result. Positions in check, positions where the played move was a capture or promotion, the opening-book plies, and the final plies are all skipped - in real search the eval only ever scores quiet positions, so only those may teach it.
 
-2. **Fit the weights** with the tuner (`tools/tuner.cpp`, built as `bin/tuner`; building it needs Intel TBB, e.g. `dnf install tbb-devel` - the engine itself stays dependency-free). It maps each eval score through a logistic curve to a win probability, measures the mean squared error against the actual results over the whole dataset in parallel (`std::execution::par`), and follows the analytic gradient of that error (Adam steps over cached feature vectors, re-extracted in a trust-region loop - see [tools/gradient-tuner.md](tools/gradient-tuner.md) for the maths):
+2. **Fit the weights** with the gradient tuner (`tools/tuner.cpp`, built as `bin/tuner`; building it needs Intel TBB, e.g. `dnf install tbb-devel` - the engine itself stays dependency-free). It maps each eval score through a logistic curve to a win probability and minimises the mean squared error against the actual results, measured over the whole dataset in parallel (`std::execution::par`). Because the eval is *linear* in its weights, the tuner extracts one feature vector per position up front (by finite-differencing the real eval), then optimises entirely on those cached vectors: it follows the analytic gradient of the error with Adam, and periodically re-extracts at the updated weights - a trust region - because a single passed-pawn term is mildly nonlinear. This replaced an earlier coordinate-descent solver; both minimise the same objective, and the design doc races them from the same start - see [tools/gradient-tuner.md](tools/gradient-tuner.md) for the full maths.
 
    ```bash
-   ./bin/tuner quiet-labeled.epd          # full run (hours; checkpoints every iteration)
-   ./bin/tuner quiet-labeled.epd 10000    # quick smoke test
+   # tuner <positions-file> [max-positions] [max-outer] [trust] [resume-file]
+   ./bin/tuner quiet-labeled.epd               # full run (hours; defaults 15 re-anchors, trust 30)
+   ./bin/tuner quiet-labeled.epd 10000         # quick smoke test on 10k positions
+   ./bin/tuner quiet-labeled.epd 0 20 30       # all positions, up to 20 re-anchors, trust radius 30
+
+   cp gradient_params.txt resume.txt           # keep a copy to resume from
+   ./bin/tuner quiet-labeled.epd 0 20 30 resume.txt   # continue a checkpointed run
    ```
 
-   The weights are exposed through a registry (`include/tune.h`, `src/tune.cpp`) - the same idea as Stockfish's `TUNE` macro: eval constants are mutable globals with compile-time defaults, so the optimizer can adjust them in memory without rebuilding the engine.
+   The run writes `gradient_params.txt` (atomically, in `name value` format), checkpointed after every re-anchor so an interrupted overnight run can be resumed. Weights are exposed through a registry (`include/tune.h`, `src/tune.cpp`) - the same idea as Stockfish's `TUNE` macro: eval constants are mutable globals with compile-time defaults, so the optimiser can adjust them in memory without rebuilding the engine.
 
-3. **Validate.** Tuned values are pasted back into `include/score.h` as the new defaults, and the rebuilt engine must beat the previous baseline in a fastchess match before anything lands (see [Measured progress](#measured-progress)). Fitting the data better is a proxy; winning games is the objective.
+3. **Validate.** The tuned values in `gradient_params.txt` are pasted back into `include/score.h` as the new defaults, and the rebuilt engine must beat the previous baseline in a fastchess match before anything lands (see [Measured progress](#measured-progress)). Fitting the data better is a proxy; winning games is the objective.
 
 ---
 ### Visualization:
