@@ -29,8 +29,13 @@ class SearchEngine {
 
     // Search entry point
     Value search(std::int32_t depth, SearchInfo& info);
-    // Set maximum time for search
+    // Set maximum time for search (hard limit: abort mid-iteration)
     void set_max_time(std::chrono::milliseconds max_time);
+
+    // Set the soft time budget: once an iteration completes past this point,
+    // no new iteration is started. 0 means no soft limit. Only the main
+    // worker honours it; helpers run to the depth or hard limit.
+    void set_soft_time(std::chrono::milliseconds soft_time);
 
     // Cap the search at a node budget; 0 means no limit. Node-limited
     // games are immune to timing noise from CPU contention
@@ -44,6 +49,7 @@ class SearchEngine {
     Position& pos;
     std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
     std::chrono::milliseconds max_time;
+    std::chrono::milliseconds soft_time{0};  // 0 = no soft limit
     std::uint64_t max_nodes;  // 0 = no node limit
 
     bool should_stop;

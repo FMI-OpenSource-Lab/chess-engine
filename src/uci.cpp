@@ -1,7 +1,10 @@
 #include "uci.h"
 
 #include <stdlib.h>
+#include <algorithm>
+#include <functional>
 #include <iostream>
+#include <thread>
 
 #include "move.h"
 #include "movegen.h"
@@ -108,16 +111,18 @@ void parse_position(const char* cmd, Position& pos, InfoListPtr& infos) {
     }
 }
 
-void parse_go(const char* cmd, Position& pos) {
+bool parse_go(const char* cmd, Position& pos, SearchLimits& limits) {
     const char* current;
 
     if ((current = strstr(cmd, "perft"))) {
         perft_debug(pos, atoi(current + 6));
-        return;
+        return false;
     }
 
     std::int32_t depth = 0;
-    std::int64_t search_time = 0;  // in milliseconds
+    std::int64_t movetime = 0;    // fixed per-move time, in milliseconds
+    std::int64_t soft_time = 0;   // optimum budget: don't start a new iteration
+    std::int64_t hard_time = 0;   // ceiling: abort an iteration in flight
 
     // fixed depth search
     if ((current = strstr(cmd, "depth"))) {
@@ -130,16 +135,18 @@ void parse_go(const char* cmd, Position& pos) {
         max_nodes = atoll(current + 6);
     }
 
-    // fixed time per move
     if ((current = strstr(cmd, "movetime"))) {
-        search_time = atoll(current + 9);
+        // Explicit per-move time: spend it exactly, no soft cutoff.
+        movetime = atoll(current + 9);
+        hard_time = movetime;
     } else {
-        // allocate a slice of the remaining clock time
+        // Allocate a slice of the remaining clock time.
         const char* time_token = pos.side_to_move() == WHITE ? "wtime" : "btime";
         const char* inc_token = pos.side_to_move() == WHITE ? "winc" : "binc";
 
         std::int64_t time_left = 0;
         std::int64_t increment = 0;
+        std::int64_t moves_to_go = 0;
 
         if ((current = strstr(cmd, time_token))) {
             time_left = atoll(current + 6);
@@ -147,23 +154,51 @@ void parse_go(const char* cmd, Position& pos) {
         if ((current = strstr(cmd, inc_token))) {
             increment = atoll(current + 5);
         }
+        if ((current = strstr(cmd, "movestogo"))) {
+            moves_to_go = atoll(current + 10);
+        }
 
-        if (time_left) {
-            search_time = time_left / 20 + increment / 2;
+        if (time_left > 0) {
+            // Keep a small buffer for GUI/network lag so we never flag.
+            constexpr std::int64_t MOVE_OVERHEAD = 30;
+            std::int64_t available =
+                std::max<std::int64_t>(time_left - MOVE_OVERHEAD, 1);
+
+            // Optimum slice: divide the clock over the moves left (or an
+            // assumed horizon in sudden death / increment games), plus most
+            // of the increment we are about to get back.
+            std::int64_t optimum =
+                moves_to_go > 0
+                    ? available / moves_to_go + increment * 3 / 4
+                    : available / 20 + increment * 3 / 4;
+
+            // Let a critical position burst past the optimum, but never spend
+            // more than what is actually on the clock.
+            soft_time = std::min(optimum, available);
+            hard_time = std::min(optimum * 4, available);
         }
     }
 
     // bare "go" or "go infinite": no explicit limit, fall back to a fixed depth
-    if (!depth && !search_time && !max_nodes) {
+    if (!depth && !movetime && !soft_time && !max_nodes) {
         depth = 6;
     }
 
-    SearchLimits limits;
-    limits.max_time = std::chrono::milliseconds(
-        search_time ? search_time : 24LL * 60 * 60 * 1000);
+    limits = SearchLimits{};
+    constexpr std::int64_t ONE_DAY_MS = 24LL * 60 * 60 * 1000;
+    limits.max_time =
+        std::chrono::milliseconds(hard_time ? hard_time : ONE_DAY_MS);
+    limits.soft_time = std::chrono::milliseconds(soft_time);  // 0 => no cutoff
     limits.node_limit = static_cast<std::uint64_t>(max_nodes);
     limits.depth = depth ? depth : 64;
 
+    return true;
+}
+
+// Runs a search to completion and reports the chosen move. Meant to run on a
+// background thread so the UCI loop stays responsive to "stop"; it returns
+// once the search hits its own limit or "stop" raises the abort flag.
+void run_search(Position& pos, SearchLimits limits) {
     SearchInfo info = Threads.run(pos, limits);
 
     Move best = info.pv.empty() ? Move::invalid_move() : info.pv[0];
@@ -177,9 +212,9 @@ void parse_go(const char* cmd, Position& pos) {
     }
 
     if (best == Move::invalid_move()) {
-        std::cout << "bestmove (none)\n";
+        std::cout << "bestmove (none)\n" << std::flush;
     } else {
-        std::cout << "bestmove " << best.uci_move() << "\n";
+        std::cout << "bestmove " << best.uci_move() << "\n" << std::flush;
     }
 }
 
@@ -209,6 +244,16 @@ void uci_loop() {
     // Boot into a valid (empty) position so commands like "d" are safe
     // even before the GUI sends "position"
     pos.set(EMPTY_FEN, &infos->back());
+
+    // The active search runs on its own thread so this loop can keep reading
+    // "stop", "isready" and "quit" while the engine is thinking.
+    std::thread search_thread;
+    auto stop_and_join = [&search_thread]() {
+        if (search_thread.joinable()) {
+            SearchEngine::stop();  // raise the abort flag every worker polls
+            search_thread.join();  // wait for run_search to print bestmove
+        }
+    };
 
     // main loop
     while (true) {
@@ -251,14 +296,29 @@ void uci_loop() {
             parse_position("position startpos", pos, infos);
         }
 
-        // parse UCI "go" command
+        // parse UCI "go" command: launch the search on a background thread
         else if (strncmp(input_buffer, "go", 2) == 0) {
-            parse_go(input_buffer, pos);
+            stop_and_join();  // finish any search already in progress
+            SearchLimits limits;
+            if (parse_go(input_buffer, pos, limits)) {
+                // Lower the abort flag here, on the UCI thread, before the
+                // search thread exists. Clearing it inside the search thread
+                // would race with a "stop" arriving on this thread.
+                SearchEngine::clear_stop();
+                search_thread = std::thread(run_search, std::ref(pos), limits);
+            }
+        }
+
+        // parse UCI "stop" command: halt the current search. run_search then
+        // reports bestmove and the join reclaims the thread.
+        else if (strncmp(input_buffer, "stop", 4) == 0) {
+            stop_and_join();
         }
 
         // parse UCI "quit" command
         else if (strncmp(input_buffer, "quit", 4) == 0) {
-            break;  // exit loop
+            stop_and_join();  // never leave a joinable thread to destruct
+            break;            // exit loop
         }
 
         // parse UCI "uci" command
@@ -293,5 +353,9 @@ void uci_loop() {
             std::cout << pos << std::endl;
         }
     }
+
+    // Reached on "quit" or EOF: make sure the search thread is stopped and
+    // joined before its handle goes out of scope.
+    stop_and_join();
 }
 }  // namespace KhaosChess

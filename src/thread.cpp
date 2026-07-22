@@ -29,7 +29,9 @@ struct WorkerGuard {
 ThreadPool Threads;
 
 SearchInfo ThreadPool::run(Position& root, const SearchLimits& limits) {
-    SearchEngine::clear_stop();
+    // Note: the abort flag is cleared by the caller before this runs, not
+    // here. Clearing on the search thread would race with a "stop" raised on
+    // the UCI thread and could silently swallow it.
     tt::TT.new_search();  // one generation bump per search, shared by all workers
 
     // Helpers search the same root in parallel, sharing only the
@@ -57,6 +59,7 @@ SearchInfo ThreadPool::run(Position& root, const SearchLimits& limits) {
 
     SearchEngine engine(root);
     engine.set_max_time(limits.max_time);
+    engine.set_soft_time(limits.soft_time);
     if (limits.node_limit) {
         engine.set_max_nodes(limits.node_limit);
     }

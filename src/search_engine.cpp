@@ -182,6 +182,15 @@ Value SearchEngine::search(std::int32_t depth, SearchInfo& info) {
                 report_iteration(info, current_depth, score);
             }
         }
+
+        // Soft-limit cutoff (main worker only): the next iteration usually
+        // costs more than every previous one combined, so once we have spent
+        // the soft budget there is no point starting another one. The hard
+        // limit still aborts an iteration already in flight.
+        if ((thread_id == 0) && (soft_time.count() > 0) &&
+            (info.time >= soft_time)) {
+            break;
+        }
     }
 
     return best_score;
@@ -605,6 +614,10 @@ bool SearchEngine::is_time_up() {
 
 void SearchEngine::set_max_time(std::chrono::milliseconds max_time) {
     this->max_time = max_time;
+}
+
+void SearchEngine::set_soft_time(std::chrono::milliseconds soft_time) {
+    this->soft_time = soft_time;
 }
 
 void SearchEngine::set_max_nodes(std::uint64_t nodes) {

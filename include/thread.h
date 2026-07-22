@@ -10,7 +10,8 @@ namespace KhaosChess {
 
 // Everything a search run is bounded by; a zero field means "no limit"
 struct SearchLimits {
-    std::chrono::milliseconds max_time{0};
+    std::chrono::milliseconds max_time{0};   // hard: abort an iteration in flight
+    std::chrono::milliseconds soft_time{0};  // soft: don't start a new iteration
     std::uint64_t node_limit = 0;
     std::int32_t depth = 64;
 };

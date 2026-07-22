@@ -9,15 +9,13 @@ Development continues beyond the thesis with a single goal: make the engine as s
 
 ### Working
 - **Board representation**: bitboards with magic sliding-piece attacks; full legal move generation, verified with a perft test suite against known positions
-- **Search**: iterative-deepening negamax alpha-beta with quiescence search, principal variation search with aspiration windows, a clustered transposition table (Zobrist hashing, depth-preferred replacement with aging, shared by the main and quiescence search), move ordering by killer moves, history heuristic, and static exchange evaluation (SEE), late move reductions, internal iterative reduction, null-move pruning, forward pruning (reverse futility, late move pruning, futility), check extensions, draw detection (fifty-move rule and repetition), time- or node-based stopping, and optional Lazy SMP multi-threaded search sharing the transposition table (UCI `Threads` option)
+- **Search**: iterative-deepening negamax alpha-beta with quiescence search, principal variation search with aspiration windows, a clustered transposition table (Zobrist hashing, depth-preferred replacement with aging, shared by the main and quiescence search), move ordering by killer moves, history heuristic (with countermove and continuation-history context), and static exchange evaluation (SEE), late move reductions, internal iterative reduction, null-move pruning, forward pruning (reverse futility, late move pruning, futility), check extensions, draw detection (fifty-move rule and repetition), time management (soft/hard limits with `movestogo` and lag-overhead handling) or node-based stopping with an asynchronous search thread that honours UCI `stop`, and optional Lazy SMP multi-threaded search sharing the transposition table (UCI `Threads` option)
 - **Evaluation**: tapered middlegame/endgame scoring (material, pawn structure, king safety and more), specialized endgame evaluators keyed by material, and a KPK bitbase
 - **UCI protocol**: plays complete games in GUIs (e.g. Arena) and match runners (e.g. fastchess)
 
 ### Roadmap
 Each item gets validated with engine-vs-engine matches (see [Testing](#testing)) before it lands:
 
-- Countermove and continuation-history move ordering
-- Smarter time management and UCI `stop` support
 - UCI `Hash` option (runtime-resizable transposition table)
 - Long term: NNUE evaluation
 
@@ -133,6 +131,7 @@ Each row was measured against the frozen baseline binary that preceded it; featu
 | 2.11.0 | Quiet-move classification fix: re-enables killer/history ordering, late move reductions, late move pruning, and futility pruning (all were silently disabled by a misused promotion test) | 400 games, tc 8+0.08, single thread | +263 ± 34 |
 | 2.12.0 | Countermove ordering: the quiet reply that last refuted a given previous move is tried just below the killers | 400 games, tc 8+0.08, single thread | +23 ± 25 |
 | 2.12.0 | Continuation-history ordering (context-aware quiet scores keyed by the previous move, summed with the main history) and gravity-with-malus updates for both the main and continuation history tables (a cutoff rewards the move that caused it and penalizes the quiets tried before it, with a self-limiting update that never saturates) | 400 games, tc 8+0.08, single thread | +52 ± 24 |
+| 2.13.0 | Time management with a soft/hard split (finish the iteration in flight, don't start a new one past the soft budget), `movestogo` and lag-overhead handling, plus an asynchronous search thread so UCI `stop` interrupts and returns the best move found | 400 games, tc 8+0.08, single thread | +64 ± 27 |
 
 Fixed-node matches (`go nodes`) are used for changes where timing noise would drown the signal; they deliberately ignore speed costs, which is why the cumulative timed number runs below the sum of the parts.
 
