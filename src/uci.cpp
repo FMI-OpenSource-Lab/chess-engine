@@ -15,6 +15,11 @@
 #include "tt.h"
 
 namespace KhaosChess {
+constexpr std::int64_t MOVE_OVERHEAD_MS = 30;
+constexpr std::int64_t ENDGAME_MOVE_HORIZON = 20;
+constexpr std::int64_t HARD_LIMIT_FACTOR = 4;
+constexpr double INCREMENT_SPEND_FACTOR = 0.75;
+
 Move parse_move(std::string move_string, const Position& pos) {
     Square source =
         Square((move_string[0] - 'a') + (8 - (move_string[1] - '0')) * 8);
@@ -121,9 +126,9 @@ bool parse_go(const char* cmd, Position& pos, SearchLimits& limits) {
     }
 
     std::int32_t depth = 0;
-    std::int64_t movetime = 0;    // fixed per-move time, in milliseconds
-    std::int64_t soft_time = 0;   // optimum budget: don't start a new iteration
-    std::int64_t hard_time = 0;   // ceiling: abort an iteration in flight
+    std::int64_t movetime = 0;   // fixed per-move time, in milliseconds
+    std::int64_t soft_time = 0;  // optimum budget: don't start a new iteration
+    std::int64_t hard_time = 0;  // ceiling: abort an iteration in flight
 
     // fixed depth search
     if ((current = strstr(cmd, "depth"))) {
@@ -160,23 +165,18 @@ bool parse_go(const char* cmd, Position& pos, SearchLimits& limits) {
         }
 
         if (time_left > 0) {
-            // Keep a small buffer for GUI/network lag so we never flag.
-            constexpr std::int64_t MOVE_OVERHEAD = 30;
             std::int64_t available =
-                std::max<std::int64_t>(time_left - MOVE_OVERHEAD, 1);
+                std::max<std::int64_t>(time_left - MOVE_OVERHEAD_MS, 1);
 
-            // Optimum slice: divide the clock over the moves left (or an
-            // assumed horizon in sudden death / increment games), plus most
-            // of the increment we are about to get back.
+            std::int64_t moves_left =
+                moves_to_go > 0 ? moves_to_go
+                                : ENDGAME_MOVE_HORIZON + pos.game_phase();
+
             std::int64_t optimum =
-                moves_to_go > 0
-                    ? available / moves_to_go + increment * 3 / 4
-                    : available / 20 + increment * 3 / 4;
+                available / moves_left + static_cast<std::int64_t>(increment * INCREMENT_SPEND_FACTOR);
 
-            // Let a critical position burst past the optimum, but never spend
-            // more than what is actually on the clock.
             soft_time = std::min(optimum, available);
-            hard_time = std::min(optimum * 4, available);
+            hard_time = std::min(optimum * HARD_LIMIT_FACTOR, available);
         }
     }
 
@@ -184,10 +184,14 @@ bool parse_go(const char* cmd, Position& pos, SearchLimits& limits) {
     // The clock/movetime is still parsed above and becomes the budget once
     // ponderhit arrives; until then the search ignores it.
     bool ponder = strstr(cmd, "ponder") != nullptr;
+    bool infinite = strstr(cmd, "infinite") != nullptr;
 
-    // bare "go" or "go infinite": no explicit limit, fall back to a fixed
-    // depth. A ponder search has no limit by design, so skip the fallback.
-    if (!ponder && !depth && !movetime && !soft_time && !max_nodes) {
+    // bare "go": no explicit limit, fall back to a fixed depth for quick
+    // interactive testing. "go infinite" and pondering instead deepen until
+    // "stop" (bounded only by the depth-64 / one-day ceilings), so they skip
+    // the fallback.
+    if (!ponder && !infinite && !depth && !movetime && !soft_time &&
+        !max_nodes) {
         depth = 6;
     }
 
@@ -226,9 +230,11 @@ void run_search(Position& pos, SearchLimits limits) {
 
     std::lock_guard<std::mutex> io_lock(io_mutex);
     if (best == Move::invalid_move()) {
-        std::cout << "bestmove (none)\n" << std::flush;
+        std::cout << "bestmove (none)\n"
+                  << std::flush;
     } else if (ponder == Move::invalid_move()) {
-        std::cout << "bestmove " << best.uci_move() << "\n" << std::flush;
+        std::cout << "bestmove " << best.uci_move() << "\n"
+                  << std::flush;
     } else {
         std::cout << "bestmove " << best.uci_move() << " ponder "
                   << ponder.uci_move() << "\n"
@@ -363,8 +369,8 @@ void uci_loop() {
             std::cout << "\nid name " << NAME << "\n";
             std::cout << "id author " << AUTHOR << "\n";
             std::cout << "option name Threads type spin default 1 min 1 max 256\n";
-    std::cout << "option name Hash type spin default 64 min 1 max 4096\n";
-    std::cout << "option name Ponder type check default false\n";
+            std::cout << "option name Hash type spin default 64 min 1 max 4096\n";
+            std::cout << "option name Ponder type check default false\n";
             std::cout << "uciok\n";
         }
 
