@@ -27,6 +27,7 @@ struct WorkerGuard {
 }  // namespace
 
 ThreadPool Threads;
+std::mutex io_mutex;
 
 SearchInfo ThreadPool::run(Position& root, const SearchLimits& limits) {
     // Note: the abort flag is cleared by the caller before this runs, not

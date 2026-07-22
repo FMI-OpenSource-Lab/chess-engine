@@ -2,11 +2,17 @@
 
 #include <chrono>
 #include <cstdint>
+#include <mutex>
 
 #include "position.h"
 #include "search_engine.h"
 
 namespace KhaosChess {
+
+// Serialises writes to stdout: the search runs on its own thread and reports
+// "info"/"bestmove" lines while the UCI loop may print "readyok" and other
+// replies, so both sides lock this before touching std::cout.
+extern std::mutex io_mutex;
 
 // Everything a search run is bounded by; a zero field means "no limit"
 struct SearchLimits {

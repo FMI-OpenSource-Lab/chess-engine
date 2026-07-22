@@ -9,14 +9,13 @@ Development continues beyond the thesis with a single goal: make the engine as s
 
 ### Working
 - **Board representation**: bitboards with magic sliding-piece attacks; full legal move generation, verified with a perft test suite against known positions
-- **Search**: iterative-deepening negamax alpha-beta with quiescence search, principal variation search with aspiration windows, a clustered transposition table (Zobrist hashing, depth-preferred replacement with aging, shared by the main and quiescence search), move ordering by killer moves, history heuristic (with countermove and continuation-history context), and static exchange evaluation (SEE), late move reductions, internal iterative reduction, null-move pruning, forward pruning (reverse futility, late move pruning, futility), check extensions, draw detection (fifty-move rule and repetition), time management (soft/hard limits with `movestogo` and lag-overhead handling) or node-based stopping with an asynchronous search thread that honours UCI `stop`, and optional Lazy SMP multi-threaded search sharing the transposition table (UCI `Threads` option)
+- **Search**: iterative-deepening negamax alpha-beta with quiescence search, principal variation search with aspiration windows, a clustered transposition table (Zobrist hashing, depth-preferred replacement with aging, shared by the main and quiescence search), move ordering by killer moves, history heuristic (with countermove and continuation-history context), and static exchange evaluation (SEE), late move reductions, internal iterative reduction, null-move pruning, forward pruning (reverse futility, late move pruning, futility), check extensions, draw detection (fifty-move rule and repetition), time management (soft/hard limits with `movestogo` and lag-overhead handling) or node-based stopping with an asynchronous search thread that honours UCI `stop`, and optional Lazy SMP multi-threaded search sharing a runtime-resizable transposition table (UCI `Threads` and `Hash` options)
 - **Evaluation**: tapered middlegame/endgame scoring (material, pawn structure, king safety and more), specialized endgame evaluators keyed by material, and a KPK bitbase
 - **UCI protocol**: plays complete games in GUIs (e.g. Arena) and match runners (e.g. fastchess)
 
 ### Roadmap
 Each item gets validated with engine-vs-engine matches (see [Testing](#testing)) before it lands:
 
-- UCI `Hash` option (runtime-resizable transposition table)
 - Long term: NNUE evaluation
 
 ---

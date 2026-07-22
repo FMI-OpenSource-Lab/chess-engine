@@ -4,7 +4,9 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <mutex>
 
+#include "thread.h"
 #include "tt.h"
 
 namespace KhaosChess {
@@ -26,14 +28,6 @@ constexpr std::int32_t CAPTURE_CEILING =
 
 constexpr std::int32_t SCORE_TT_MOVE = CAPTURE_CEILING + 1;
 constexpr std::int32_t SCORE_SKIP = -1'000'000;
-
-// Countermove heuristic: the quiet reply that last refuted a given previous
-// move is ordered just below the killers. Toggle for A/B measurement.
-constexpr bool COUNTERMOVE = true;
-
-// SEE gates
-constexpr bool SEE_ORDER_CAPTURES = true;
-constexpr bool SEE_PRUNE_QUIESCENCE = true;
 
 // Bad-capture tier
 constexpr std::int32_t SCORE_BAD_CAPTURE = -20'000;
@@ -66,9 +60,6 @@ constexpr std::int32_t ASPIRATION_MIN_DEPTH = 4;
 
 // By how much we want to extend the depth search
 constexpr std::int32_t MAX_EXTENSION = 16;
-
-constexpr bool MATE_DISTANCE_PRUNING = true;
-constexpr bool QSEARCH_TT = true;
 
 constexpr std::int32_t IIR_MIN_DEPTH = 4;
 
@@ -217,7 +208,7 @@ Value SearchEngine::negamax(std::int32_t depth, std::int32_t ply, Value alpha,
 
     // Mate distance pruning: cap the window by the fastest mate possible
     // from this ply; a collapsed window means nothing here can matter
-    if (MATE_DISTANCE_PRUNING && (ply > 0)) {
+    if (ply > 0) {
         alpha = std::max(alpha, -VALUE_MATE + ply);
         beta = std::min(beta, VALUE_MATE - (ply + 1));
 
@@ -395,19 +386,15 @@ Value SearchEngine::quiescence(std::int32_t ply, Value alpha, Value beta,
     bool is_tt_hit = false;
     tt::TTEntry* tte = nullptr;
 
-    if (QSEARCH_TT) {
-        tte = tt::TT.probe(pos.key(), is_tt_hit);
+    tte = tt::TT.probe(pos.key(), is_tt_hit);
 
-        if (is_tt_hit) {
-            Value tt_score = score_from_tt(tte->score, ply);
+    if (is_tt_hit) {
+        Value tt_score = score_from_tt(tte->score, ply);
 
-            if ((tte->flag() == tt::Flag::F_EXACT) ||
-                ((tte->flag() == tt::Flag::F_LOWER_BOUND) &&
-                 (tt_score >= beta)) ||
-                ((tte->flag() == tt::Flag::F_UPPER_BOUND) &&
-                 (tt_score <= alpha))) {
-                return tt_score;
-            }
+        if ((tte->flag() == tt::Flag::F_EXACT) ||
+            ((tte->flag() == tt::Flag::F_LOWER_BOUND) && (tt_score >= beta)) ||
+            ((tte->flag() == tt::Flag::F_UPPER_BOUND) && (tt_score <= alpha))) {
+            return tt_score;
         }
     }
 
@@ -423,10 +410,8 @@ Value SearchEngine::quiescence(std::int32_t ply, Value alpha, Value beta,
 
         // Stand-pat cutoff
         if (stand_pat >= beta) {
-            if (QSEARCH_TT) {
-                tt::TT.store(pos.key(), score_to_tt(beta, ply), 0,
-                             tt::Flag::F_LOWER_BOUND, Move::invalid_move());
-            }
+            tt::TT.store(pos.key(), score_to_tt(beta, ply), 0,
+                         tt::Flag::F_LOWER_BOUND, Move::invalid_move());
             return beta;
         }
 
@@ -447,7 +432,7 @@ Value SearchEngine::quiescence(std::int32_t ply, Value alpha, Value beta,
     // Score legal moves for better ordering; a quiet TT move is harmless,
     // the capture filter below skips it anyway
     score_moves(legals.begin(), legals.end(), ply,
-                (QSEARCH_TT && is_tt_hit) ? tte->move : Move::invalid_move(),
+                is_tt_hit ? tte->move : Move::invalid_move(),
                 false);
 
     // Loop through capture moves
@@ -459,7 +444,7 @@ Value SearchEngine::quiescence(std::int32_t ply, Value alpha, Value beta,
         Move move = scored_move;
 
         // SEE pruning
-        if (!in_check && SEE_PRUNE_QUIESCENCE && !pos.see_ge(move, 0)) {
+        if (!in_check && !pos.see_ge(move, 0)) {
             continue;
         }
 
@@ -481,10 +466,8 @@ Value SearchEngine::quiescence(std::int32_t ply, Value alpha, Value beta,
 
         // Beta cutoff (fail-high)
         if (score >= beta) {
-            if (QSEARCH_TT) {
-                tt::TT.store(pos.key(), score_to_tt(beta, ply), 0,
-                             tt::Flag::F_LOWER_BOUND, move);
-            }
+            tt::TT.store(pos.key(), score_to_tt(beta, ply), 0,
+                         tt::Flag::F_LOWER_BOUND, move);
             return beta;
         }
 
@@ -495,11 +478,9 @@ Value SearchEngine::quiescence(std::int32_t ply, Value alpha, Value beta,
         }
     }
 
-    if (QSEARCH_TT) {
-        tt::Flag flag =
-            (alpha > orig_alpha) ? tt::Flag::F_EXACT : tt::Flag::F_UPPER_BOUND;
-        tt::TT.store(pos.key(), score_to_tt(alpha, ply), 0, flag, best_move);
-    }
+    tt::Flag flag =
+        (alpha > orig_alpha) ? tt::Flag::F_EXACT : tt::Flag::F_UPPER_BOUND;
+    tt::TT.store(pos.key(), score_to_tt(alpha, ply), 0, flag, best_move);
 
     return alpha;
 }
@@ -533,7 +514,7 @@ void SearchEngine::score_moves(ScoredMoves* begin, ScoredMoves* end,
             PieceType aggressor =
                 type_of_piece(pos.get_piece_on(move.source_square()));
 
-            bool is_winning = !SEE_ORDER_CAPTURES || pos.see_ge(move, 0);
+            bool is_winning = pos.see_ge(move, 0);
 
             it->score = (is_winning ? SCORE_CAPTURE : SCORE_BAD_CAPTURE) +
                         MATERIAL_SCORES.piece_value[victim].mg -
@@ -548,7 +529,7 @@ void SearchEngine::score_moves(ScoredMoves* begin, ScoredMoves* end,
                 it->score = SCORE_KILLER_PRIMARY;
             } else if (move == killers[ply][1]) {
                 it->score = SCORE_KILLER_SECONDARY;
-            } else if (COUNTERMOVE && (prev_move != Move::invalid_move()) &&
+            } else if ((prev_move != Move::invalid_move()) &&
                        (move == countermove[pos.side_to_move()]
                                            [prev_move.source_square()]
                                            [prev_move.target_square()])) {
@@ -646,7 +627,7 @@ void SearchEngine::update_quiet_stats(Move move, std::int32_t ply,
         killers[ply][0] = move;
     }
 
-    if (COUNTERMOVE && (prev_move != Move::invalid_move())) {
+    if (prev_move != Move::invalid_move()) {
         countermove[pos.side_to_move()][prev_move.source_square()]
                    [prev_move.target_square()] = move;
     }
@@ -798,6 +779,8 @@ Value SearchEngine::aspiration_search(std::int32_t depth, Value prev_score,
 
 void SearchEngine::report_iteration(const SearchInfo& info, std::int32_t depth,
                                     Value score) const {
+    std::lock_guard<std::mutex> io_lock(io_mutex);
+
     std::cout << "info depth " << depth;
 
     if (std::abs(score) >= VALUE_MATE - MAX_PLY) {

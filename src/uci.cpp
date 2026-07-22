@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <functional>
 #include <iostream>
+#include <mutex>
 #include <thread>
 
 #include "move.h"
@@ -211,6 +212,7 @@ void run_search(Position& pos, SearchLimits limits) {
         }
     }
 
+    std::lock_guard<std::mutex> io_lock(io_mutex);
     if (best == Move::invalid_move()) {
         std::cout << "bestmove (none)\n" << std::flush;
     } else {
@@ -236,6 +238,7 @@ void uci_loop() {
     std::cout << "id name " << NAME << "\n";
     std::cout << "id author " << AUTHOR << "\n";
     std::cout << "option name Threads type spin default 1 min 1 max 256\n";
+    std::cout << "option name Hash type spin default 64 min 1 max 4096\n";
     std::cout << "uciok\n";
 
     InfoListPtr infos(new std::deque<MoveInfo>(1));
@@ -275,7 +278,10 @@ void uci_loop() {
 
         // parse UCI "isready" command
         if (strncmp(input_buffer, "isready", 7) == 0) {
-            std::cout << "readyok\n";
+            {
+                std::lock_guard<std::mutex> io_lock(io_mutex);
+                std::cout << "readyok\n";
+            }
             continue;
         }
         // parse UCI "setoption" command
@@ -283,6 +289,10 @@ void uci_loop() {
             const char* val = strstr(input_buffer, "value");
             if (val && strstr(input_buffer, "Threads")) {
                 Threads.set_count(atoi(val + 6));
+            } else if (val && strstr(input_buffer, "Hash")) {
+                // Resize the transposition table to the requested MB. Wipes
+                // its contents, so this is a between-games operation.
+                tt::TT.resize(static_cast<std::size_t>(atoi(val + 6)));
             }
         }
         // parse UCI "position" command
@@ -326,6 +336,7 @@ void uci_loop() {
             std::cout << "\nid name " << NAME << "\n";
             std::cout << "id author " << AUTHOR << "\n";
             std::cout << "option name Threads type spin default 1 min 1 max 256\n";
+    std::cout << "option name Hash type spin default 64 min 1 max 4096\n";
             std::cout << "uciok\n";
         }
 
