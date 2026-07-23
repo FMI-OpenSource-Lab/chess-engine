@@ -1,8 +1,13 @@
 #pragma once
 
 #include <chrono>
+#include <condition_variable>
 #include <cstdint>
+#include <memory>
 #include <mutex>
+#include <string>
+#include <thread>
+#include <vector>
 
 #include "position.h"
 #include "search_engine.h"
@@ -23,11 +28,16 @@ struct SearchLimits {
     bool ponder = false;                     // search on the opponent's clock
 };
 
-// Owns the Lazy SMP dispatch: clones the root per worker, launches the
-// helper threads, runs the main search, and joins them. Returns the main
-// worker's result (its pv[0] is the move to play).
+// Persistent Lazy SMP pool. The worker threads are created once (on the first
+// search, or when the Threads count changes) and parked in an idle loop between
+// searches, rather than spawned per move. Each worker owns its own board and
+// SearchEngine and shares only the transposition table; run() wakes them all on
+// the same root, waits for them, and returns the best worker's result. Worker 0
+// is the "main": it honours the soft time limit and prints the live info lines.
 class ThreadPool {
    public:
+    ~ThreadPool();
+
     void set_count(std::int32_t n) {
         count_ = n < 1 ? 1 : n;
     }
@@ -38,7 +48,28 @@ class ThreadPool {
     SearchInfo run(Position& root, const SearchLimits& limits);
 
    private:
+    struct Worker {
+        std::thread thread;
+        Position pos;
+        MoveInfo mi;
+        std::unique_ptr<SearchEngine> engine;
+        SearchInfo result;
+        std::int32_t id = 0;
+        bool searching = false;  // guarded by mtx_
+    };
+
+    void idle_loop(Worker* w);
+    void ensure_workers();  // (re)spawn so workers_.size() == count_
+    void kill_workers();
+
+    std::vector<std::unique_ptr<Worker>> workers_;  // index 0 is the main worker
     std::int32_t count_ = 1;
+
+    std::mutex mtx_;
+    std::condition_variable cv_;       // wakes parked workers to start a search
+    std::condition_variable done_cv_;  // a worker signals it has finished
+    SearchLimits limits_{};            // params of the current search (read by workers)
+    bool exit_ = false;                // set on shutdown so idle loops return
 };
 
 extern ThreadPool Threads;  // global instance, like tt::TT
