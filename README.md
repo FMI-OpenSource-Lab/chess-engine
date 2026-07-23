@@ -131,10 +131,12 @@ Each row was measured against the frozen baseline binary that preceded it; featu
 | 2.12.0 | Countermove ordering: the quiet reply that last refuted a given previous move is tried just below the killers | 400 games, tc 8+0.08, single thread | +23 ± 25 |
 | 2.12.0 | Continuation-history ordering (context-aware quiet scores keyed by the previous move, summed with the main history) and gravity-with-malus updates for both the main and continuation history tables (a cutoff rewards the move that caused it and penalizes the quiets tried before it, with a self-limiting update that never saturates) | 400 games, tc 8+0.08, single thread | +52 ± 24 |
 | 2.13.0 | Time management with a soft/hard split (finish the iteration in flight, don't start a new one past the soft budget), `movestogo` and lag-overhead handling, plus an asynchronous search thread so UCI `stop` interrupts and returns the best move found | 400 games, tc 8+0.08, single thread | +64 ± 27 |
+| 2.16.0 | Sudden-death time allocation scaled by material (a fuller board assumes more moves remain) instead of a flat fraction of the clock, so the engine stops over-spending in the opening | 400 games, tc 8+0.08, single thread | +57 ± 22 |
+| 2.17.0 | Best-thread voting for Lazy SMP: play the move from the worker that reached the deepest completed iteration, not always the main thread's | 200 games, tc 8+0.08, 6 threads vs 1 | +141 ± 32 |
 
 Fixed-node matches (`go nodes`) are used for changes where timing noise would drown the signal; they deliberately ignore speed costs, which is why the cumulative timed number runs below the sum of the parts.
 
-The 2.10.0 row is a self-play scaling result: two search threads versus one, not a gain over the frozen baseline. At the default `Threads 1` the engine is behaviourally identical to 2.9.0, so single-threaded strength is unchanged; the second thread is what buys the Elo.
+The 2.10.0 and 2.17.0 rows are self-play scaling results: more search threads versus one, not a gain over the frozen baseline. At the default `Threads 1` the engine is behaviourally identical to the preceding release, so single-threaded strength is unchanged; the extra threads — and, in 2.17.0, playing the deepest worker's move rather than the main thread's — are what buy the Elo.
 
 ---
 
