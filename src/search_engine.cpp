@@ -21,6 +21,14 @@ constexpr std::int32_t SCORE_KILLER_SECONDARY = SCORE_COUNTERMOVE + 1;
 constexpr std::int32_t SCORE_KILLER_PRIMARY = SCORE_KILLER_SECONDARY + 1;
 constexpr std::int32_t SCORE_CAPTURE = SCORE_KILLER_PRIMARY + 1;
 
+// Kill-switch (dormant, pending an A/B match). When true, the history/
+// continuation/countermove tables are retained across the moves of a game
+// (Stockfish-style) instead of wiped every search, so move ordering carries
+// context between moves; cleared on ucinewgame. Left false so the committed
+// binary matches 2.17.0 — flip to true, rebuild, and measure vs the frozen
+// base to bank it.
+constexpr bool HISTORY_RETENTION = false;
+
 // A capture's ceiling: queen victim + promotion bonus + promoted queen
 constexpr std::int32_t SCORE_PROMOTION_BONUS = 900;
 constexpr std::int32_t CAPTURE_CEILING =
@@ -137,6 +145,14 @@ SearchEngine::SearchEngine(Position& pos, std::int32_t id)
       time_checks(0),
       thread_id(id) {
     [[maybe_unused]] static bool lmr_ready = (init_lmr_table(), true);
+    // Retention skips the per-search wipe, so the tables must start zeroed.
+    clear_history();
+}
+
+void SearchEngine::clear_history() {
+    std::memset(history, 0, sizeof(history));
+    std::memset(continuation_history, 0, sizeof(continuation_history));
+    std::memset(countermove, 0, sizeof(countermove));  // 0 == invalid move
 }
 
 Value SearchEngine::search(std::int32_t depth, SearchInfo& info) {
@@ -154,15 +170,15 @@ Value SearchEngine::search(std::int32_t depth, SearchInfo& info) {
                               : now_ms() + max_time.count(),
                       std::memory_order_relaxed);
 
-    // Fresh ordering state per search
+    // Killers are ply-indexed, so they are always reset per search; the history
+    // tables are retained across the game's moves unless retention is disabled.
     for (std::int32_t i = 0; i < MAX_PLY; ++i) {
         killers[i][0] = killers[i][1] = Move::invalid_move();
     }
 
-    std::memset(history, 0, sizeof(history));
-    std::memset(continuation_history, 0, sizeof(continuation_history));
-    std::memset(countermove, 0,
-                sizeof(countermove));  // 0 == Move::invalid_move()
+    if constexpr (!HISTORY_RETENTION) {
+        clear_history();
+    }
 
     Value best_score = -VALUE_INFINITE;
 

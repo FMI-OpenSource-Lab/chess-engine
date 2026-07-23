@@ -327,6 +327,7 @@ void uci_loop() {
         // parse UCI "ucinewgame" command
         else if (strncmp(input_buffer, "ucinewgame", 10) == 0) {
             tt::TT.clear();
+            Threads.clear_history();
             parse_position("position startpos", pos, infos);
         }
 

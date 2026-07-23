@@ -67,6 +67,11 @@ class SearchEngine {
     static void report_iteration(const SearchInfo& info, std::int32_t depth,
                                  Value score);
 
+    // Zero the history/continuation/countermove tables. Called at construction
+    // and on ucinewgame; the per-search wipe is skipped while history is
+    // retained across a game's moves.
+    void clear_history();
+
    private:
     Position& pos;
     std::chrono::time_point<std::chrono::high_resolution_clock> start_time;

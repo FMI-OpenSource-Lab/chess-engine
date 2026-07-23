@@ -47,6 +47,9 @@ class ThreadPool {
 
     SearchInfo run(Position& root, const SearchLimits& limits);
 
+    // Reset every worker's retained history (called on ucinewgame).
+    void clear_history();
+
    private:
     struct Worker {
         std::thread thread;

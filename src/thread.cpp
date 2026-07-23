@@ -89,6 +89,13 @@ void ThreadPool::kill_workers() {
     exit_ = false;
 }
 
+void ThreadPool::clear_history() {
+    // Called on ucinewgame, between games, so no search is in flight.
+    for (auto& w : workers_) {
+        w->engine->clear_history();
+    }
+}
+
 SearchInfo ThreadPool::run(Position& root, const SearchLimits& limits) {
     ensure_workers();
     tt::TT.new_search();  // one generation bump per search, shared by all workers
