@@ -61,6 +61,12 @@ class SearchEngine {
     // search into a normal timed one by arming the deadline from now.
     static void ponderhit(std::chrono::milliseconds budget);
 
+    // Print a UCI "info" line for a completed iteration. Static because it uses
+    // no per-engine state, so ThreadPool can emit the final line for a voted
+    // best thread that is not the reporting (main) worker.
+    static void report_iteration(const SearchInfo& info, std::int32_t depth,
+                                 Value score);
+
    private:
     Position& pos;
     std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
@@ -104,8 +110,6 @@ class SearchEngine {
                             Move prev_move, Move* searched_quiets,
                             std::int32_t num_quiets);
     void update_pv(Move move, std::int32_t ply);
-    void report_iteration(const SearchInfo& info, std::int32_t depth,
-                          Value score) const;
 
     Value aspiration_search(std::int32_t depth, Value prev_score,
                             SearchInfo& info);

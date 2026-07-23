@@ -27,21 +27,22 @@ struct WorkerGuard {
 
 // Lazy SMP move selection: prefer the worker that finished the deepest
 // iteration, breaking ties on score. Workers that never completed depth 1
-// (empty pv) are skipped. With a single worker this returns the main result.
-const SearchInfo& pick_best_thread(const std::vector<SearchInfo>& results) {
-    const SearchInfo* best = &results[0];
-    for (const SearchInfo& candidate : results) {
-        if (candidate.pv.empty()) {
+// (empty pv) are skipped. Returns the index into results (0 is the main
+// worker); with a single worker this is always 0.
+std::size_t pick_best_thread(const std::vector<SearchInfo>& results) {
+    std::size_t best = 0;
+    for (std::size_t i = 0; i < results.size(); ++i) {
+        if (results[i].pv.empty()) {
             continue;
         }
-        if (best->pv.empty() ||
-            candidate.completed_depth > best->completed_depth ||
-            (candidate.completed_depth == best->completed_depth &&
-             candidate.score > best->score)) {
-            best = &candidate;
+        if (results[best].pv.empty() ||
+            results[i].completed_depth > results[best].completed_depth ||
+            (results[i].completed_depth == results[best].completed_depth &&
+             results[i].score > results[best].score)) {
+            best = i;
         }
     }
-    return *best;
+    return best;
 }
 }  // namespace
 
@@ -98,7 +99,17 @@ SearchInfo ThreadPool::run(Position& root, const SearchLimits& limits) {
         }
     }
 
-    return pick_best_thread(results);
+    std::size_t best = pick_best_thread(results);
+
+    // Only the main worker reports info lines during the search. If a helper
+    // won the vote, its PV was never printed, so emit a final info line for it
+    // now — otherwise the GUI's last PV would not match the bestmove we play.
+    if (best != 0) {
+        const SearchInfo& b = results[best];
+        SearchEngine::report_iteration(b, b.completed_depth, b.score);
+    }
+
+    return results[best];
 }
 
 }  // namespace KhaosChess

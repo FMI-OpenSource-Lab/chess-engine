@@ -816,7 +816,7 @@ Value SearchEngine::aspiration_search(std::int32_t depth, Value prev_score,
 }
 
 void SearchEngine::report_iteration(const SearchInfo& info, std::int32_t depth,
-                                    Value score) const {
+                                    Value score) {
     std::lock_guard<std::mutex> io_lock(io_mutex);
 
     std::cout << "info depth " << depth;
